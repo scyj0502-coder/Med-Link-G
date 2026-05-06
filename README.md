@@ -36,3 +36,27 @@ E:\Med-Link-G\index.html
 - 17:00：夜診與隔日拜訪規劃前同步
 
 資料表草案位於 `backend/schema.sql`，ETL 流程骨架位於 `backend/etl_outline.py`。
+
+## 高醫資料同步
+
+目前高醫已改為讀取 `data/kmuh.json`。更新方式：
+
+```powershell
+python -m pip install -r backend\requirements.txt
+python backend\sources\kmuh_sync.py --output data\kmuh.json
+```
+
+同步來源：
+
+- 高醫門診表頁面：`https://www.kmuh.org.tw/KMUHInterWeb/InterWeb/InnerPage/1001124048`
+- 高醫門診 PDF：`https://www.kmuh.org.tw/include/lib/images/opd.pdf`
+
+產生 JSON 後提交並推送：
+
+```powershell
+git add data\kmuh.json
+git commit -m "Update KMUH schedule data"
+git push origin main
+```
+
+GitHub Pages 重新部署後，前端會自動讀取新版高醫資料。

@@ -195,7 +195,7 @@ const roomPrefix = {
   "過敏免疫風濕科": "免疫"
 };
 
-const doctors = Object.entries(doctorSeed).flatMap(([hospitalId, rows]) =>
+let doctors = Object.entries(doctorSeed).flatMap(([hospitalId, rows]) =>
   rows.map(([name, department, specialty], index) => ({
     id: `${hospitalId}-${String(index + 1).padStart(2, "0")}`,
     name,
@@ -205,7 +205,7 @@ const doctors = Object.entries(doctorSeed).flatMap(([hospitalId, rows]) =>
   }))
 );
 
-const sessionTemplates = doctors.map((doctor, index) => ({
+let sessionTemplates = doctors.map((doctor, index) => ({
   doctorId: doctor.id,
   weekdays: weekdayCycle[index % weekdayCycle.length],
   period: periodCycle[index % periodCycle.length],
@@ -238,7 +238,7 @@ const state = {
   deferredInstallPrompt: null
 };
 
-const appointments = buildAppointments();
+let appointments = [];
 
 const $ = (selector) => document.querySelector(selector);
 const elements = {
@@ -301,7 +301,7 @@ function buildAppointments() {
       }
 
       items.push({
-        id: `${doctor.id}-${iso}-${template.period}`,
+        id: `${doctor.id}-${iso}-${template.period}-${template.room}`,
         date: iso,
         weekday: day,
         period: status === "changed" ? "下午" : template.period,
@@ -318,13 +318,66 @@ function buildAppointments() {
   return items;
 }
 
-function init() {
+async function init() {
+  await loadExternalSchedules();
+  appointments = buildAppointments();
   populateWeekdayFilter();
   populateFilters();
   bindEvents();
   updateSyncInfo();
   applyFilters(false);
   registerPwa();
+}
+
+async function loadExternalSchedules() {
+  if (location.protocol === "file:") return;
+  try {
+    const response = await fetch("./data/kmuh.json?v=20260506e", { cache: "no-store" });
+    if (!response.ok) return;
+    const kmuh = await response.json();
+    mergeExternalSchedule(kmuh);
+  } catch (error) {
+    console.info("Using bundled demo schedule because external data could not be loaded.", error);
+  }
+}
+
+function mergeExternalSchedule(payload) {
+  const source = payload.source || {};
+  const hospitalId = source.hospitalId;
+  if (!hospitalId || !Array.isArray(payload.doctors) || !Array.isArray(payload.sessions)) return;
+
+  doctors = doctors.filter((doctor) => doctor.hospitalId !== hospitalId);
+  sessionTemplates = sessionTemplates.filter((session) => {
+    const doctor = doctors.find((item) => item.id === session.doctorId);
+    return doctor && doctor.hospitalId !== hospitalId;
+  });
+
+  const externalDoctors = payload.doctors.map((doctor) => ({
+    id: doctor.id,
+    name: doctor.name,
+    department: doctor.department,
+    specialty: doctor.specialty || `${doctor.department}門診`,
+    hospitalId
+  }));
+  doctors = [...doctors, ...externalDoctors];
+
+  const doctorIds = new Set(externalDoctors.map((doctor) => doctor.id));
+  const externalSessions = payload.sessions
+    .filter((session) => doctorIds.has(findExternalDoctorId(externalDoctors, session)))
+    .map((session) => ({
+      doctorId: findExternalDoctorId(externalDoctors, session),
+      weekdays: session.weekdays,
+      period: session.period,
+      room: session.room || session.clinic || session.clinicCode || "門診"
+    }));
+  sessionTemplates = [...sessionTemplates, ...externalSessions];
+}
+
+function findExternalDoctorId(externalDoctors, session) {
+  const doctor = externalDoctors.find((item) =>
+    item.name === session.doctorName && item.department === session.department
+  );
+  return doctor ? doctor.id : "";
 }
 
 function bindEvents() {

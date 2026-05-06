@@ -17,3 +17,6 @@ venv/
 
 .idea/
 .vscode/
+
+backend/*.pdf
+backend/*.jpg

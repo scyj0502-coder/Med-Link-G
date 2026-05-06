@@ -34,3 +34,20 @@
 ```
 
 正式開發時可用 FastAPI 作為 API 層，Scrapy 或 Playwright 作為資料擷取層。
+
+## 高醫同步腳本
+
+```powershell
+python -m pip install -r backend\requirements.txt
+python backend\sources\kmuh_sync.py --output data\kmuh.json
+```
+
+腳本會下載高醫官方門診 PDF，解析各科門診表頁面的文字座標，輸出：
+
+- `source`: 來源、同步時間、解析器版本
+- `departments`: 科別清單
+- `doctors`: 醫師清單
+- `sessions`: 每週診次樣板
+- `stats`: 診別、科別、醫師、診次數量
+
+目前 PDF 表格中的特殊備註已保留在來源欄位，完整停代診比對會在下一階段處理。
