@@ -335,7 +335,7 @@ async function init() {
 async function loadExternalSchedules() {
   if (location.protocol === "file:") return;
   try {
-    const response = await fetch("./data/kmuh.json?v=20260506e", { cache: "no-store" });
+    const response = await fetch("./data/kmuh.json?v=20260507a", { cache: "no-store" });
     if (!response.ok) return;
     const kmuh = await response.json();
     mergeExternalSchedule(kmuh);
