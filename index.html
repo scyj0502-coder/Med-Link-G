@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0e7c7b" />
+    <title>醫點通 Med-Link</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="診表篩選">
+        <div class="brand">
+          <div class="brand-mark">M</div>
+          <div>
+            <p class="eyebrow">Med-Link</p>
+            <h1>醫點通</h1>
+          </div>
+        </div>
+
+        <section class="panel filters">
+          <div class="section-heading">
+            <h2>智慧篩選</h2>
+            <button class="ghost-button" id="resetFilters" type="button">重設</button>
+          </div>
+
+          <label>
+            <span>快速搜尋醫師</span>
+            <input id="doctorSearch" type="search" placeholder="輸入姓名或專長" autocomplete="off" />
+          </label>
+
+          <label>
+            <span>地區</span>
+            <select id="regionFilter"></select>
+          </label>
+
+          <label>
+            <span>醫院與分院</span>
+            <select id="hospitalFilter"></select>
+          </label>
+
+          <label>
+            <span>科別</span>
+            <select id="departmentFilter"></select>
+          </label>
+
+          <label>
+            <span>醫師</span>
+            <select id="doctorFilter"></select>
+          </label>
+        </section>
+
+        <section class="panel sync-panel">
+          <div class="section-heading">
+            <h2>資料同步</h2>
+            <span class="status-dot"></span>
+          </div>
+          <div class="sync-grid">
+            <div>
+              <span>下次同步</span>
+              <strong id="nextSync">08:00</strong>
+            </div>
+            <div>
+              <span>異動診次</span>
+              <strong id="changedCount">0</strong>
+            </div>
+          </div>
+          <p>每日 08:00、12:00、17:00 擷取官網診訊並比對停診、代診與班別調整。</p>
+        </section>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">南台灣醫療通路診表整合</p>
+            <h2>今日門診動態</h2>
+          </div>
+          <div class="top-actions">
+            <button class="icon-button" id="notifyButton" type="button" aria-label="推播通知" title="推播通知">!</button>
+            <button class="primary-button" id="installButton" type="button" hidden>安裝 PWA</button>
+          </div>
+        </header>
+
+        <section class="metrics" aria-label="診表摘要">
+          <article>
+            <span>本月診次</span>
+            <strong id="monthTotal">0</strong>
+          </article>
+          <article>
+            <span>今日開診</span>
+            <strong id="todayTotal">0</strong>
+          </article>
+          <article>
+            <span>收藏追蹤</span>
+            <strong id="favoriteTotal">0</strong>
+          </article>
+          <article class="alert-metric">
+            <span>臨時停診</span>
+            <strong id="cancelledTotal">0</strong>
+          </article>
+        </section>
+
+        <section class="workspace">
+          <div class="calendar-area">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Calendar</p>
+                <h2 id="monthTitle">月分看板</h2>
+              </div>
+              <div class="month-controls">
+                <button class="icon-button" id="prevMonth" type="button" aria-label="上個月" title="上個月">&#8249;</button>
+                <button class="icon-button" id="nextMonth" type="button" aria-label="下個月" title="下個月">&#8250;</button>
+              </div>
+            </div>
+            <div class="weekday-row" aria-hidden="true">
+              <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+          </div>
+
+          <aside class="day-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Schedule</p>
+                <h2 id="selectedDateTitle">診次清單</h2>
+              </div>
+              <button class="ghost-button" id="todayButton" type="button">今天</button>
+            </div>
+
+            <div class="weekday-filter" id="weekdayFilter" aria-label="週表過濾"></div>
+            <div class="appointment-list" id="appointmentList"></div>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="detailDialog">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow" id="detailHospital">醫院</p>
+          <h2 id="detailDoctor">醫師診次</h2>
+        </div>
+        <button class="icon-button" id="closeDialog" type="button" aria-label="關閉" title="關閉">x</button>
+      </div>
+      <div id="detailBody"></div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
