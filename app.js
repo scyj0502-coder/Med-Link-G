@@ -380,7 +380,7 @@ function bindEvents() {
 
   $("#notifyButton").addEventListener("click", () => {
     const tracked = getFilteredAppointments().filter((item) => isFavorite(item.doctor.id) || item.status !== "normal");
-    showToast(`已模擬推播 ${tracked.length} 則重點通知，可銜接 LINE Messaging API。`);
+    showToast(`已模擬推播 ${tracked.length} 則重點通知，可銜接 Telegram Bot API。`);
   });
 
   $("#closeDialog").addEventListener("click", () => elements.detailDialog.close());

@@ -12,7 +12,7 @@
 - 診次詳細資訊、診間、醫師專長、代診與導航
 - 收藏醫師追蹤，使用 `localStorage` 保存
 - 停診、班別調動、代診的紅色/黃色警示
-- 模擬 LINE/系統推播按鈕
+- 模擬 Telegram/系統推播按鈕
 - PWA manifest 與 service worker 離線快取
 
 ## 開啟方式
@@ -27,7 +27,7 @@ E:\Med-Link-G\index.html
 
 ## 後端接軌方向
 
-前端目前的 `appointments` 結構可對應到 `/api/appointments` 回傳資料。後端建議以 Python ETL 定時同步各院官網，再將標準化資料寫入 PostgreSQL/MySQL，Redis 快取高頻查詢，LINE Messaging API 負責異動推播。
+前端目前的 `appointments` 結構可對應到 `/api/appointments` 回傳資料。後端建議以 Python ETL 定時同步各院官網，再將標準化資料寫入 PostgreSQL/MySQL，Redis 快取高頻查詢，Telegram Bot API 負責異動推播。
 
 建議排程：
 

@@ -60,8 +60,34 @@ CREATE TABLE user_favorites (
   CONSTRAINT user_favorites_target CHECK (hospital_id IS NOT NULL OR doctor_id IS NOT NULL)
 );
 
+CREATE TABLE telegram_subscriptions (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id VARCHAR(96) NOT NULL,
+  telegram_chat_id VARCHAR(96) NOT NULL UNIQUE,
+  telegram_username VARCHAR(120),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE notification_logs (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id VARCHAR(96) NOT NULL,
+  channel VARCHAR(24) NOT NULL DEFAULT 'telegram',
+  telegram_chat_id VARCHAR(96),
+  change_event_id BIGINT REFERENCES change_events(id),
+  message TEXT NOT NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'pending',
+  provider_response TEXT,
+  sent_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX idx_appointments_date ON appointments(clinic_date);
 CREATE INDEX idx_appointments_doctor ON appointments(doctor_id);
 CREATE INDEX idx_appointments_hospital ON appointments(hospital_id);
 CREATE INDEX idx_appointments_status ON appointments(status);
 CREATE INDEX idx_change_events_detected ON change_events(detected_at);
+CREATE INDEX idx_telegram_subscriptions_user ON telegram_subscriptions(user_id);
+CREATE INDEX idx_notification_logs_user ON notification_logs(user_id);
+CREATE INDEX idx_notification_logs_status ON notification_logs(status);
