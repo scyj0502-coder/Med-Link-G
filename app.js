@@ -307,6 +307,9 @@ function buildAppointments() {
         period: status === "changed" ? "下午" : template.period,
         originalPeriod: template.period,
         room: template.room,
+        rawClinic: template.rawClinic || template.room,
+        sourceDepartment: template.sourceDepartment || doctor.department,
+        category: template.category || doctor.department,
         status,
         note,
         substitute,
@@ -356,6 +359,8 @@ function mergeExternalSchedule(payload) {
     id: doctor.id,
     name: doctor.name,
     department: doctor.department,
+    rawDepartment: doctor.rawDepartment || doctor.department,
+    rawClinic: doctor.rawClinic || doctor.rawDepartment || doctor.department,
     specialty: doctor.specialty || `${doctor.department}門診`,
     hospitalId
   }));
@@ -368,14 +373,17 @@ function mergeExternalSchedule(payload) {
       doctorId: findExternalDoctorId(externalDoctors, session),
       weekdays: session.weekdays,
       period: session.period,
-      room: session.room || session.clinic || session.clinicCode || "門診"
+      room: session.room || session.clinic || session.clinicCode || "門診",
+      rawClinic: session.rawClinic || session.clinic || session.department,
+      sourceDepartment: session.department,
+      category: session.category || session.department
     }));
   sessionTemplates = [...sessionTemplates, ...externalSessions];
 }
 
 function findExternalDoctorId(externalDoctors, session) {
   const doctor = externalDoctors.find((item) =>
-    item.name === session.doctorName && item.department === session.department
+    item.name === session.doctorName && item.rawDepartment === session.department
   );
   return doctor ? doctor.id : "";
 }
@@ -587,12 +595,12 @@ function renderAppointments(filtered) {
       <article class="appointment-card ${item.status !== "normal" ? "changed" : ""}">
         <div class="appointment-title">
           <div>
-            <h3>${item.doctor.name} · ${item.doctor.department}</h3>
+            <h3>${item.doctor.name} · ${item.category}</h3>
             <p class="appointment-meta">${item.hospital.region}｜${item.hospital.name} ${item.hospital.branch}</p>
           </div>
           <span class="status-pill ${status.className}">${status.label}</span>
         </div>
-        <p class="appointment-meta">${item.date} 星期${weekdayNames[item.weekday]}｜${item.period}｜診間 ${item.room}</p>
+        <p class="appointment-meta">${item.date} 星期${weekdayNames[item.weekday]}｜${item.period}｜原始診別 ${item.rawClinic}</p>
         ${item.note ? `<p class="mini-alert">${item.note}</p>` : ""}
         <div class="card-actions">
           <button class="small-button ${favorite ? "favorited" : ""}" type="button" data-favorite="${item.doctor.id}">${favorite ? "已收藏" : "收藏"}</button>
@@ -632,7 +640,7 @@ function getFilteredAppointments() {
   const query = state.filters.search.toLowerCase();
   return appointments.filter((item) => {
     const hospitalText = hospitalLabel(item.hospital);
-    const searchPool = `${item.doctor.name} ${item.doctor.department} ${item.doctor.specialty} ${hospitalText}`.toLowerCase();
+    const searchPool = `${item.doctor.name} ${item.doctor.department} ${item.doctor.rawDepartment || ""} ${item.rawClinic || ""} ${item.doctor.specialty} ${hospitalText}`.toLowerCase();
     return (!query || searchPool.includes(query))
       && matchesRegion(item.hospital)
       && matchesHospital(item.hospital)
@@ -690,11 +698,13 @@ function openDetail(id) {
   const item = appointments.find((appointment) => appointment.id === id);
   if (!item) return;
   elements.detailHospital.textContent = `${item.hospital.region}｜${item.hospital.name} ${item.hospital.branch}`;
-  elements.detailDoctor.textContent = `${item.doctor.name} ${item.doctor.department}`;
+  elements.detailDoctor.textContent = `${item.doctor.name} ${item.category}`;
   elements.detailBody.innerHTML = `
     <div class="detail-grid">
       <div><span>日期班別</span><strong>${item.date} 星期${weekdayNames[item.weekday]} ${item.period}</strong></div>
-      <div><span>診間號碼</span><strong>${item.room}</strong></div>
+      <div><span>標準分類</span><strong>${item.category}</strong></div>
+      <div><span>原始診別</span><strong>${item.rawClinic}</strong></div>
+      <div><span>PDF 科別/診別</span><strong>${item.sourceDepartment}</strong></div>
       <div><span>醫師專長</span><strong>${item.doctor.specialty}</strong></div>
       <div><span>追蹤狀態</span><strong>${isFavorite(item.doctor.id) ? "已收藏，優先推播" : "尚未收藏"}</strong></div>
     </div>

@@ -46,6 +46,7 @@ class ClinicRow:
     code: str
     clinic: str
     department: str
+    category: str
 
 
 def download_pdf(target: Path) -> Path:
@@ -74,6 +75,8 @@ def parse_pdf(pdf_path: Path) -> dict:
     sessions = dedupe_sessions(sessions)
     doctors = build_doctors(sessions)
     departments = sorted({session["department"] for session in sessions})
+    categories = sorted({session["category"] for session in sessions})
+    raw_clinics = sorted({session["rawClinic"] for session in sessions})
     return {
         "source": {
             "hospitalId": HOSPITAL_ID,
@@ -87,12 +90,16 @@ def parse_pdf(pdf_path: Path) -> dict:
             "quality": "pdf-text-extracted",
             "note": "第一版以官方 PDF 文字座標解析診別、時段、星期與醫師；特殊備註仍需後續校正。",
         },
+        "categories": categories,
         "departments": departments,
+        "rawClinics": raw_clinics,
         "doctors": doctors,
         "sessions": sessions,
         "stats": {
             "clinicRows": len({row.code for row in clinic_rows}),
+            "categories": len(categories),
             "departments": len(departments),
+            "rawClinics": len(raw_clinics),
             "doctors": len(doctors),
             "sessions": len(sessions),
         },
@@ -132,6 +139,8 @@ def extract_sessions(words: list[Word], clinics: list[ClinicRow], page_number: i
                     "region": REGION,
                     "department": clinic.department,
                     "clinic": clinic.clinic,
+                    "rawClinic": clinic.clinic,
+                    "category": clinic.category,
                     "clinicCode": clinic.code,
                     "doctorName": doctor,
                     "weekdays": [weekday],
@@ -197,6 +206,7 @@ def extract_clinic_rows(words: list[Word]) -> list[ClinicRow]:
             code=match.group(1),
             clinic=clinic,
             department=normalize_department(clinic),
+            category=normalize_category(clinic),
         ))
     return dedupe_clinic_rows(rows)
 
@@ -250,6 +260,8 @@ def clean_clinic_label(value: str) -> str:
     value = re.sub(r"【.*?】", "", value)
     value = value.replace("診別", "").replace("診間", "")
     value = value.replace(" ", "").replace("　", "")
+    value = re.sub(r"^(上午|下午|夜間|時段)+", "", value)
+    value = re.sub(r"(上午|下午|夜間)+$", "", value)
     return value.strip("・:：")
 
 
@@ -296,6 +308,52 @@ def normalize_department(clinic: str) -> str:
     return value or clinic
 
 
+def normalize_category(clinic: str) -> str:
+    clean = normalize_department(clinic)
+    rules = [
+        ("內分泌新陳代謝內科", ["內分泌", "糖尿病"]),
+        ("胸腔內科", ["胸腔內科"]),
+        ("腎臟內科", ["腎臟內科"]),
+        ("感染內科", ["感染內科", "熱帶疾病", "登革熱"]),
+        ("心臟血管內科", ["心臟血管內科", "心臟內科"]),
+        ("胃腸內科", ["胃腸內科"]),
+        ("肝膽胰內科", ["肝膽胰內科"]),
+        ("血液腫瘤內科", ["血液腫瘤"]),
+        ("過敏免疫風濕內科", ["過敏免疫風濕"]),
+        ("一般醫學內科", ["一般醫學內科", "三高整合", "高齡醫學", "老年醫學"]),
+        ("一般外科", ["一般外科", "一般醫學外科"]),
+        ("整形外科", ["整形外科", "高壓氧"]),
+        ("胸腔食道外科", ["胸腔食道外科"]),
+        ("胃腸及一般外科", ["胃腸及一般外科"]),
+        ("肝膽胰外科", ["肝膽胰外科", "肝臟移植"]),
+        ("大腸直腸肛門外科", ["大腸直腸", "胃腸、大腸"]),
+        ("乳房外科", ["婦女乳房", "乳房腫瘤", "甲狀腺腫瘤"]),
+        ("小兒外科", ["小兒外科"]),
+        ("婦產科", ["婦產科"]),
+        ("小兒科", ["一般小兒科", "新生兒科", "小兒神經", "小兒血液", "特殊血液病", "兒童發展"]),
+        ("皮膚科", ["皮膚科"]),
+        ("骨科", ["骨科"]),
+        ("腦神經內科", ["腦神經內科", "神經肌肉"]),
+        ("泌尿科", ["泌尿科", "性功能障礙"]),
+        ("疼痛科", ["疼痛科"]),
+        ("眼科", ["眼科"]),
+        ("耳鼻喉頭頸科", ["耳鼻"]),
+        ("放射腫瘤科", ["放射腫瘤"]),
+        ("家庭醫學科", ["家庭醫學科", "家醫科", "自費減重", "職業暨環境"]),
+        ("安寧共同照護", ["安寧"]),
+        ("營養門診", ["營養"]),
+        ("復健科", ["復健科"]),
+        ("精神科", ["精神科", "青少年"]),
+        ("中醫部", ["中醫"]),
+        ("牙科部", ["牙科"]),
+        ("癌症中心", ["癌症", "新藥臨床試驗", "高杏", "國際醫療", "腫瘤"]),
+    ]
+    for category, keywords in rules:
+        if any(keyword in clean for keyword in keywords):
+            return category
+    return clean
+
+
 def dedupe_clinic_rows(rows: list[ClinicRow]) -> list[ClinicRow]:
     seen = set()
     result = []
@@ -334,7 +392,9 @@ def build_doctors(sessions: list[dict]) -> list[dict]:
             "id": f"kmuh-{slug(session['doctorName'])}-{slug(session['department'])}",
             "hospitalId": HOSPITAL_ID,
             "name": session["doctorName"],
-            "department": session["department"],
+            "department": session["category"],
+            "rawDepartment": session["department"],
+            "rawClinic": session["rawClinic"],
             "specialty": f"{session['department']}門診",
         }
     return sorted(doctors.values(), key=lambda item: (item["department"], item["name"]))
