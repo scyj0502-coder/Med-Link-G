@@ -1,6 +1,9 @@
+const ALL = "全部";
+
 const hospitals = [
   { id: "ncku", region: "台南", name: "成大醫院", branch: "總院", lat: 23.0015, lng: 120.2197 },
   { id: "chi-mei", region: "台南", name: "奇美醫院", branch: "永康院區", lat: 23.0202, lng: 120.2216 },
+  { id: "tainan-municipal", region: "台南", name: "台南市立醫院", branch: "崇德院區", lat: 22.9731, lng: 120.2237 },
   { id: "kmuh", region: "高雄", name: "高雄醫學大學附設中和紀念醫院", branch: "總院", lat: 22.6467, lng: 120.3097 },
   { id: "cgmh-kao", region: "高雄", name: "高雄長庚紀念醫院", branch: "鳥松院區", lat: 22.6501, lng: 120.3565 },
   { id: "vghks", region: "高雄", name: "高雄榮民總醫院", branch: "左營院區", lat: 22.6774, lng: 120.3222 },
@@ -8,35 +11,117 @@ const hospitals = [
   { id: "pntn", region: "屏東", name: "衛福部屏東醫院", branch: "總院", lat: 22.6719, lng: 120.4868 }
 ];
 
-const doctors = [
-  { id: "d01", name: "林哲宇", department: "心臟內科", specialty: "心導管、高血壓、心衰竭", hospitalId: "ncku" },
-  { id: "d02", name: "陳怡君", department: "腫瘤內科", specialty: "乳癌、標靶治療、臨床試驗", hospitalId: "ncku" },
-  { id: "d03", name: "黃柏翰", department: "神經內科", specialty: "腦中風、巴金森氏症", hospitalId: "chi-mei" },
-  { id: "d04", name: "蔡孟儒", department: "骨科", specialty: "人工關節、運動醫學", hospitalId: "chi-mei" },
-  { id: "d05", name: "許雅婷", department: "胸腔內科", specialty: "氣喘、慢性阻塞性肺病", hospitalId: "kmuh" },
-  { id: "d06", name: "吳宗憲", department: "胃腸肝膽科", specialty: "肝炎、內視鏡治療", hospitalId: "kmuh" },
-  { id: "d07", name: "張維倫", department: "新陳代謝科", specialty: "糖尿病、甲狀腺疾病", hospitalId: "cgmh-kao" },
-  { id: "d08", name: "劉佳穎", department: "腎臟內科", specialty: "慢性腎病、透析照護", hospitalId: "cgmh-kao" },
-  { id: "d09", name: "王俊傑", department: "感染科", specialty: "抗生素管理、旅遊醫學", hospitalId: "vghks" },
-  { id: "d10", name: "鄭欣怡", department: "血液腫瘤科", specialty: "淋巴癌、貧血、化療照護", hospitalId: "vghks" },
-  { id: "d11", name: "邱冠廷", department: "心臟內科", specialty: "心律不整、介入治療", hospitalId: "ptch" },
-  { id: "d12", name: "郭芷涵", department: "小兒科", specialty: "兒童過敏、疫苗諮詢", hospitalId: "pntn" }
-];
+const doctorSeed = {
+  ncku: [
+    ["林哲宇", "心臟內科", "心導管、高血壓、心衰竭"],
+    ["陳怡君", "腫瘤內科", "乳癌、標靶治療、臨床試驗"],
+    ["蘇冠廷", "胃腸肝膽科", "肝炎、膽胰疾病、內視鏡治療"],
+    ["方若瑜", "神經內科", "腦中風、頭痛、失智症"],
+    ["何柏叡", "胸腔內科", "肺癌、氣喘、慢性阻塞性肺病"],
+    ["周品萱", "新陳代謝科", "糖尿病、甲狀腺、骨質疏鬆"]
+  ],
+  "chi-mei": [
+    ["黃柏翰", "神經內科", "腦中風、巴金森氏症"],
+    ["蔡孟儒", "骨科", "人工關節、運動醫學"],
+    ["李佳蓉", "心臟內科", "心律不整、心臟超音波"],
+    ["趙庭瑋", "腎臟內科", "慢性腎病、透析照護"],
+    ["郭乃文", "感染科", "抗生素管理、感染症"],
+    ["林宛臻", "風濕免疫科", "類風濕關節炎、紅斑性狼瘡"]
+  ],
+  "tainan-municipal": [
+    ["楊宗翰", "胸腔內科", "肺阻塞、肺炎、呼吸治療"],
+    ["賴映潔", "小兒科", "兒童過敏、疫苗諮詢"],
+    ["許承恩", "胃腸肝膽科", "胃食道逆流、肝膽疾病"],
+    ["劉沛晴", "婦產科", "高危險妊娠、婦科腫瘤"],
+    ["鄭宇軒", "泌尿科", "攝護腺、泌尿道結石"],
+    ["張雅筑", "皮膚科", "乾癬、異位性皮膚炎"]
+  ],
+  kmuh: [
+    ["許雅婷", "胸腔內科", "氣喘、慢性阻塞性肺病"],
+    ["吳宗憲", "胃腸肝膽科", "肝炎、內視鏡治療"],
+    ["陳冠霖", "心臟內科", "冠心症、心衰竭"],
+    ["林佳穎", "血液腫瘤科", "淋巴癌、貧血、化療照護"],
+    ["王紹宇", "神經外科", "腦腫瘤、脊椎手術"],
+    ["蔡宜芳", "復健科", "神經復健、疼痛治療"]
+  ],
+  "cgmh-kao": [
+    ["張維倫", "新陳代謝科", "糖尿病、甲狀腺疾病"],
+    ["劉佳穎", "腎臟內科", "慢性腎病、透析照護"],
+    ["吳品叡", "骨科", "脊椎、人工關節"],
+    ["黃筱雯", "腫瘤內科", "肺癌、免疫治療"],
+    ["朱柏諺", "耳鼻喉科", "頭頸腫瘤、鼻竇炎"],
+    ["謝宜蓁", "眼科", "白內障、視網膜疾病"]
+  ],
+  vghks: [
+    ["王俊傑", "感染科", "抗生素管理、旅遊醫學"],
+    ["鄭欣怡", "血液腫瘤科", "淋巴癌、貧血、化療照護"],
+    ["沈立仁", "心臟內科", "心律不整、介入治療"],
+    ["羅子涵", "神經內科", "癲癇、失智症"],
+    ["林奕辰", "肝膽腸胃科", "肝硬化、內視鏡"],
+    ["高敏華", "過敏免疫風濕科", "僵直性脊椎炎、乾燥症"]
+  ],
+  ptch: [
+    ["邱冠廷", "心臟內科", "心律不整、介入治療"],
+    ["蕭怡安", "胸腔內科", "肺結節、肺炎"],
+    ["曾郁婷", "胃腸肝膽科", "脂肪肝、消化道潰瘍"],
+    ["洪子翔", "骨科", "骨折創傷、關節鏡"],
+    ["陳佩君", "婦產科", "產前檢查、更年期照護"],
+    ["潘柏均", "泌尿科", "男性醫學、結石治療"]
+  ],
+  pntn: [
+    ["郭芷涵", "小兒科", "兒童過敏、疫苗諮詢"],
+    ["李彥廷", "家醫科", "慢性病整合、成人健檢"],
+    ["蔡承祐", "神經內科", "腦中風、偏頭痛"],
+    ["林思妤", "皮膚科", "青春痘、皮膚過敏"],
+    ["何俊毅", "復健科", "肩頸痠痛、運動傷害"],
+    ["黃可欣", "精神科", "焦慮、睡眠障礙"]
+  ]
+};
 
-const sessionTemplates = [
-  { doctorId: "d01", weekdays: [1, 3, 5], period: "上午", room: "A203" },
-  { doctorId: "d02", weekdays: [2, 4], period: "下午", room: "B118" },
-  { doctorId: "d03", weekdays: [1, 4], period: "上午", room: "C302" },
-  { doctorId: "d04", weekdays: [2, 5], period: "夜診", room: "D510" },
-  { doctorId: "d05", weekdays: [1, 3], period: "下午", room: "12診" },
-  { doctorId: "d06", weekdays: [2, 4, 6], period: "上午", room: "16診" },
-  { doctorId: "d07", weekdays: [1, 5], period: "上午", room: "內科08" },
-  { doctorId: "d08", weekdays: [3, 5], period: "下午", room: "內科11" },
-  { doctorId: "d09", weekdays: [2, 4], period: "下午", room: "E221" },
-  { doctorId: "d10", weekdays: [1, 3], period: "上午", room: "F105" },
-  { doctorId: "d11", weekdays: [2, 5], period: "上午", room: "心內02" },
-  { doctorId: "d12", weekdays: [1, 3, 6], period: "下午", room: "兒科06" }
-];
+const periodCycle = ["上午", "下午", "夜診"];
+const weekdayCycle = [[1, 3, 5], [2, 4], [1, 4], [2, 5], [3, 5], [2, 4, 6]];
+const roomPrefix = {
+  "心臟內科": "心內",
+  "腫瘤內科": "腫內",
+  "胃腸肝膽科": "肝膽",
+  "肝膽腸胃科": "肝膽",
+  "神經內科": "神內",
+  "胸腔內科": "胸內",
+  "新陳代謝科": "新陳",
+  "腎臟內科": "腎內",
+  "感染科": "感染",
+  "血液腫瘤科": "血腫",
+  "骨科": "骨科",
+  "小兒科": "兒科",
+  "婦產科": "婦產",
+  "泌尿科": "泌尿",
+  "皮膚科": "皮膚",
+  "復健科": "復健",
+  "神經外科": "神外",
+  "耳鼻喉科": "耳鼻",
+  "眼科": "眼科",
+  "家醫科": "家醫",
+  "精神科": "精神",
+  "風濕免疫科": "免疫",
+  "過敏免疫風濕科": "免疫"
+};
+
+const doctors = Object.entries(doctorSeed).flatMap(([hospitalId, rows]) =>
+  rows.map(([name, department, specialty], index) => ({
+    id: `${hospitalId}-${String(index + 1).padStart(2, "0")}`,
+    name,
+    department,
+    specialty,
+    hospitalId
+  }))
+);
+
+const sessionTemplates = doctors.map((doctor, index) => ({
+  doctorId: doctor.id,
+  weekdays: weekdayCycle[index % weekdayCycle.length],
+  period: periodCycle[index % periodCycle.length],
+  room: `${roomPrefix[doctor.department] || "門診"}${String((index % 9) + 1).padStart(2, "0")}`
+}));
 
 const weekdayNames = ["日", "一", "二", "三", "四", "五", "六"];
 const statusMap = {
@@ -46,17 +131,20 @@ const statusMap = {
   substitute: { label: "代診", className: "changed" }
 };
 
+const defaultFilters = {
+  search: "",
+  region: ALL,
+  hospital: ALL,
+  department: ALL,
+  doctor: ALL
+};
+
 const state = {
   viewedDate: new Date(),
   selectedDate: new Date(),
   selectedWeekday: null,
-  filters: {
-    search: "",
-    region: "全部",
-    hospital: "全部",
-    department: "全部",
-    doctor: "全部"
-  },
+  filters: { ...defaultFilters },
+  draftFilters: { ...defaultFilters },
   favorites: JSON.parse(localStorage.getItem("medlink:favorites") || "[]"),
   deferredInstallPrompt: null
 };
@@ -86,7 +174,8 @@ const elements = {
   detailHospital: $("#detailHospital"),
   detailDoctor: $("#detailDoctor"),
   detailBody: $("#detailBody"),
-  installButton: $("#installButton")
+  installButton: $("#installButton"),
+  querySummary: $("#querySummary")
 };
 
 function buildAppointments() {
@@ -98,27 +187,26 @@ function buildAppointments() {
 
   for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
     const day = date.getDay();
-    sessionTemplates.forEach((template) => {
+    sessionTemplates.forEach((template, index) => {
       if (!template.weekdays.includes(day)) return;
       const doctor = doctors.find((item) => item.id === template.doctorId);
       const hospital = hospitals.find((item) => item.id === doctor.hospitalId);
       const iso = toIsoDate(date);
-      const marker = `${doctor.id}-${iso}`;
       let status = "normal";
       let note = "";
       let substitute = "";
 
-      if (marker.includes("d03") && date.getDate() === 8) {
+      if (date.getDate() === 8 && index % 13 === 2) {
         status = "cancelled";
         note = "醫師臨時請假，官網於 08:00 同步時偵測停診。";
-      } else if (marker.includes("d07") && date.getDate() === 15) {
+      } else if (date.getDate() === 15 && index % 11 === 4) {
         status = "changed";
         note = "原上午診調整為下午診，請重新安排拜訪路線。";
-      } else if (marker.includes("d10") && date.getDate() === 22) {
+      } else if (date.getDate() === 22 && index % 17 === 7) {
         status = "substitute";
-        note = "由李昱辰醫師代診，重點醫師追蹤已觸發提醒。";
-        substitute = "李昱辰";
-      } else if (date.getDay() === 5 && date.getDate() % 13 === 0) {
+        note = "由同科醫師代診，重點醫師追蹤已觸發提醒。";
+        substitute = "代診醫師";
+      } else if (date.getDay() === 5 && date.getDate() % 13 === 0 && index % 9 === 0) {
         status = "cancelled";
         note = "醫院公告臨時停診，請確認替代拜訪時段。";
       }
@@ -146,14 +234,14 @@ function init() {
   populateFilters();
   bindEvents();
   updateSyncInfo();
-  render();
+  applyFilters(false);
   registerPwa();
 }
 
 function bindEvents() {
   elements.doctorSearch.addEventListener("input", (event) => {
-    state.filters.search = event.target.value.trim();
-    render();
+    state.draftFilters.search = event.target.value.trim();
+    updateQuerySummary();
   });
 
   [
@@ -163,20 +251,25 @@ function bindEvents() {
     ["doctorFilter", "doctor"]
   ].forEach(([elementKey, filterKey]) => {
     elements[elementKey].addEventListener("change", (event) => {
-      state.filters[filterKey] = event.target.value;
-      if (filterKey === "region") state.filters.hospital = "全部";
-      if (["region", "hospital"].includes(filterKey)) state.filters.department = "全部";
-      if (["region", "hospital", "department"].includes(filterKey)) state.filters.doctor = "全部";
+      state.draftFilters[filterKey] = event.target.value;
+      if (filterKey === "region") state.draftFilters.hospital = ALL;
+      if (["region", "hospital"].includes(filterKey)) state.draftFilters.department = ALL;
+      if (["region", "hospital", "department"].includes(filterKey)) state.draftFilters.doctor = ALL;
       populateFilters();
-      render();
+      updateQuerySummary();
     });
   });
 
+  $("#applyFilters").addEventListener("click", () => applyFilters(true));
+
   $("#resetFilters").addEventListener("click", () => {
-    state.filters = { search: "", region: "全部", hospital: "全部", department: "全部", doctor: "全部" };
+    state.filters = { ...defaultFilters };
+    state.draftFilters = { ...defaultFilters };
+    state.selectedWeekday = null;
     elements.doctorSearch.value = "";
     populateFilters();
     render();
+    showToast("已重設查詢條件，顯示全部診表。");
   });
 
   $("#prevMonth").addEventListener("click", () => {
@@ -218,24 +311,33 @@ function bindEvents() {
   });
 }
 
+function applyFilters(announce) {
+  state.filters = { ...state.draftFilters };
+  state.selectedWeekday = null;
+  render();
+  if (announce) {
+    showToast(`查詢完成：符合條件 ${getFilteredAppointments().length} 筆診次。`);
+  }
+}
+
 function populateFilters() {
-  setOptions(elements.regionFilter, ["全部", ...unique(hospitals.map((item) => item.region))], state.filters.region);
+  setOptions(elements.regionFilter, [ALL, ...unique(hospitals.map((item) => item.region))], state.draftFilters.region);
 
   const hospitalOptions = hospitals
-    .filter((item) => state.filters.region === "全部" || item.region === state.filters.region)
-    .map((item) => `${item.name} ${item.branch}`);
-  setOptions(elements.hospitalFilter, ["全部", ...hospitalOptions], state.filters.hospital);
+    .filter((item) => matchesDraftRegion(item))
+    .map((item) => hospitalLabel(item));
+  setOptions(elements.hospitalFilter, [ALL, ...hospitalOptions], state.draftFilters.hospital);
 
   const availableDoctors = doctors.filter((doctor) => {
     const hospital = hospitals.find((item) => item.id === doctor.hospitalId);
-    return matchesRegion(hospital) && matchesHospital(hospital);
+    return matchesDraftRegion(hospital) && matchesDraftHospital(hospital);
   });
-  setOptions(elements.departmentFilter, ["全部", ...unique(availableDoctors.map((item) => item.department))], state.filters.department);
+  setOptions(elements.departmentFilter, [ALL, ...unique(availableDoctors.map((item) => item.department))], state.draftFilters.department);
 
   const doctorOptions = availableDoctors
-    .filter((doctor) => state.filters.department === "全部" || doctor.department === state.filters.department)
+    .filter((doctor) => state.draftFilters.department === ALL || doctor.department === state.draftFilters.department)
     .map((doctor) => doctor.name);
-  setOptions(elements.doctorFilter, ["全部", ...doctorOptions], state.filters.doctor);
+  setOptions(elements.doctorFilter, [ALL, ...doctorOptions], state.draftFilters.doctor);
 }
 
 function populateWeekdayFilter() {
@@ -256,6 +358,7 @@ function render() {
   renderMetrics(filtered);
   renderCalendar(filtered);
   renderAppointments(filtered);
+  updateQuerySummary(filtered);
   elements.changedCount.textContent = filtered.filter((item) => item.status !== "normal").length;
   elements.favoriteTotal.textContent = state.favorites.length;
 }
@@ -320,7 +423,7 @@ function renderAppointments(filtered) {
   const weekday = state.selectedWeekday;
   const list = filtered
     .filter((item) => (weekday === null ? item.date === selectedIso : item.weekday === weekday))
-    .sort((a, b) => `${a.date}${a.period}`.localeCompare(`${b.date}${b.period}`));
+    .sort((a, b) => `${a.date}${a.period}`.localeCompare(`${b.date}${b.period}`, "zh-Hant"));
 
   elements.selectedDateTitle.textContent = weekday === null
     ? `${formatDate(state.selectedDate)} 診次`
@@ -331,7 +434,7 @@ function renderAppointments(filtered) {
   });
 
   if (!list.length) {
-    elements.appointmentList.innerHTML = `<div class="empty-state">目前條件沒有診次，可調整地區、醫院、科別或醫師。</div>`;
+    elements.appointmentList.innerHTML = `<div class="empty-state">目前條件沒有診次，可調整地區、醫院、科別或醫師後按「套用查詢」。</div>`;
     return;
   }
 
@@ -369,30 +472,66 @@ function renderAppointments(filtered) {
   });
 }
 
+function updateQuerySummary(filtered = getFilteredAppointments()) {
+  const draftParts = Object.entries(state.draftFilters)
+    .filter(([, value]) => value && value !== ALL)
+    .map(([key, value]) => `${filterLabel(key)}：${value}`);
+  const activeParts = Object.entries(state.filters)
+    .filter(([, value]) => value && value !== ALL)
+    .map(([key, value]) => `${filterLabel(key)}：${value}`);
+  const isDirty = JSON.stringify(state.draftFilters) !== JSON.stringify(state.filters);
+  const base = activeParts.length ? activeParts.join("、") : "全部院所與科別";
+  elements.querySummary.textContent = isDirty
+    ? `條件已變更，請按「套用查詢」。草稿：${draftParts.join("、") || "全部"}`
+    : `目前顯示 ${base}，共 ${filtered.length} 筆診次。`;
+}
+
 function getFilteredAppointments() {
   const query = state.filters.search.toLowerCase();
   return appointments.filter((item) => {
-    const hospitalLabel = `${item.hospital.name} ${item.hospital.branch}`;
-    const searchPool = `${item.doctor.name} ${item.doctor.department} ${item.doctor.specialty} ${hospitalLabel}`.toLowerCase();
+    const hospitalText = hospitalLabel(item.hospital);
+    const searchPool = `${item.doctor.name} ${item.doctor.department} ${item.doctor.specialty} ${hospitalText}`.toLowerCase();
     return (!query || searchPool.includes(query))
       && matchesRegion(item.hospital)
       && matchesHospital(item.hospital)
-      && (state.filters.department === "全部" || item.doctor.department === state.filters.department)
-      && (state.filters.doctor === "全部" || item.doctor.name === state.filters.doctor);
+      && (state.filters.department === ALL || item.doctor.department === state.filters.department)
+      && (state.filters.doctor === ALL || item.doctor.name === state.filters.doctor);
   });
 }
 
 function matchesRegion(hospital) {
-  return state.filters.region === "全部" || hospital.region === state.filters.region;
+  return state.filters.region === ALL || hospital.region === state.filters.region;
 }
 
 function matchesHospital(hospital) {
-  return state.filters.hospital === "全部" || `${hospital.name} ${hospital.branch}` === state.filters.hospital;
+  return state.filters.hospital === ALL || hospitalLabel(hospital) === state.filters.hospital;
+}
+
+function matchesDraftRegion(hospital) {
+  return state.draftFilters.region === ALL || hospital.region === state.draftFilters.region;
+}
+
+function matchesDraftHospital(hospital) {
+  return state.draftFilters.hospital === ALL || hospitalLabel(hospital) === state.draftFilters.hospital;
+}
+
+function hospitalLabel(hospital) {
+  return `${hospital.name} ${hospital.branch}`;
+}
+
+function filterLabel(key) {
+  return {
+    search: "關鍵字",
+    region: "地區",
+    hospital: "醫院",
+    department: "科別",
+    doctor: "醫師"
+  }[key];
 }
 
 function setOptions(select, options, selected) {
   select.innerHTML = options.map((option) => `<option value="${option}">${option}</option>`).join("");
-  select.value = options.includes(selected) ? selected : "全部";
+  select.value = options.includes(selected) ? selected : ALL;
 }
 
 function toggleFavorite(doctorId) {
@@ -439,7 +578,7 @@ function updateSyncInfo() {
 }
 
 function registerPwa() {
-  if ("serviceWorker" in navigator) {
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
     navigator.serviceWorker.register("./service-worker.js");
   }
 }

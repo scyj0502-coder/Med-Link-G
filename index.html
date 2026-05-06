@@ -21,13 +21,13 @@
 
         <section class="panel filters">
           <div class="section-heading">
-            <h2>智慧篩選</h2>
+            <h2>智慧查詢</h2>
             <button class="ghost-button" id="resetFilters" type="button">重設</button>
           </div>
 
           <label>
             <span>快速搜尋醫師</span>
-            <input id="doctorSearch" type="search" placeholder="輸入姓名或專長" autocomplete="off" />
+            <input id="doctorSearch" type="search" placeholder="輸入姓名、科別、專長或醫院" autocomplete="off" />
           </label>
 
           <label>
@@ -49,6 +49,11 @@
             <span>醫師</span>
             <select id="doctorFilter"></select>
           </label>
+
+          <div class="filter-actions">
+            <button class="primary-button full-button" id="applyFilters" type="button">套用查詢</button>
+            <p id="querySummary">目前顯示全部院所與科別。</p>
+          </div>
         </section>
 
         <section class="panel sync-panel">
