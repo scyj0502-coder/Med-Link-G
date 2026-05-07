@@ -78,7 +78,7 @@ def inspect_file(path: Path, content_type: str) -> dict:
 
 
 def inspect_tesseract() -> dict:
-    executable = shutil.which("tesseract")
+    executable = find_tesseract()
     if not executable:
         return {
             "available": False,
@@ -112,6 +112,19 @@ def inspect_tesseract() -> dict:
         "hasChineseTraditional": "chi_tra" in languages,
         "note": "已偵測到 Tesseract；若有 chi_tra 語言包即可解析繁體中文。",
     }
+
+
+def find_tesseract() -> str:
+    executable = shutil.which("tesseract")
+    if executable:
+        return executable
+    for candidate in [
+        Path("C:/Program Files/Tesseract-OCR/tesseract.exe"),
+        Path("C:/Program Files (x86)/Tesseract-OCR/tesseract.exe"),
+    ]:
+        if candidate.exists():
+            return str(candidate)
+    return ""
 
 
 def sync_sources(input_path: Path) -> dict:

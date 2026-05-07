@@ -72,6 +72,13 @@ python backend\sources\source_registry.py --input data\sources.sample.csv --outp
 python backend\sources\source_sync.py --input data\sources.sample.csv --output data\source-sync-status.json
 ```
 
+岡山圖片型 PDF OCR 與指定科別診表輸出：
+
+```powershell
+python backend\sources\okayama_ocr.py --input data\sources.sample.csv --output data\okayama-ocr.json
+python backend\sources\okayama_schedule.py --output data\okayama.json
+```
+
 CSV 欄位：
 
 ```text

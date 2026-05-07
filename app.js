@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260507d";
+const DATA_VERSION = "20260507e";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -356,13 +356,16 @@ async function loadSourceSyncStatus() {
 
 async function loadExternalSchedules() {
   if (location.protocol === "file:") return;
-  try {
-    const response = await fetch(`./data/kmuh.json?v=${DATA_VERSION}`, { cache: "no-store" });
-    if (!response.ok) return;
-    const kmuh = await response.json();
-    mergeExternalSchedule(kmuh);
-  } catch (error) {
-    console.info("Using bundled demo schedule because external data could not be loaded.", error);
+  const sources = ["./data/okayama.json", "./data/kmuh.json"];
+  for (const sourceUrl of sources) {
+    try {
+      const response = await fetch(`${sourceUrl}?v=${DATA_VERSION}`, { cache: "no-store" });
+      if (!response.ok) continue;
+      const schedule = await response.json();
+      mergeExternalSchedule(schedule);
+    } catch (error) {
+      console.info(`Using bundled demo schedule because ${sourceUrl} could not be loaded.`, error);
+    }
   }
 }
 

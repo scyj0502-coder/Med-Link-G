@@ -1,11 +1,16 @@
 {
-  "syncedAt": "2026-05-07T14:50:07.612860+00:00",
+  "syncedAt": "2026-05-07T15:50:45.264837+00:00",
   "input": "data\\sources.sample.csv",
   "ocr": {
-    "available": false,
-    "executable": "",
-    "languages": [],
-    "note": "本機尚未偵測到 Tesseract OCR；圖片型 PDF 會先標示待 OCR。"
+    "available": true,
+    "executable": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+    "languages": [
+      "chi_tra",
+      "eng",
+      "osd"
+    ],
+    "hasChineseTraditional": true,
+    "note": "已偵測到 Tesseract；若有 chi_tra 語言包即可解析繁體中文。"
   },
   "registryErrors": [],
   "sources": [
@@ -28,7 +33,7 @@
         "note": ""
       },
       "status": "ok",
-      "message": "高雄醫學大學附設醫院-岡山醫院 是圖片型 PDF，需安裝 Tesseract OCR 後才能解析醫師診次。",
+      "message": "高雄醫學大學附設醫院-岡山醫院 是圖片型 PDF，可進入 OCR 解析階段。",
       "inspection": {
         "sourceKind": "PDF",
         "contentType": "application/pdf",
