@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260507f";
+const DATA_VERSION = "20260508a";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -568,9 +568,15 @@ function bindEvents() {
 function applyFilters(announce) {
   state.filters = { ...state.draftFilters };
   state.selectedWeekday = null;
+  const filtered = getFilteredAppointments();
+  const nextDate = findNearestAppointmentDate(filtered, state.selectedDate);
+  if (nextDate) {
+    state.selectedDate = nextDate;
+    state.viewedDate = new Date(nextDate);
+  }
   render();
   if (announce) {
-    showToast(`查詢完成：符合條件 ${getFilteredAppointments().length} 筆診次。`);
+    showToast(`查詢完成：符合條件 ${filtered.length} 筆診次。`);
   }
 }
 
@@ -688,7 +694,9 @@ function renderAppointments(filtered) {
   });
 
   if (!list.length) {
-    elements.appointmentList.innerHTML = `<div class="empty-state">目前條件沒有診次，可調整地區、醫院、科別或醫師後按「套用查詢」。</div>`;
+    const nearest = findNearestAppointmentDate(filtered, state.selectedDate);
+    const hint = nearest ? `最近有診日期：${formatDate(nearest)}，可點月曆該日查看。` : "可調整地區、醫院、科別或醫師後按「套用查詢」。";
+    elements.appointmentList.innerHTML = `<div class="empty-state">目前選定日期沒有診次。${hint}</div>`;
     return;
   }
 
@@ -754,6 +762,14 @@ function getFilteredAppointments() {
       && (state.filters.department === ALL || item.doctor.department === state.filters.department)
       && (state.filters.doctor === ALL || item.doctor.name === state.filters.doctor);
   });
+}
+
+function findNearestAppointmentDate(items, fromDate) {
+  if (!items.length) return null;
+  const fromTime = new Date(toIsoDate(fromDate)).getTime();
+  const dates = unique(items.map((item) => item.date));
+  const future = dates.find((date) => new Date(date).getTime() >= fromTime);
+  return new Date(`${future || dates[0]}T00:00:00`);
 }
 
 function matchesRegion(hospital) {
