@@ -66,7 +66,7 @@ GitHub Pages 重新部署後，前端會自動讀取新版高醫資料。
 Google Sheet 建議欄位：
 
 ```text
-醫院名稱 | 科別 | 門診連結位置 | 狀態 | 備註
+區域 | 醫院簡稱 | 醫院全名 | 分院名稱 | 科別 | 來源類型 | 門診連結位置 | 狀態 | 備註
 ```
 
 目前先用 `data/sources.sample.csv` 模擬 Google Sheet。檢查方式：
@@ -80,3 +80,4 @@ python backend\sources\source_registry.py --input data\sources.sample.csv
 - `狀態 = 啟用`：系統會讀取
 - `狀態 = 停用` 或空白：系統跳過
 - `科別` 可用逗號分隔多個科別，例如 `心臟血管內科,肝膽內科`
+- `來源類型` 目前可先填 `PDF`，之後可擴充 `HTML`、`API` 或 `Google Sheet`

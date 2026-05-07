@@ -12,8 +12,13 @@ ENABLED = "啟用"
 
 @dataclass(frozen=True)
 class SourceRow:
+    region: str
+    hospital_short_name: str
+    hospital_full_name: str
+    branch_name: str
     hospital_name: str
     departments: list[str]
+    source_type: str
     schedule_url: str
     status: str
     note: str = ""
@@ -30,14 +35,27 @@ def read_sources(path: Path) -> list[SourceRow]:
 
 
 def normalize_row(row: dict[str, str]) -> SourceRow:
+    region = (row.get("區域") or "").strip()
+    hospital_short_name = (row.get("醫院簡稱") or "").strip()
+    hospital_full_name = (row.get("醫院全名") or row.get("醫院名稱") or "").strip()
+    branch_name = (row.get("分院名稱") or "").strip()
+    hospital_name = (row.get("醫院名稱") or "").strip()
+    if not hospital_name:
+        hospital_name = "-".join(value for value in [hospital_full_name, branch_name] if value)
+
     departments = [
         value.strip()
         for value in (row.get("科別") or "").replace("，", ",").split(",")
         if value.strip()
     ]
     return SourceRow(
-        hospital_name=(row.get("醫院名稱") or "").strip(),
+        region=region,
+        hospital_short_name=hospital_short_name,
+        hospital_full_name=hospital_full_name,
+        branch_name=branch_name,
+        hospital_name=hospital_name,
         departments=departments,
+        source_type=(row.get("來源類型") or "").strip(),
         schedule_url=(row.get("門診連結位置") or "").strip(),
         status=(row.get("狀態") or ENABLED).strip(),
         note=(row.get("備註") or "").strip(),
@@ -50,7 +68,7 @@ def validate_sources(rows: list[SourceRow]) -> list[str]:
         if not row.enabled:
             continue
         if not row.hospital_name:
-            errors.append(f"第 {index} 列：醫院名稱不可空白")
+            errors.append(f"第 {index} 列：醫院全名或醫院名稱不可空白")
         if not row.departments:
             errors.append(f"第 {index} 列：科別不可空白")
         if not row.schedule_url.startswith(("http://", "https://")):

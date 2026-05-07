@@ -63,7 +63,7 @@ python backend\sources\source_registry.py --input data\sources.sample.csv
 CSV 欄位：
 
 ```text
-醫院名稱,科別,門診連結位置,狀態,備註
+區域,醫院簡稱,醫院全名,分院名稱,科別,來源類型,門診連結位置,狀態,備註
 ```
 
 未來改接 Google Sheets API 時，維持相同欄位即可。
