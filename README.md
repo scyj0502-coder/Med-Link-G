@@ -81,6 +81,12 @@ python backend\sources\source_registry.py --input data\sources.sample.csv
 python backend\sources\source_registry.py --input data\sources.sample.csv --output data\source-registry.json
 ```
 
+檢查來源是否可解析，並產生同步診斷：
+
+```powershell
+python backend\sources\source_sync.py --input data\sources.sample.csv --output data\source-sync-status.json
+```
+
 規則：
 
 - `狀態 = 啟用`：系統會讀取

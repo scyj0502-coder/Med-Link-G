@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260507c";
+const DATA_VERSION = "20260507d";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -237,6 +237,7 @@ const state = {
   filters: { ...defaultFilters },
   draftFilters: { ...defaultFilters },
   favorites: JSON.parse(localStorage.getItem("medlink:favorites") || "[]"),
+  sourceStatus: null,
   deferredInstallPrompt: null
 };
 
@@ -316,6 +317,7 @@ function buildAppointments() {
         sourceDepartment: template.sourceDepartment || doctor.department,
         category: template.category || doctor.department,
         sourceUrl: template.sourceUrl || doctor.sourceUrl || "",
+        sourceStatus: template.sourceStatus || null,
         syncPending: Boolean(template.syncPending),
         status,
         note,
@@ -329,6 +331,7 @@ function buildAppointments() {
 }
 
 async function init() {
+  await loadSourceSyncStatus();
   await loadSourceRegistry();
   await loadExternalSchedules();
   appointments = buildAppointments();
@@ -338,6 +341,17 @@ async function init() {
   updateSyncInfo();
   applyFilters(false);
   registerPwa();
+}
+
+async function loadSourceSyncStatus() {
+  if (location.protocol === "file:") return;
+  try {
+    const response = await fetch(`./data/source-sync-status.json?v=${DATA_VERSION}`, { cache: "no-store" });
+    if (!response.ok) return;
+    state.sourceStatus = await response.json();
+  } catch (error) {
+    console.info("Source sync status could not be loaded.", error);
+  }
 }
 
 async function loadExternalSchedules() {
@@ -372,7 +386,8 @@ function mergeSourceRegistry(payload) {
     const hospital = upsertSourceHospital(source, sourceIndex);
     const sourceType = source.source_type || "來源";
     const isPdf = sourceType.toUpperCase() === "PDF";
-    const pendingNote = source.note || `${hospital.branch}門診${sourceType}已啟用；${isPdf ? "待 OCR 解析後更新醫師與診次" : "待解析後更新醫師與診次"}。`;
+    const sourceStatus = findSourceStatus(source);
+    const pendingNote = source.note || sourceStatus?.message || `${hospital.branch}門診${sourceType}已啟用；${isPdf ? "待 OCR 解析後更新醫師與診次" : "待解析後更新醫師與診次"}。`;
 
     (source.departments || []).forEach((department, departmentIndex) => {
       const doctorId = `source-${hospital.id}-${sourceIndex + 1}-${departmentIndex + 1}`;
@@ -398,12 +413,18 @@ function mergeSourceRegistry(payload) {
           sourceDepartment: department,
           category: department,
           sourceUrl: source.schedule_url,
+          sourceStatus,
           syncPending: true,
           pendingNote
         });
       }
     });
   });
+}
+
+function findSourceStatus(source) {
+  const items = state.sourceStatus?.sources || [];
+  return items.find((item) => item.source?.schedule_url === source.schedule_url);
 }
 
 function upsertSourceHospital(source, sourceIndex) {
@@ -787,11 +808,26 @@ function openDetail(id) {
       <div><span>PDF 科別/診別</span><strong>${item.sourceDepartment}</strong></div>
       <div><span>醫師專長</span><strong>${item.doctor.specialty}</strong></div>
       <div><span>追蹤狀態</span><strong>${isFavorite(item.doctor.id) ? "已收藏，優先推播" : "尚未收藏"}</strong></div>
+      ${item.sourceUrl ? `<div><span>來源網址</span><strong><a href="${item.sourceUrl}" target="_blank" rel="noopener">開啟門診來源</a></strong></div>` : ""}
+      ${item.sourceStatus ? `<div><span>同步狀態</span><strong>${sourceStatusLabel(item.sourceStatus)}</strong></div>` : ""}
     </div>
     ${item.substitute ? `<div class="change-note">代診醫師：${item.substitute}</div>` : ""}
     ${item.note ? `<div class="change-note">${item.note}</div>` : ""}
+    ${item.sourceStatus?.inspection ? `<div class="change-note">${sourceInspectionLabel(item.sourceStatus.inspection)}</div>` : ""}
   `;
   elements.detailDialog.showModal();
+}
+
+function sourceStatusLabel(status) {
+  if (status.inspection?.requiresOcr) return "圖片型 PDF，待 OCR";
+  if (status.status === "ok") return "來源可讀取";
+  return "來源讀取異常";
+}
+
+function sourceInspectionLabel(inspection) {
+  const pageCount = inspection.pageCount ? `${inspection.pageCount} 頁` : "頁數未明";
+  const textChars = Number.isFinite(inspection.textChars) ? `${inspection.textChars} 字` : "文字數未明";
+  return `來源診斷：${inspection.sourceKind || "來源"}，${pageCount}，可抽取文字 ${textChars}。`;
 }
 
 function openNavigation(id) {
