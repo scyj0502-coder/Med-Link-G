@@ -1,6 +1,7 @@
 const ALL = "全部";
 
 const hospitals = [
+  { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "高醫岡山醫院", lat: 22.7966, lng: 120.2946 },
   { id: "ncku", region: "台南", name: "成大醫院", branch: "總院", lat: 23.0015, lng: 120.2197 },
   { id: "chi-mei", region: "台南", name: "奇美醫院", branch: "永康院區", lat: 23.0202, lng: 120.2216 },
   { id: "tainan-municipal", region: "台南", name: "台南市立醫院", branch: "崇德院區", lat: 22.9731, lng: 120.2237 },
@@ -156,6 +157,11 @@ const doctorSeed = {
   ]
 };
 
+const sourceRegistryDoctors = [
+  { id: "kmugh-source-01", name: "待同步", department: "心臟血管內科", specialty: "來源清單已啟用，等待岡山 PDF OCR 解析", hospitalId: "kmugh" },
+  { id: "kmugh-source-02", name: "待同步", department: "肝膽內科", specialty: "來源清單已啟用，等待岡山 PDF OCR 解析", hospitalId: "kmugh" }
+];
+
 const periodCycle = ["上午", "下午", "夜診"];
 const weekdayCycle = [[1, 3, 5], [2, 4], [1, 4], [2, 5], [3, 5], [2, 4, 6]];
 const roomPrefix = {
@@ -195,22 +201,31 @@ const roomPrefix = {
   "過敏免疫風濕科": "免疫"
 };
 
-let doctors = Object.entries(doctorSeed).flatMap(([hospitalId, rows]) =>
-  rows.map(([name, department, specialty], index) => ({
-    id: `${hospitalId}-${String(index + 1).padStart(2, "0")}`,
-    name,
-    department,
-    specialty,
-    hospitalId
-  }))
-);
+let doctors = [
+  ...sourceRegistryDoctors,
+  ...Object.entries(doctorSeed).flatMap(([hospitalId, rows]) =>
+    rows.map(([name, department, specialty], index) => ({
+      id: `${hospitalId}-${String(index + 1).padStart(2, "0")}`,
+      name,
+      department,
+      specialty,
+      hospitalId
+    }))
+  )
+];
 
-let sessionTemplates = doctors.map((doctor, index) => ({
-  doctorId: doctor.id,
-  weekdays: weekdayCycle[index % weekdayCycle.length],
-  period: periodCycle[index % periodCycle.length],
-  room: `${roomPrefix[doctor.department] || "門診"}${String((index % 9) + 1).padStart(2, "0")}`
-}));
+let sessionTemplates = [
+  { doctorId: "kmugh-source-01", weekdays: [1, 2, 3, 4, 5], period: "待同步", room: "來源清單：心臟血管內科", syncPending: true },
+  { doctorId: "kmugh-source-02", weekdays: [1, 2, 3, 4, 5], period: "待同步", room: "來源清單：肝膽內科", syncPending: true },
+  ...doctors
+    .filter((doctor) => doctor.hospitalId !== "kmugh")
+    .map((doctor, index) => ({
+      doctorId: doctor.id,
+      weekdays: weekdayCycle[index % weekdayCycle.length],
+      period: periodCycle[index % periodCycle.length],
+      room: `${roomPrefix[doctor.department] || "門診"}${String((index % 9) + 1).padStart(2, "0")}`
+    }))
+];
 
 const weekdayNames = ["日", "一", "二", "三", "四", "五", "六"];
 const statusMap = {
@@ -285,7 +300,10 @@ function buildAppointments() {
       let note = "";
       let substitute = "";
 
-      if (date.getDate() === 8 && index % 13 === 2) {
+      if (template.syncPending) {
+        status = "changed";
+        note = "來源清單已啟用；岡山門診 PDF 為圖片型，待 OCR 解析後更新醫師與診次。";
+      } else if (date.getDate() === 8 && index % 13 === 2) {
         status = "cancelled";
         note = "醫師臨時請假，官網於 08:00 同步時偵測停診。";
       } else if (date.getDate() === 15 && index % 11 === 4) {
@@ -310,6 +328,7 @@ function buildAppointments() {
         rawClinic: template.rawClinic || template.room,
         sourceDepartment: template.sourceDepartment || doctor.department,
         category: template.category || doctor.department,
+        syncPending: Boolean(template.syncPending),
         status,
         note,
         substitute,
