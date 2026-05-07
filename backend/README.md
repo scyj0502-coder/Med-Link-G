@@ -51,3 +51,19 @@ python backend\sources\kmuh_sync.py --output data\kmuh.json
 - `stats`: 診別、科別、醫師、診次數量
 
 目前 PDF 表格中的特殊備註已保留在來源欄位，完整停代診比對會在下一階段處理。
+
+## 資料來源清單
+
+先用 CSV 模擬 Google Sheet：
+
+```powershell
+python backend\sources\source_registry.py --input data\sources.sample.csv
+```
+
+CSV 欄位：
+
+```text
+醫院名稱,科別,門診連結位置,狀態,備註
+```
+
+未來改接 Google Sheets API 時，維持相同欄位即可。
