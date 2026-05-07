@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260507e";
+const DATA_VERSION = "20260507f";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -680,7 +680,7 @@ function renderAppointments(filtered) {
     .sort((a, b) => `${a.date}${a.period}`.localeCompare(`${b.date}${b.period}`, "zh-Hant"));
 
   elements.selectedDateTitle.textContent = weekday === null
-    ? `${formatDate(state.selectedDate)} 診次`
+    ? `${formatDate(state.selectedDate)} 診次（當日，不是全科全部醫師）`
     : `星期${weekdayNames[weekday]}週表`;
 
   elements.weekdayFilter.querySelectorAll("button").forEach((button) => {
@@ -735,9 +735,12 @@ function updateQuerySummary(filtered = getFilteredAppointments()) {
     .map(([key, value]) => `${filterLabel(key)}：${value}`);
   const isDirty = JSON.stringify(state.draftFilters) !== JSON.stringify(state.filters);
   const base = activeParts.length ? activeParts.join("、") : "全部院所與科別";
+  const doctorNames = unique(filtered.map((item) => item.doctor.name));
+  const doctorPreview = doctorNames.slice(0, 12).join("、");
+  const moreText = doctorNames.length > 12 ? ` 等 ${doctorNames.length} 位` : "";
   elements.querySummary.textContent = isDirty
     ? `條件已變更，請按「套用查詢」。草稿：${draftParts.join("、") || "全部"}`
-    : `目前顯示 ${base}，共 ${filtered.length} 筆診次。`;
+    : `目前顯示 ${base}，共 ${filtered.length} 筆診次；符合醫師 ${doctorNames.length} 位：${doctorPreview}${moreText || "。"}`;
 }
 
 function getFilteredAppointments() {
