@@ -60,6 +60,12 @@ python backend\sources\kmuh_sync.py --output data\kmuh.json
 python backend\sources\source_registry.py --input data\sources.sample.csv
 ```
 
+產生前端讀取用 JSON：
+
+```powershell
+python backend\sources\source_registry.py --input data\sources.sample.csv --output data\source-registry.json
+```
+
 CSV 欄位：
 
 ```text

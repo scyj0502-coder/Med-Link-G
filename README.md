@@ -75,6 +75,12 @@ Google Sheet 建議欄位：
 python backend\sources\source_registry.py --input data\sources.sample.csv
 ```
 
+產生前端讀取用 JSON：
+
+```powershell
+python backend\sources\source_registry.py --input data\sources.sample.csv --output data\source-registry.json
+```
+
 規則：
 
 - `狀態 = 啟用`：系統會讀取

@@ -1,7 +1,8 @@
 const ALL = "全部";
+const DATA_VERSION = "20260507c";
 
 const hospitals = [
-  { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "高醫岡山醫院", lat: 22.7966, lng: 120.2946 },
+  { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
   { id: "ncku", region: "台南", name: "成大醫院", branch: "總院", lat: 23.0015, lng: 120.2197 },
   { id: "chi-mei", region: "台南", name: "奇美醫院", branch: "永康院區", lat: 23.0202, lng: 120.2216 },
   { id: "tainan-municipal", region: "台南", name: "台南市立醫院", branch: "崇德院區", lat: 22.9731, lng: 120.2237 },
@@ -157,11 +158,6 @@ const doctorSeed = {
   ]
 };
 
-const sourceRegistryDoctors = [
-  { id: "kmugh-source-01", name: "待同步", department: "心臟血管內科", specialty: "來源清單已啟用，等待岡山 PDF OCR 解析", hospitalId: "kmugh" },
-  { id: "kmugh-source-02", name: "待同步", department: "肝膽內科", specialty: "來源清單已啟用，等待岡山 PDF OCR 解析", hospitalId: "kmugh" }
-];
-
 const periodCycle = ["上午", "下午", "夜診"];
 const weekdayCycle = [[1, 3, 5], [2, 4], [1, 4], [2, 5], [3, 5], [2, 4, 6]];
 const roomPrefix = {
@@ -201,31 +197,22 @@ const roomPrefix = {
   "過敏免疫風濕科": "免疫"
 };
 
-let doctors = [
-  ...sourceRegistryDoctors,
-  ...Object.entries(doctorSeed).flatMap(([hospitalId, rows]) =>
-    rows.map(([name, department, specialty], index) => ({
-      id: `${hospitalId}-${String(index + 1).padStart(2, "0")}`,
-      name,
-      department,
-      specialty,
-      hospitalId
-    }))
-  )
-];
+let doctors = Object.entries(doctorSeed).flatMap(([hospitalId, rows]) =>
+  rows.map(([name, department, specialty], index) => ({
+    id: `${hospitalId}-${String(index + 1).padStart(2, "0")}`,
+    name,
+    department,
+    specialty,
+    hospitalId
+  }))
+);
 
-let sessionTemplates = [
-  { doctorId: "kmugh-source-01", weekdays: [1, 2, 3, 4, 5], period: "待同步", room: "來源清單：心臟血管內科", syncPending: true },
-  { doctorId: "kmugh-source-02", weekdays: [1, 2, 3, 4, 5], period: "待同步", room: "來源清單：肝膽內科", syncPending: true },
-  ...doctors
-    .filter((doctor) => doctor.hospitalId !== "kmugh")
-    .map((doctor, index) => ({
-      doctorId: doctor.id,
-      weekdays: weekdayCycle[index % weekdayCycle.length],
-      period: periodCycle[index % periodCycle.length],
-      room: `${roomPrefix[doctor.department] || "門診"}${String((index % 9) + 1).padStart(2, "0")}`
-    }))
-];
+let sessionTemplates = doctors.map((doctor, index) => ({
+  doctorId: doctor.id,
+  weekdays: weekdayCycle[index % weekdayCycle.length],
+  period: periodCycle[index % periodCycle.length],
+  room: `${roomPrefix[doctor.department] || "門診"}${String((index % 9) + 1).padStart(2, "0")}`
+}));
 
 const weekdayNames = ["日", "一", "二", "三", "四", "五", "六"];
 const statusMap = {
@@ -302,7 +289,7 @@ function buildAppointments() {
 
       if (template.syncPending) {
         status = "changed";
-        note = "來源清單已啟用；岡山門診 PDF 為圖片型，待 OCR 解析後更新醫師與診次。";
+        note = template.pendingNote || "來源清單已啟用；待解析後更新醫師與診次。";
       } else if (date.getDate() === 8 && index % 13 === 2) {
         status = "cancelled";
         note = "醫師臨時請假，官網於 08:00 同步時偵測停診。";
@@ -328,6 +315,7 @@ function buildAppointments() {
         rawClinic: template.rawClinic || template.room,
         sourceDepartment: template.sourceDepartment || doctor.department,
         category: template.category || doctor.department,
+        sourceUrl: template.sourceUrl || doctor.sourceUrl || "",
         syncPending: Boolean(template.syncPending),
         status,
         note,
@@ -341,6 +329,7 @@ function buildAppointments() {
 }
 
 async function init() {
+  await loadSourceRegistry();
   await loadExternalSchedules();
   appointments = buildAppointments();
   populateWeekdayFilter();
@@ -354,13 +343,85 @@ async function init() {
 async function loadExternalSchedules() {
   if (location.protocol === "file:") return;
   try {
-    const response = await fetch("./data/kmuh.json?v=20260507a", { cache: "no-store" });
+    const response = await fetch(`./data/kmuh.json?v=${DATA_VERSION}`, { cache: "no-store" });
     if (!response.ok) return;
     const kmuh = await response.json();
     mergeExternalSchedule(kmuh);
   } catch (error) {
     console.info("Using bundled demo schedule because external data could not be loaded.", error);
   }
+}
+
+async function loadSourceRegistry() {
+  if (location.protocol === "file:") return;
+  try {
+    const response = await fetch(`./data/source-registry.json?v=${DATA_VERSION}`, { cache: "no-store" });
+    if (!response.ok) return;
+    const registry = await response.json();
+    mergeSourceRegistry(registry);
+  } catch (error) {
+    console.info("Source registry could not be loaded; using bundled demo data only.", error);
+  }
+}
+
+function mergeSourceRegistry(payload) {
+  if (!Array.isArray(payload.enabled)) return;
+
+  payload.enabled.forEach((source, sourceIndex) => {
+    if (!source.enabled) return;
+    const hospital = upsertSourceHospital(source, sourceIndex);
+    const sourceType = source.source_type || "來源";
+    const isPdf = sourceType.toUpperCase() === "PDF";
+    const pendingNote = source.note || `${hospital.branch}門診${sourceType}已啟用；${isPdf ? "待 OCR 解析後更新醫師與診次" : "待解析後更新醫師與診次"}。`;
+
+    (source.departments || []).forEach((department, departmentIndex) => {
+      const doctorId = `source-${hospital.id}-${sourceIndex + 1}-${departmentIndex + 1}`;
+
+      if (!doctors.some((doctor) => doctor.id === doctorId)) {
+        doctors.unshift({
+          id: doctorId,
+          name: "待同步",
+          department,
+          specialty: `${sourceType} 來源清單已啟用，等待${isPdf ? " OCR" : ""}解析`,
+          hospitalId: hospital.id,
+          sourceUrl: source.schedule_url
+        });
+      }
+
+      if (!sessionTemplates.some((session) => session.doctorId === doctorId)) {
+        sessionTemplates.unshift({
+          doctorId,
+          weekdays: [1, 2, 3, 4, 5],
+          period: "待同步",
+          room: `來源清單：${department}`,
+          rawClinic: `來源清單：${department}`,
+          sourceDepartment: department,
+          category: department,
+          sourceUrl: source.schedule_url,
+          syncPending: true,
+          pendingNote
+        });
+      }
+    });
+  });
+}
+
+function upsertSourceHospital(source, sourceIndex) {
+  const name = source.hospital_full_name || source.hospital_name || source.hospital_short_name || "未命名醫院";
+  const branch = source.branch_name || "總院";
+  const existing = hospitals.find((hospital) => hospital.name === name && hospital.branch === branch);
+  if (existing) return existing;
+
+  const hospital = {
+    id: `source-hospital-${sourceIndex + 1}`,
+    region: source.region || "未分類",
+    name,
+    branch,
+    lat: 22.6273,
+    lng: 120.3014
+  };
+  hospitals.unshift(hospital);
+  return hospital;
 }
 
 function mergeExternalSchedule(payload) {

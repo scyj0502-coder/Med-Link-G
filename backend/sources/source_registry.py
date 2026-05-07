@@ -57,7 +57,7 @@ def normalize_row(row: dict[str, str]) -> SourceRow:
         departments=departments,
         source_type=(row.get("來源類型") or "").strip(),
         schedule_url=(row.get("門診連結位置") or "").strip(),
-        status=(row.get("狀態") or ENABLED).strip(),
+        status=(row.get("狀態") or "").strip(),
         note=(row.get("備註") or "").strip(),
     )
 

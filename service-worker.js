@@ -1,11 +1,12 @@
-const CACHE_NAME = "med-link-v7";
+const CACHE_NAME = "med-link-v8";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260507b",
-  "./app.js?v=20260507b",
-  "./manifest.webmanifest?v=20260507b",
-  "./data/kmuh.json?v=20260507b",
+  "./styles.css?v=20260507c",
+  "./app.js?v=20260507c",
+  "./manifest.webmanifest?v=20260507c",
+  "./data/kmuh.json?v=20260507c",
+  "./data/source-registry.json?v=20260507c",
   "./icon.svg"
 ];
 

@@ -1,0 +1,22 @@
+{
+  "enabled": [
+    {
+      "region": "高雄",
+      "hospital_short_name": "高醫",
+      "hospital_full_name": "高雄醫學大學附設醫院",
+      "branch_name": "岡山醫院",
+      "hospital_name": "高雄醫學大學附設醫院-岡山醫院",
+      "departments": [
+        "心臟血管內科",
+        "肝膽內科"
+      ],
+      "source_type": "PDF",
+      "schedule_url": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "status": "啟用",
+      "note": "",
+      "enabled": true
+    }
+  ],
+  "disabled": [],
+  "errors": []
+}
