@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260511b";
+const DATA_VERSION = "20260511c";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
