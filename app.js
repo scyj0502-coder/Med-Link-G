@@ -235,6 +235,7 @@ const state = {
   selectedDate: new Date(),
   selectedWeekday: null,
   viewMode: "dashboard",
+  reviewStatusFilter: ALL,
   filters: { ...defaultFilters },
   draftFilters: { ...defaultFilters },
   favorites: JSON.parse(localStorage.getItem("medlink:favorites") || "[]"),
@@ -277,7 +278,9 @@ const elements = {
   validationList: $("#validationList"),
   importValidation: $("#importValidation"),
   exportValidation: $("#exportValidation"),
+  confirmVisibleValidation: $("#confirmVisibleValidation"),
   validationFile: $("#validationFile"),
+  reviewFilter: $("#reviewFilter"),
   workspace: $(".workspace"),
   metrics: $(".metrics")
 };
@@ -548,6 +551,7 @@ function bindEvents() {
   elements.exportValidation.addEventListener("click", exportValidationJson);
   elements.importValidation.addEventListener("click", () => elements.validationFile.click());
   elements.validationFile.addEventListener("change", importValidationJson);
+  elements.confirmVisibleValidation.addEventListener("click", confirmVisibleValidationItems);
 
   $("#resetFilters").addEventListener("click", () => {
     state.filters = { ...defaultFilters };
@@ -777,11 +781,15 @@ function renderAppointments(filtered) {
 function renderValidation(filtered) {
   if (state.viewMode !== "validation") return;
   const items = buildValidationItems(filtered);
+  const visibleItems = items.filter((item) =>
+    state.reviewStatusFilter === ALL || verificationFor(item).status === state.reviewStatusFilter
+  );
   const counts = {
     pending: items.filter((item) => verificationFor(item).status === "pending").length,
     confirmed: items.filter((item) => verificationFor(item).status === "confirmed").length,
     issue: items.filter((item) => verificationFor(item).status === "issue").length
   };
+  renderReviewFilter(counts);
   elements.validationSummary.innerHTML = `
     <article><span>待確認</span><strong>${counts.pending}</strong></article>
     <article><span>已人工確認</span><strong>${counts.confirmed}</strong></article>
@@ -789,12 +797,12 @@ function renderValidation(filtered) {
     <article><span>樣板診次</span><strong>${items.length}</strong></article>
   `;
 
-  if (!items.length) {
+  if (!visibleItems.length) {
     elements.validationList.innerHTML = `<div class="empty-state">目前篩選條件沒有可驗證診次。</div>`;
     return;
   }
 
-  elements.validationList.innerHTML = items.map((item) => {
+  elements.validationList.innerHTML = visibleItems.map((item) => {
     const verification = verificationFor(item);
     return `
       <article class="validation-card ${verification.status}">
@@ -835,6 +843,24 @@ function renderValidation(filtered) {
   });
   elements.validationList.querySelectorAll("[data-review-note]").forEach((textarea) => {
     textarea.addEventListener("change", () => updateVerification(textarea.dataset.reviewNote, { note: textarea.value }));
+  });
+}
+
+function renderReviewFilter(counts) {
+  const options = [
+    [ALL, `全部 ${counts.pending + counts.confirmed + counts.issue}`],
+    ["pending", `待確認 ${counts.pending}`],
+    ["confirmed", `已確認 ${counts.confirmed}`],
+    ["issue", `有疑問 ${counts.issue}`]
+  ];
+  elements.reviewFilter.innerHTML = options.map(([value, label]) => `
+    <button type="button" class="${state.reviewStatusFilter === value ? "active" : ""}" data-review-filter="${value}">${label}</button>
+  `).join("");
+  elements.reviewFilter.querySelectorAll("[data-review-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.reviewStatusFilter = button.dataset.reviewFilter;
+      render();
+    });
   });
 }
 
@@ -927,6 +953,23 @@ async function importValidationJson(event) {
   } finally {
     event.target.value = "";
   }
+}
+
+function confirmVisibleValidationItems() {
+  const items = buildValidationItems(getFilteredAppointments()).filter((item) =>
+    state.reviewStatusFilter === ALL || verificationFor(item).status === state.reviewStatusFilter
+  );
+  items.forEach((item) => {
+    const previous = verificationFor(item);
+    state.verifications[item.validationKey] = {
+      ...previous,
+      status: "confirmed",
+      updatedAt: new Date().toISOString()
+    };
+  });
+  localStorage.setItem("medlink:verifications", JSON.stringify(state.verifications));
+  showToast(`已將目前清單 ${items.length} 筆標為已人工確認。`);
+  render();
 }
 
 function verificationLabel(status) {

@@ -148,10 +148,12 @@
             <div class="top-actions">
               <button class="ghost-button" id="importValidation" type="button">匯入校正 JSON</button>
               <button class="ghost-button" id="exportValidation" type="button">匯出校正 JSON</button>
+              <button class="ghost-button" id="confirmVisibleValidation" type="button">目前清單全確認</button>
               <button class="ghost-button" id="closeValidation" type="button">返回看板</button>
               <input id="validationFile" type="file" accept="application/json,.json" hidden />
             </div>
           </div>
+          <div class="review-filter" id="reviewFilter" aria-label="校正狀態篩選"></div>
           <div class="validation-summary" id="validationSummary"></div>
           <div class="validation-list" id="validationList"></div>
         </section>
