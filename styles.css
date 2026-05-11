@@ -350,6 +350,11 @@ main {
 }
 
 .review-filter {
+  display: grid;
+  gap: 8px;
+}
+
+.review-filter-group {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

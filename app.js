@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260511c";
+const DATA_VERSION = "20260511d";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -236,6 +236,7 @@ const state = {
   selectedWeekday: null,
   viewMode: "dashboard",
   reviewStatusFilter: ALL,
+  reviewWeekdayFilter: ALL,
   filters: { ...defaultFilters },
   draftFilters: { ...defaultFilters },
   favorites: JSON.parse(localStorage.getItem("medlink:favorites") || "[]"),
@@ -783,6 +784,8 @@ function renderValidation(filtered) {
   const items = buildValidationItems(filtered);
   const visibleItems = items.filter((item) =>
     state.reviewStatusFilter === ALL || verificationFor(item).status === state.reviewStatusFilter
+  ).filter((item) =>
+    state.reviewWeekdayFilter === ALL || item.weekday === Number(state.reviewWeekdayFilter)
   );
   const counts = {
     pending: items.filter((item) => verificationFor(item).status === "pending").length,
@@ -853,12 +856,28 @@ function renderReviewFilter(counts) {
     ["confirmed", `已確認 ${counts.confirmed}`],
     ["issue", `有疑問 ${counts.issue}`]
   ];
-  elements.reviewFilter.innerHTML = options.map(([value, label]) => `
-    <button type="button" class="${state.reviewStatusFilter === value ? "active" : ""}" data-review-filter="${value}">${label}</button>
-  `).join("");
+  const weekdays = [[ALL, "全部星期"], ...weekdayNames.map((label, index) => [String(index), `星期${label}`])];
+  elements.reviewFilter.innerHTML = `
+    <div class="review-filter-group">
+      ${options.map(([value, label]) => `
+        <button type="button" class="${state.reviewStatusFilter === value ? "active" : ""}" data-review-filter="${value}">${label}</button>
+      `).join("")}
+    </div>
+    <div class="review-filter-group">
+      ${weekdays.map(([value, label]) => `
+        <button type="button" class="${String(state.reviewWeekdayFilter) === value ? "active" : ""}" data-review-weekday="${value}">${label}</button>
+      `).join("")}
+    </div>
+  `;
   elements.reviewFilter.querySelectorAll("[data-review-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.reviewStatusFilter = button.dataset.reviewFilter;
+      render();
+    });
+  });
+  elements.reviewFilter.querySelectorAll("[data-review-weekday]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.reviewWeekdayFilter = button.dataset.reviewWeekday;
       render();
     });
   });
@@ -958,6 +977,8 @@ async function importValidationJson(event) {
 function confirmVisibleValidationItems() {
   const items = buildValidationItems(getFilteredAppointments()).filter((item) =>
     state.reviewStatusFilter === ALL || verificationFor(item).status === state.reviewStatusFilter
+  ).filter((item) =>
+    state.reviewWeekdayFilter === ALL || item.weekday === Number(state.reviewWeekdayFilter)
   );
   items.forEach((item) => {
     const previous = verificationFor(item);
