@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260511i";
+const DATA_VERSION = "20260511k";
 const REVIEW_ATTENTION = "需處理";
 
 const hospitals = [
@@ -591,6 +591,7 @@ function bindEvents() {
 
   elements.validationToggle.addEventListener("click", () => {
     state.viewMode = "validation";
+    state.reviewStatusFilter = REVIEW_ATTENTION;
     render();
   });
 
@@ -725,9 +726,7 @@ function renderMetrics(filtered) {
     return date.getMonth() === viewedMonth && date.getFullYear() === viewedYear;
   }).length;
   elements.todayTotal.textContent = filtered.filter((item) => item.date === todayIso && item.status !== "cancelled").length;
-  const report = state.changeReport?.summary || {};
-  const issueCount = (report.added || 0) + (report.removed || 0) + (report.issue || 0);
-  elements.cancelledTotal.textContent = issueCount || filtered.filter((item) => item.status === "cancelled").length;
+  elements.cancelledTotal.textContent = filtered.filter((item) => item.status !== "normal").length;
 }
 
 function renderCalendar(filtered) {
