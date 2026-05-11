@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260511a";
+const DATA_VERSION = "20260511b";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -275,7 +275,9 @@ const elements = {
   validationPanel: $("#validationPanel"),
   validationSummary: $("#validationSummary"),
   validationList: $("#validationList"),
+  importValidation: $("#importValidation"),
   exportValidation: $("#exportValidation"),
+  validationFile: $("#validationFile"),
   workspace: $(".workspace"),
   metrics: $(".metrics")
 };
@@ -544,6 +546,8 @@ function bindEvents() {
   });
 
   elements.exportValidation.addEventListener("click", exportValidationJson);
+  elements.importValidation.addEventListener("click", () => elements.validationFile.click());
+  elements.validationFile.addEventListener("change", importValidationJson);
 
   $("#resetFilters").addEventListener("click", () => {
     state.filters = { ...defaultFilters };
@@ -737,6 +741,7 @@ function renderAppointments(filtered) {
   elements.appointmentList.innerHTML = list.map((item) => {
     const status = statusMap[item.status];
     const favorite = isFavorite(item.doctor.id);
+    const verification = verificationFor(validationItemFromAppointment(item));
     return `
       <article class="appointment-card ${item.status !== "normal" ? "changed" : ""}">
         <div class="appointment-title">
@@ -746,6 +751,7 @@ function renderAppointments(filtered) {
           </div>
           <span class="status-pill ${status.className}">${status.label}</span>
         </div>
+        <span class="review-pill ${verification.status}">${verificationLabel(verification.status)}</span>
         <p class="appointment-meta">${item.date} 星期${weekdayNames[item.weekday]}｜${item.period}｜原始診別 ${item.rawClinic}</p>
         ${item.note ? `<p class="mini-alert">${item.note}</p>` : ""}
         <div class="card-actions">
@@ -835,23 +841,27 @@ function renderValidation(filtered) {
 function buildValidationItems(filtered) {
   const seen = new Set();
   return filtered
-    .map((item) => ({
-      ...item,
-      validationKey: [
-        item.hospital.id,
-        item.doctor.id,
-        item.weekday,
-        item.period,
-        item.room,
-        item.category
-      ].join("|")
-    }))
+    .map(validationItemFromAppointment)
     .filter((item) => {
       if (seen.has(item.validationKey)) return false;
       seen.add(item.validationKey);
       return true;
     })
     .sort((a, b) => `${a.category}${a.weekday}${a.period}${a.room}${a.doctor.name}`.localeCompare(`${b.category}${b.weekday}${b.period}${b.room}${b.doctor.name}`, "zh-Hant"));
+}
+
+function validationItemFromAppointment(item) {
+  return {
+    ...item,
+    validationKey: [
+      item.hospital.id,
+      item.doctor.id,
+      item.weekday,
+      item.period,
+      item.room,
+      item.category
+    ].join("|")
+  };
 }
 
 function verificationFor(item) {
@@ -891,6 +901,32 @@ function exportValidationJson() {
   link.click();
   URL.revokeObjectURL(url);
   showToast(`已匯出 ${items.length} 筆校正資料。`);
+}
+
+async function importValidationJson(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    if (!Array.isArray(payload.items)) throw new Error("校正檔缺少 items 陣列。");
+    let imported = 0;
+    payload.items.forEach((item) => {
+      if (!item.key || !item.verification) return;
+      state.verifications[item.key] = {
+        status: item.verification.status || "pending",
+        note: item.verification.note || "",
+        updatedAt: item.verification.updatedAt || new Date().toISOString()
+      };
+      imported += 1;
+    });
+    localStorage.setItem("medlink:verifications", JSON.stringify(state.verifications));
+    showToast(`已匯入 ${imported} 筆校正資料。`);
+    render();
+  } catch (error) {
+    showToast(`匯入失敗：${error.message}`);
+  } finally {
+    event.target.value = "";
+  }
 }
 
 function verificationLabel(status) {

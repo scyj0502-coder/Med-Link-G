@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0e7c7b" />
     <title>醫點通 Med-Link</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260511a" />
-    <link rel="stylesheet" href="./styles.css?v=20260511a" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260511b" />
+    <link rel="stylesheet" href="./styles.css?v=20260511b" />
   </head>
   <body>
     <div class="app-shell">
@@ -146,8 +146,10 @@
               <h2>資料可信度驗證</h2>
             </div>
             <div class="top-actions">
+              <button class="ghost-button" id="importValidation" type="button">匯入校正 JSON</button>
               <button class="ghost-button" id="exportValidation" type="button">匯出校正 JSON</button>
               <button class="ghost-button" id="closeValidation" type="button">返回看板</button>
+              <input id="validationFile" type="file" accept="application/json,.json" hidden />
             </div>
           </div>
           <div class="validation-summary" id="validationSummary"></div>
@@ -168,6 +170,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=20260511a" defer></script>
+    <script src="./app.js?v=20260511b" defer></script>
   </body>
 </html>
