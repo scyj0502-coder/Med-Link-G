@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260511d";
+const DATA_VERSION = "20260511e";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -350,6 +350,7 @@ function buildAppointments() {
 }
 
 async function init() {
+  await loadValidationBaseline();
   await loadSourceSyncStatus();
   await loadSourceRegistry();
   await loadExternalSchedules();
@@ -360,6 +361,27 @@ async function init() {
   updateSyncInfo();
   applyFilters(false);
   registerPwa();
+}
+
+async function loadValidationBaseline() {
+  if (location.protocol === "file:") return;
+  try {
+    const response = await fetch(`./data/validation-baseline.json?v=${DATA_VERSION}`, { cache: "no-store" });
+    if (!response.ok) return;
+    const baseline = await response.json();
+    const verifications = baseline.verifications || {};
+    let merged = 0;
+    Object.entries(verifications).forEach(([key, verification]) => {
+      if (state.verifications[key]) return;
+      state.verifications[key] = verification;
+      merged += 1;
+    });
+    if (merged) {
+      localStorage.setItem("medlink:verifications", JSON.stringify(state.verifications));
+    }
+  } catch (error) {
+    console.info("Validation baseline could not be loaded.", error);
+  }
 }
 
 async function loadSourceSyncStatus() {

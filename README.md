@@ -104,6 +104,12 @@ python backend\sources\okayama_schedule.py --output data\okayama.json
 
 校正狀態與備註目前先存在瀏覽器 `localStorage`，可用 `匯出校正 JSON` 下載，後續再轉成正式人工校正版資料來源。
 
+匯出的校正 JSON 可轉成前端自動載入的基準資料：
+
+```powershell
+python backend\sources\validation_baseline.py --input "C:\Users\ac778\Downloads\med-link-validation-2026-05-11 (1).json" --output data\validation-baseline.json
+```
+
 規則：
 
 - `狀態 = 啟用`：系統會讀取
