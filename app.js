@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260511f";
+const DATA_VERSION = "20260511g";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -242,6 +242,7 @@ const state = {
   favorites: JSON.parse(localStorage.getItem("medlink:favorites") || "[]"),
   verifications: JSON.parse(localStorage.getItem("medlink:verifications") || "{}"),
   sourceStatus: null,
+  changeReport: null,
   deferredInstallPrompt: null
 };
 
@@ -351,6 +352,7 @@ function buildAppointments() {
 
 async function init() {
   await loadValidationBaseline();
+  await loadChangeReport();
   await loadSourceSyncStatus();
   await loadSourceRegistry();
   await loadExternalSchedules();
@@ -381,6 +383,17 @@ async function loadValidationBaseline() {
     }
   } catch (error) {
     console.info("Validation baseline could not be loaded.", error);
+  }
+}
+
+async function loadChangeReport() {
+  if (location.protocol === "file:") return;
+  try {
+    const response = await fetch(`./data/change-report.json?v=${DATA_VERSION}`, { cache: "no-store" });
+    if (!response.ok) return;
+    state.changeReport = await response.json();
+  } catch (error) {
+    console.info("Schedule change report could not be loaded.", error);
   }
 }
 
@@ -697,7 +710,9 @@ function renderMetrics(filtered) {
     return date.getMonth() === viewedMonth && date.getFullYear() === viewedYear;
   }).length;
   elements.todayTotal.textContent = filtered.filter((item) => item.date === todayIso && item.status !== "cancelled").length;
-  elements.cancelledTotal.textContent = filtered.filter((item) => item.status === "cancelled").length;
+  const report = state.changeReport?.summary || {};
+  const issueCount = (report.added || 0) + (report.removed || 0) + (report.issue || 0);
+  elements.cancelledTotal.textContent = issueCount || filtered.filter((item) => item.status === "cancelled").length;
 }
 
 function renderCalendar(filtered) {
@@ -815,12 +830,18 @@ function renderValidation(filtered) {
     confirmed: items.filter((item) => verificationFor(item).status === "confirmed").length,
     issue: items.filter((item) => verificationFor(item).status === "issue").length
   };
+  const report = state.changeReport?.summary || {};
+  const changeSummary = state.changeReport ? `
+    <article><span>基準外新增</span><strong>${report.added || 0}</strong></article>
+    <article><span>基準移除</span><strong>${report.removed || 0}</strong></article>
+  ` : "";
   renderReviewFilter(counts);
   elements.validationSummary.innerHTML = `
     <article><span>待確認</span><strong>${counts.pending}</strong></article>
     <article><span>已人工確認</span><strong>${counts.confirmed}</strong></article>
     <article><span>有疑問</span><strong>${counts.issue}</strong></article>
     <article><span>樣板診次</span><strong>${items.length}</strong></article>
+    ${changeSummary}
   `;
 
   if (!visibleItems.length) {

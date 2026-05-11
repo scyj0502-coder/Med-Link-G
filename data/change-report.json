@@ -1,0 +1,567 @@
+{
+  "generatedAt": "2026-05-11T14:52:30.060493+00:00",
+  "schedule": "data\\okayama.json",
+  "baseline": "data\\validation-baseline.json",
+  "source": {
+    "hospitalId": "kmugh",
+    "hospitalName": "高雄醫學大學附設醫院",
+    "branch": "岡山醫院",
+    "region": "高雄",
+    "pageUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+    "pdfUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+    "syncedAt": "2026-05-07T15:50:42.512275+00:00",
+    "parser": "okayama_schedule.py",
+    "quality": "ocr-assisted-page-8-target-extract",
+    "note": "第一版先抽取來源清單指定科別：肝膽內科、心臟血管內科。表格來源為岡山 PDF 第 8 頁，後續會擴充全頁表格 OCR。"
+  },
+  "summary": {
+    "added": 11,
+    "removed": 0,
+    "pending": 12,
+    "confirmed": 8,
+    "issue": 2
+  },
+  "added": [
+    {
+      "key": "kmugh|kmugh-余明隆-肝膽內科|1|夜診|0113|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "余明隆",
+      "weekday": "星期一",
+      "period": "夜診",
+      "room": "0113",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-戴嘉言-肝膽內科|1|夜診|0113|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "戴嘉言",
+      "weekday": "星期一",
+      "period": "夜診",
+      "room": "0113",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-梁博程-肝膽內科|3|下午|0113|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "梁博程",
+      "weekday": "星期三",
+      "period": "下午",
+      "room": "0113",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-謝明彥-肝膽內科|1|上午|0113|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "謝明彥",
+      "weekday": "星期一",
+      "period": "上午",
+      "room": "0113",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-謝明彥-肝膽內科|3|夜診|0114|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "謝明彥",
+      "weekday": "星期三",
+      "period": "夜診",
+      "room": "0114",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-謝明彥-肝膽內科|5|上午|0114|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "謝明彥",
+      "weekday": "星期五",
+      "period": "上午",
+      "room": "0114",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-陳信成-肝膽內科|2|下午|0113|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "陳信成",
+      "weekday": "星期二",
+      "period": "下午",
+      "room": "0113",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-陳信成-肝膽內科|5|上午|0113|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "陳信成",
+      "weekday": "星期五",
+      "period": "上午",
+      "room": "0113",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-陳信成-肝膽內科|5|下午|0113|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "陳信成",
+      "weekday": "星期五",
+      "period": "下午",
+      "room": "0113",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-魏鈺儒-肝膽內科|4|上午|0113|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "魏鈺儒",
+      "weekday": "星期四",
+      "period": "上午",
+      "room": "0113",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-黃志富-肝膽內科|3|夜診|0113|肝膽內科",
+      "status": "added",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "肝膽內科",
+      "doctor": "黃志富",
+      "weekday": "星期三",
+      "period": "夜診",
+      "room": "0113",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "added",
+        "note": ""
+      }
+    }
+  ],
+  "removed": [],
+  "unchanged": [
+    {
+      "key": "kmugh|kmugh-吳韋聰-心臟血管內科|4|下午|0108|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "吳韋聰",
+      "weekday": "星期四",
+      "period": "下午",
+      "room": "0108",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-朱志生-心臟血管內科|2|下午|0108|心臟血管內科",
+      "status": "confirmed",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "朱志生",
+      "weekday": "星期二",
+      "period": "下午",
+      "room": "0108",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "confirmed",
+        "note": "",
+        "updatedAt": "2026-05-11T14:35:02.109Z"
+      }
+    },
+    {
+      "key": "kmugh|kmugh-李柏瀚-心臟血管內科|4|下午|0107|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "李柏瀚",
+      "weekday": "星期四",
+      "period": "下午",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-李柏瀚-心臟血管內科|5|下午|0108|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "李柏瀚",
+      "weekday": "星期五",
+      "period": "下午",
+      "room": "0108",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-李柏瀚-心臟血管內科|5|夜診|0108|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "李柏瀚",
+      "weekday": "星期五",
+      "period": "夜診",
+      "room": "0108",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-李香君-心臟血管內科|1|下午|0108|心臟血管內科",
+      "status": "confirmed",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "李香君",
+      "weekday": "星期一",
+      "period": "下午",
+      "room": "0108",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "confirmed",
+        "note": "",
+        "updatedAt": "2026-05-11T14:33:47.960Z"
+      }
+    },
+    {
+      "key": "kmugh|kmugh-李香君-心臟血管內科|3|上午|0107|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "李香君",
+      "weekday": "星期三",
+      "period": "上午",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-林宗憲-心臟血管內科|2|上午|0108|心臟血管內科",
+      "status": "confirmed",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "林宗憲",
+      "weekday": "星期二",
+      "period": "上午",
+      "room": "0108",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "confirmed",
+        "note": "",
+        "updatedAt": "2026-05-11T14:34:35.752Z"
+      }
+    },
+    {
+      "key": "kmugh|kmugh-林宗翰-心臟血管內科|2|上午|0107|心臟血管內科",
+      "status": "confirmed",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "林宗翰",
+      "weekday": "星期二",
+      "period": "上午",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "confirmed",
+        "note": "",
+        "updatedAt": "2026-05-11T14:34:30.766Z"
+      }
+    },
+    {
+      "key": "kmugh|kmugh-林宗翰-心臟血管內科|2|下午|0107|心臟血管內科",
+      "status": "issue",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "林宗翰",
+      "weekday": "星期二",
+      "period": "下午",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "issue",
+        "note": "星號代表限約診",
+        "updatedAt": "2026-05-11T14:35:00.369Z"
+      }
+    },
+    {
+      "key": "kmugh|kmugh-林宗翰-心臟血管內科|3|下午|0108|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "林宗翰",
+      "weekday": "星期三",
+      "period": "下午",
+      "room": "0108",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-郭炫孚-心臟血管內科|1|上午|0107|心臟血管內科",
+      "status": "confirmed",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "郭炫孚",
+      "weekday": "星期一",
+      "period": "上午",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "confirmed",
+        "note": "",
+        "updatedAt": "2026-05-11T14:32:24.158Z"
+      }
+    },
+    {
+      "key": "kmugh|kmugh-郭炫孚-心臟血管內科|1|下午|0107|心臟血管內科",
+      "status": "issue",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "郭炫孚",
+      "weekday": "星期一",
+      "period": "下午",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "issue",
+        "note": "星號代表限約診\n",
+        "updatedAt": "2026-05-11T14:33:31.890Z"
+      }
+    },
+    {
+      "key": "kmugh|kmugh-郭炫孚-心臟血管內科|3|下午|0107|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "郭炫孚",
+      "weekday": "星期三",
+      "period": "下午",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-郭炫孚-心臟血管內科|3|夜診|0107|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "郭炫孚",
+      "weekday": "星期三",
+      "period": "夜診",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-顏學偉-心臟血管內科|1|下午|0109|心臟血管內科",
+      "status": "confirmed",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "顏學偉",
+      "weekday": "星期一",
+      "period": "下午",
+      "room": "0109",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "confirmed",
+        "note": "",
+        "updatedAt": "2026-05-11T14:34:20.162Z"
+      }
+    },
+    {
+      "key": "kmugh|kmugh-顏學偉-心臟血管內科|2|下午|0109|心臟血管內科",
+      "status": "confirmed",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "顏學偉",
+      "weekday": "星期二",
+      "period": "下午",
+      "room": "0109",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "confirmed",
+        "note": "",
+        "updatedAt": "2026-05-11T14:35:13.395Z"
+      }
+    },
+    {
+      "key": "kmugh|kmugh-顏學偉-心臟血管內科|3|下午|0109|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "顏學偉",
+      "weekday": "星期三",
+      "period": "下午",
+      "room": "0109",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-高培恒-心臟血管內科|1|上午|0108|心臟血管內科",
+      "status": "confirmed",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "高培恒",
+      "weekday": "星期一",
+      "period": "上午",
+      "room": "0108",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "confirmed",
+        "note": "",
+        "updatedAt": "2026-05-11T14:32:33.328Z"
+      }
+    },
+    {
+      "key": "kmugh|kmugh-高培恒-心臟血管內科|4|上午|0107|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "高培恒",
+      "weekday": "星期四",
+      "period": "上午",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-高培恒-心臟血管內科|5|上午|0107|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "高培恒",
+      "weekday": "星期五",
+      "period": "上午",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    },
+    {
+      "key": "kmugh|kmugh-高培恒-心臟血管內科|5|下午|0107|心臟血管內科",
+      "status": "pending",
+      "hospital": "高雄醫學大學附設醫院 岡山醫院",
+      "department": "心臟血管內科",
+      "doctor": "高培恒",
+      "weekday": "星期五",
+      "period": "下午",
+      "room": "0107",
+      "sourcePage": 8,
+      "sourceUrl": "https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule",
+      "verification": {
+        "status": "pending",
+        "note": ""
+      }
+    }
+  ]
+}
