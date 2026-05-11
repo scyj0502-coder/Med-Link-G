@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260511e";
+const DATA_VERSION = "20260511f";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -769,6 +769,7 @@ function renderAppointments(filtered) {
     const status = statusMap[item.status];
     const favorite = isFavorite(item.doctor.id);
     const verification = verificationFor(validationItemFromAppointment(item));
+    const needsAttention = verification.status === "issue";
     return `
       <article class="appointment-card ${item.status !== "normal" ? "changed" : ""}">
         <div class="appointment-title">
@@ -778,7 +779,7 @@ function renderAppointments(filtered) {
           </div>
           <span class="status-pill ${status.className}">${status.label}</span>
         </div>
-        <span class="review-pill ${verification.status}">${verificationLabel(verification.status)}</span>
+        ${needsAttention ? `<span class="review-pill ${verification.status}">資料有疑問</span>` : ""}
         <p class="appointment-meta">${item.date} 星期${weekdayNames[item.weekday]}｜${item.period}｜原始診別 ${item.rawClinic}</p>
         ${item.note ? `<p class="mini-alert">${item.note}</p>` : ""}
         <div class="card-actions">
