@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260511h";
+const DATA_VERSION = "20260511i";
 const REVIEW_ATTENTION = "需處理";
 
 const hospitals = [
@@ -244,6 +244,7 @@ const state = {
   verifications: JSON.parse(localStorage.getItem("medlink:verifications") || "{}"),
   sourceStatus: null,
   changeReport: null,
+  sourceHospitalIds: new Set(),
   deferredInstallPrompt: null
 };
 
@@ -305,21 +306,22 @@ function buildAppointments() {
       let status = "normal";
       let note = "";
       let substitute = "";
+      const isOfficialSource = Boolean(template.sourceUrl || template.sourcePage);
 
       if (template.syncPending) {
         status = "changed";
         note = template.pendingNote || "來源清單已啟用；待解析後更新醫師與診次。";
-      } else if (date.getDate() === 8 && index % 13 === 2) {
+      } else if (!isOfficialSource && date.getDate() === 8 && index % 13 === 2) {
         status = "cancelled";
         note = "醫師臨時請假，官網於 08:00 同步時偵測停診。";
-      } else if (date.getDate() === 15 && index % 11 === 4) {
+      } else if (!isOfficialSource && date.getDate() === 15 && index % 11 === 4) {
         status = "changed";
         note = "原上午診調整為下午診，請重新安排拜訪路線。";
-      } else if (date.getDate() === 22 && index % 17 === 7) {
+      } else if (!isOfficialSource && date.getDate() === 22 && index % 17 === 7) {
         status = "substitute";
         note = "由同科醫師代診，重點醫師追蹤已觸發提醒。";
         substitute = "代診醫師";
-      } else if (date.getDay() === 5 && date.getDate() % 13 === 0 && index % 9 === 0) {
+      } else if (!isOfficialSource && date.getDay() === 5 && date.getDate() % 13 === 0 && index % 9 === 0) {
         status = "cancelled";
         note = "醫院公告臨時停診，請確認替代拜訪時段。";
       }
@@ -357,6 +359,7 @@ async function init() {
   await loadSourceSyncStatus();
   await loadSourceRegistry();
   await loadExternalSchedules();
+  pruneToSourceHospitals();
   appointments = buildAppointments();
   populateWeekdayFilter();
   populateFilters();
@@ -417,6 +420,7 @@ async function loadExternalSchedules() {
       const response = await fetch(`${sourceUrl}?v=${DATA_VERSION}`, { cache: "no-store" });
       if (!response.ok) continue;
       const schedule = await response.json();
+      if (state.sourceHospitalIds.size && !state.sourceHospitalIds.has(schedule.source?.hospitalId)) continue;
       mergeExternalSchedule(schedule);
     } catch (error) {
       console.info(`Using bundled demo schedule because ${sourceUrl} could not be loaded.`, error);
@@ -442,6 +446,7 @@ function mergeSourceRegistry(payload) {
   payload.enabled.forEach((source, sourceIndex) => {
     if (!source.enabled) return;
     const hospital = upsertSourceHospital(source, sourceIndex);
+    state.sourceHospitalIds.add(hospital.id);
     const sourceType = source.source_type || "來源";
     const isPdf = sourceType.toUpperCase() === "PDF";
     const sourceStatus = findSourceStatus(source);
@@ -478,6 +483,15 @@ function mergeSourceRegistry(payload) {
       }
     });
   });
+}
+
+function pruneToSourceHospitals() {
+  if (!state.sourceHospitalIds.size) return;
+  const activeIds = state.sourceHospitalIds;
+  hospitals.splice(0, hospitals.length, ...hospitals.filter((hospital) => activeIds.has(hospital.id)));
+  doctors = doctors.filter((doctor) => activeIds.has(doctor.hospitalId));
+  const doctorIds = new Set(doctors.map((doctor) => doctor.id));
+  sessionTemplates = sessionTemplates.filter((session) => doctorIds.has(session.doctorId));
 }
 
 function findSourceStatus(source) {
