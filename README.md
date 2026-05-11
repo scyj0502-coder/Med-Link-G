@@ -94,6 +94,16 @@ python backend\sources\okayama_ocr.py --input data\sources.sample.csv --output d
 python backend\sources\okayama_schedule.py --output data\okayama.json
 ```
 
+## 資料可信度驗證
+
+前端提供 `資料驗證` 工作台，可針對目前篩選條件下的每週診次樣板標記：
+
+- `OCR待確認`
+- `已人工確認`
+- `有疑問`
+
+校正狀態與備註目前先存在瀏覽器 `localStorage`，可用 `匯出校正 JSON` 下載，後續再轉成正式人工校正版資料來源。
+
 規則：
 
 - `狀態 = 啟用`：系統會讀取

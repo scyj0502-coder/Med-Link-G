@@ -79,6 +79,10 @@ python backend\sources\okayama_ocr.py --input data\sources.sample.csv --output d
 python backend\sources\okayama_schedule.py --output data\okayama.json
 ```
 
+## 人工校正資料流
+
+前端 `資料驗證` 工作台會先把校正狀態存在瀏覽器 `localStorage`，並可匯出 JSON。下一階段可將匯出的校正 JSON 轉為正式 `data/*-verified.json`，讓人工確認資料優先於 OCR 初稿。
+
 CSV 欄位：
 
 ```text
