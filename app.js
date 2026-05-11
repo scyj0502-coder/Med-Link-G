@@ -1,6 +1,7 @@
 const ALL = "全部";
-const DATA_VERSION = "20260511k";
+const DATA_VERSION = "20260511l";
 const REVIEW_ATTENTION = "需處理";
+const ADMIN_MODE = new URLSearchParams(location.search).get("admin") === "1";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -236,6 +237,7 @@ const state = {
   selectedDate: new Date(),
   selectedWeekday: null,
   viewMode: "dashboard",
+  adminMode: ADMIN_MODE,
   reviewStatusFilter: REVIEW_ATTENTION,
   reviewWeekdayFilter: ALL,
   filters: { ...defaultFilters },
@@ -589,11 +591,16 @@ function bindEvents() {
 
   $("#applyFilters").addEventListener("click", () => applyFilters(true));
 
-  elements.validationToggle.addEventListener("click", () => {
-    state.viewMode = "validation";
-    state.reviewStatusFilter = REVIEW_ATTENTION;
-    render();
-  });
+  if (state.adminMode) {
+    elements.validationToggle.removeAttribute("hidden");
+    elements.validationToggle.addEventListener("click", () => {
+      state.viewMode = "validation";
+      state.reviewStatusFilter = REVIEW_ATTENTION;
+      render();
+    });
+  } else {
+    elements.validationToggle.setAttribute("hidden", "");
+  }
 
   elements.closeValidation.addEventListener("click", () => {
     state.viewMode = "dashboard";
@@ -703,6 +710,9 @@ function populateWeekdayFilter() {
 }
 
 function render() {
+  if (!state.adminMode && state.viewMode === "validation") {
+    state.viewMode = "dashboard";
+  }
   const filtered = getFilteredAppointments();
   renderMetrics(filtered);
   renderCalendar(filtered);
@@ -714,7 +724,7 @@ function render() {
   elements.workspace.hidden = state.viewMode !== "dashboard";
   elements.metrics.hidden = state.viewMode !== "dashboard";
   elements.validationPanel.hidden = state.viewMode !== "validation";
-  elements.validationToggle.textContent = state.viewMode === "validation" ? "診表看板" : "資料驗證";
+  elements.validationToggle.textContent = state.viewMode === "validation" ? "診表看板" : "資料維護";
 }
 
 function renderMetrics(filtered) {
@@ -798,7 +808,7 @@ function renderAppointments(filtered) {
     const status = statusMap[item.status];
     const favorite = isFavorite(item.doctor.id);
     const verification = verificationFor(validationItemFromAppointment(item));
-    const needsAttention = verification.status === "issue";
+    const needsAttention = state.adminMode && verification.status === "issue";
     return `
       <article class="appointment-card ${item.status !== "normal" ? "changed" : ""}">
         <div class="appointment-title">
