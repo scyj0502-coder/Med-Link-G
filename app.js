@@ -1,5 +1,6 @@
 const ALL = "全部";
-const DATA_VERSION = "20260511g";
+const DATA_VERSION = "20260511h";
+const REVIEW_ATTENTION = "需處理";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -235,7 +236,7 @@ const state = {
   selectedDate: new Date(),
   selectedWeekday: null,
   viewMode: "dashboard",
-  reviewStatusFilter: ALL,
+  reviewStatusFilter: REVIEW_ATTENTION,
   reviewWeekdayFilter: ALL,
   filters: { ...defaultFilters },
   draftFilters: { ...defaultFilters },
@@ -821,15 +822,18 @@ function renderValidation(filtered) {
   if (state.viewMode !== "validation") return;
   const items = buildValidationItems(filtered);
   const visibleItems = items.filter((item) =>
-    state.reviewStatusFilter === ALL || verificationFor(item).status === state.reviewStatusFilter
+    matchesReviewStatus(item, state.reviewStatusFilter)
   ).filter((item) =>
     state.reviewWeekdayFilter === ALL || item.weekday === Number(state.reviewWeekdayFilter)
   );
   const counts = {
-    pending: items.filter((item) => verificationFor(item).status === "pending").length,
-    confirmed: items.filter((item) => verificationFor(item).status === "confirmed").length,
-    issue: items.filter((item) => verificationFor(item).status === "issue").length
+    pending: items.filter((item) => reviewStatusFor(item) === "pending").length,
+    confirmed: items.filter((item) => reviewStatusFor(item) === "confirmed").length,
+    issue: items.filter((item) => reviewStatusFor(item) === "issue").length,
+    added: items.filter((item) => reviewStatusFor(item) === "added").length,
+    removed: items.filter((item) => reviewStatusFor(item) === "removed").length
   };
+  counts.attention = counts.issue + counts.added + counts.removed;
   const report = state.changeReport?.summary || {};
   const changeSummary = state.changeReport ? `
     <article><span>基準外新增</span><strong>${report.added || 0}</strong></article>
@@ -851,14 +855,15 @@ function renderValidation(filtered) {
 
   elements.validationList.innerHTML = visibleItems.map((item) => {
     const verification = verificationFor(item);
+    const reviewStatus = reviewStatusFor(item);
     return `
-      <article class="validation-card ${verification.status}">
+      <article class="validation-card ${reviewStatus}">
         <div class="validation-card-head">
           <div>
             <h3>${escapeHtml(item.doctor.name)} · ${escapeHtml(item.category)}</h3>
             <p class="appointment-meta">${escapeHtml(item.hospital.name)} ${escapeHtml(item.hospital.branch)}｜星期${weekdayNames[item.weekday]}｜${escapeHtml(item.period)}｜診間/代號 ${escapeHtml(item.room)}</p>
           </div>
-          <span class="review-pill ${verification.status}">${verificationLabel(verification.status)}</span>
+          <span class="review-pill ${reviewStatus}">${verificationLabel(reviewStatus)}</span>
         </div>
         <div class="validation-grid">
           <div><span>來源頁碼</span><strong>${item.sourcePage ? `PDF 第 ${escapeHtml(String(item.sourcePage))} 頁` : "未標示"}</strong></div>
@@ -871,7 +876,7 @@ function renderValidation(filtered) {
           <label>
             <span>校正狀態</span>
             <select data-review-status="${item.validationKey}">
-              <option value="pending" ${verification.status === "pending" ? "selected" : ""}>OCR待確認</option>
+              <option value="pending" ${verification.status === "pending" ? "selected" : ""}>待確認</option>
               <option value="confirmed" ${verification.status === "confirmed" ? "selected" : ""}>已人工確認</option>
               <option value="issue" ${verification.status === "issue" ? "selected" : ""}>有疑問</option>
             </select>
@@ -895,10 +900,13 @@ function renderValidation(filtered) {
 
 function renderReviewFilter(counts) {
   const options = [
-    [ALL, `全部 ${counts.pending + counts.confirmed + counts.issue}`],
+    [REVIEW_ATTENTION, `需處理 ${counts.attention}`],
+    ["issue", `有疑問 ${counts.issue}`],
+    ["added", `新增 ${counts.added}`],
+    ["removed", `已移除 ${counts.removed}`],
     ["pending", `待確認 ${counts.pending}`],
     ["confirmed", `已確認 ${counts.confirmed}`],
-    ["issue", `有疑問 ${counts.issue}`]
+    [ALL, `全部 ${counts.pending + counts.confirmed + counts.issue + counts.added + counts.removed}`]
   ];
   const weekdays = [[ALL, "全部星期"], ...weekdayNames.map((label, index) => [String(index), `星期${label}`])];
   elements.reviewFilter.innerHTML = `
@@ -929,32 +937,84 @@ function renderReviewFilter(counts) {
 
 function buildValidationItems(filtered) {
   const seen = new Set();
-  return filtered
+  const currentItems = filtered
     .map(validationItemFromAppointment)
     .filter((item) => {
       if (seen.has(item.validationKey)) return false;
       seen.add(item.validationKey);
       return true;
-    })
+    });
+  const removedItems = (state.changeReport?.removed || [])
+    .filter((item) => item.key && !seen.has(item.key))
+    .map(removedValidationItem);
+  return [...currentItems, ...removedItems]
     .sort((a, b) => `${a.category}${a.weekday}${a.period}${a.room}${a.doctor.name}`.localeCompare(`${b.category}${b.weekday}${b.period}${b.room}${b.doctor.name}`, "zh-Hant"));
 }
 
 function validationItemFromAppointment(item) {
+  const validationKey = [
+    item.hospital.id,
+    item.doctor.id,
+    item.weekday,
+    item.period,
+    item.room,
+    item.category
+  ].join("|");
   return {
     ...item,
-    validationKey: [
-      item.hospital.id,
-      item.doctor.id,
-      item.weekday,
-      item.period,
-      item.room,
-      item.category
-    ].join("|")
+    validationKey,
+    changeStatus: changeReportKeySet("added").has(validationKey) ? "added" : ""
   };
 }
 
 function verificationFor(item) {
   return state.verifications[item.validationKey] || { status: item.sourcePage ? "pending" : "confirmed", note: "" };
+}
+
+function reviewStatusFor(item) {
+  const verification = verificationFor(item);
+  if (verification.status === "issue") return "issue";
+  if (item.changeStatus === "removed") return "removed";
+  if (item.changeStatus === "added") return "added";
+  return verification.status;
+}
+
+function changeReportKeySet(kind) {
+  return new Set((state.changeReport?.[kind] || []).map((item) => item.key));
+}
+
+function matchesReviewStatus(item, filter) {
+  const status = reviewStatusFor(item);
+  if (filter === ALL) return true;
+  if (filter === REVIEW_ATTENTION) return ["issue", "added", "removed"].includes(status);
+  return status === filter;
+}
+
+function removedValidationItem(item) {
+  const [hospitalId, doctorId, weekday, period, room, category] = item.key.split("|");
+  const [hospitalName, branchName = ""] = String(item.hospital || "").split(" ");
+  return {
+    validationKey: item.key,
+    changeStatus: "removed",
+    sourcePage: item.sourcePage || "",
+    sourceUrl: item.sourceUrl || "",
+    sourceWeekdayLabel: item.weekday || "",
+    rawClinic: item.department || category || "",
+    category: item.department || category || "",
+    weekday: Number(weekday),
+    period: period || "",
+    room: room || "",
+    sourceNote: "目前資料來源已找不到這筆診次，需確認是否停診、改班或 OCR 辨識變動。",
+    doctor: {
+      id: doctorId || item.key,
+      name: item.doctor || "未知醫師"
+    },
+    hospital: {
+      id: hospitalId || "unknown",
+      name: hospitalName || item.hospital || "未知醫院",
+      branch: branchName
+    }
+  };
 }
 
 function updateVerification(key, patch) {
@@ -1020,7 +1080,7 @@ async function importValidationJson(event) {
 
 function confirmVisibleValidationItems() {
   const items = buildValidationItems(getFilteredAppointments()).filter((item) =>
-    state.reviewStatusFilter === ALL || verificationFor(item).status === state.reviewStatusFilter
+    matchesReviewStatus(item, state.reviewStatusFilter)
   ).filter((item) =>
     state.reviewWeekdayFilter === ALL || item.weekday === Number(state.reviewWeekdayFilter)
   );
@@ -1039,10 +1099,12 @@ function confirmVisibleValidationItems() {
 
 function verificationLabel(status) {
   return {
-    pending: "OCR待確認",
+    pending: "待確認",
     confirmed: "已人工確認",
-    issue: "有疑問"
-  }[status] || "OCR待確認";
+    issue: "有疑問",
+    added: "基準外新增",
+    removed: "基準移除"
+  }[status] || "待確認";
 }
 
 function updateQuerySummary(filtered = getFilteredAppointments()) {

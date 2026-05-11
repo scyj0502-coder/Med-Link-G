@@ -395,6 +395,16 @@ main {
   background: var(--danger-bg);
 }
 
+.validation-card.added {
+  border-left-color: var(--accent);
+  background: #fffaf0;
+}
+
+.validation-card.removed {
+  border-left-color: var(--danger);
+  background: #fff3f0;
+}
+
 .validation-card-head {
   display: flex;
   justify-content: space-between;
@@ -464,6 +474,16 @@ main {
 }
 
 .review-pill.issue {
+  background: #ffe3de;
+  color: var(--danger);
+}
+
+.review-pill.added {
+  background: #fff1c4;
+  color: #8a5a00;
+}
+
+.review-pill.removed {
   background: #ffe3de;
   color: var(--danger);
 }
