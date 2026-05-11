@@ -1,5 +1,5 @@
 const ALL = "全部";
-const DATA_VERSION = "20260508a";
+const DATA_VERSION = "20260511a";
 
 const hospitals = [
   { id: "kmugh", region: "高雄", name: "高雄醫學大學附設醫院", branch: "岡山醫院", lat: 22.7966, lng: 120.2946 },
@@ -234,9 +234,11 @@ const state = {
   viewedDate: new Date(),
   selectedDate: new Date(),
   selectedWeekday: null,
+  viewMode: "dashboard",
   filters: { ...defaultFilters },
   draftFilters: { ...defaultFilters },
   favorites: JSON.parse(localStorage.getItem("medlink:favorites") || "[]"),
+  verifications: JSON.parse(localStorage.getItem("medlink:verifications") || "{}"),
   sourceStatus: null,
   deferredInstallPrompt: null
 };
@@ -267,7 +269,15 @@ const elements = {
   detailDoctor: $("#detailDoctor"),
   detailBody: $("#detailBody"),
   installButton: $("#installButton"),
-  querySummary: $("#querySummary")
+  querySummary: $("#querySummary"),
+  validationToggle: $("#validationToggle"),
+  closeValidation: $("#closeValidation"),
+  validationPanel: $("#validationPanel"),
+  validationSummary: $("#validationSummary"),
+  validationList: $("#validationList"),
+  exportValidation: $("#exportValidation"),
+  workspace: $(".workspace"),
+  metrics: $(".metrics")
 };
 
 function buildAppointments() {
@@ -317,6 +327,9 @@ function buildAppointments() {
         sourceDepartment: template.sourceDepartment || doctor.department,
         category: template.category || doctor.department,
         sourceUrl: template.sourceUrl || doctor.sourceUrl || "",
+        sourcePage: template.sourcePage || "",
+        sourceWeekdayLabel: template.sourceWeekdayLabel || "",
+        sourceNote: template.sourceNote || "",
         sourceStatus: template.sourceStatus || null,
         syncPending: Boolean(template.syncPending),
         status,
@@ -480,7 +493,11 @@ function mergeExternalSchedule(payload) {
       room: session.room || session.clinic || session.clinicCode || "門診",
       rawClinic: session.rawClinic || session.clinic || session.department,
       sourceDepartment: session.department,
-      category: session.category || session.department
+      category: session.category || session.department,
+      sourceUrl: session.sourceUrl || source.pageUrl || source.pdfUrl || "",
+      sourcePage: session.sourcePage || "",
+      sourceWeekdayLabel: session.sourceWeekdayLabel || "",
+      sourceNote: session.note || source.note || ""
     }));
   sessionTemplates = [...sessionTemplates, ...externalSessions];
 }
@@ -515,6 +532,18 @@ function bindEvents() {
   });
 
   $("#applyFilters").addEventListener("click", () => applyFilters(true));
+
+  elements.validationToggle.addEventListener("click", () => {
+    state.viewMode = "validation";
+    render();
+  });
+
+  elements.closeValidation.addEventListener("click", () => {
+    state.viewMode = "dashboard";
+    render();
+  });
+
+  elements.exportValidation.addEventListener("click", exportValidationJson);
 
   $("#resetFilters").addEventListener("click", () => {
     state.filters = { ...defaultFilters };
@@ -618,9 +647,14 @@ function render() {
   renderMetrics(filtered);
   renderCalendar(filtered);
   renderAppointments(filtered);
+  renderValidation(filtered);
   updateQuerySummary(filtered);
   elements.changedCount.textContent = filtered.filter((item) => item.status !== "normal").length;
   elements.favoriteTotal.textContent = state.favorites.length;
+  elements.workspace.hidden = state.viewMode !== "dashboard";
+  elements.metrics.hidden = state.viewMode !== "dashboard";
+  elements.validationPanel.hidden = state.viewMode !== "validation";
+  elements.validationToggle.textContent = state.viewMode === "validation" ? "診表看板" : "資料驗證";
 }
 
 function renderMetrics(filtered) {
@@ -734,6 +768,139 @@ function renderAppointments(filtered) {
   });
 }
 
+function renderValidation(filtered) {
+  if (state.viewMode !== "validation") return;
+  const items = buildValidationItems(filtered);
+  const counts = {
+    pending: items.filter((item) => verificationFor(item).status === "pending").length,
+    confirmed: items.filter((item) => verificationFor(item).status === "confirmed").length,
+    issue: items.filter((item) => verificationFor(item).status === "issue").length
+  };
+  elements.validationSummary.innerHTML = `
+    <article><span>待確認</span><strong>${counts.pending}</strong></article>
+    <article><span>已人工確認</span><strong>${counts.confirmed}</strong></article>
+    <article><span>有疑問</span><strong>${counts.issue}</strong></article>
+    <article><span>樣板診次</span><strong>${items.length}</strong></article>
+  `;
+
+  if (!items.length) {
+    elements.validationList.innerHTML = `<div class="empty-state">目前篩選條件沒有可驗證診次。</div>`;
+    return;
+  }
+
+  elements.validationList.innerHTML = items.map((item) => {
+    const verification = verificationFor(item);
+    return `
+      <article class="validation-card ${verification.status}">
+        <div class="validation-card-head">
+          <div>
+            <h3>${escapeHtml(item.doctor.name)} · ${escapeHtml(item.category)}</h3>
+            <p class="appointment-meta">${escapeHtml(item.hospital.name)} ${escapeHtml(item.hospital.branch)}｜星期${weekdayNames[item.weekday]}｜${escapeHtml(item.period)}｜診間/代號 ${escapeHtml(item.room)}</p>
+          </div>
+          <span class="review-pill ${verification.status}">${verificationLabel(verification.status)}</span>
+        </div>
+        <div class="validation-grid">
+          <div><span>來源頁碼</span><strong>${item.sourcePage ? `PDF 第 ${escapeHtml(String(item.sourcePage))} 頁` : "未標示"}</strong></div>
+          <div><span>來源星期</span><strong>${escapeHtml(item.sourceWeekdayLabel || `星期${weekdayNames[item.weekday]}`)}</strong></div>
+          <div><span>原始診別</span><strong>${escapeHtml(item.rawClinic)}</strong></div>
+          <div><span>資料來源</span><strong>${item.sourceUrl ? `<a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noopener">開啟來源</a>` : "未標示"}</strong></div>
+        </div>
+        ${item.sourceNote ? `<p class="appointment-meta">${escapeHtml(item.sourceNote)}</p>` : ""}
+        <div class="review-controls">
+          <label>
+            <span>校正狀態</span>
+            <select data-review-status="${item.validationKey}">
+              <option value="pending" ${verification.status === "pending" ? "selected" : ""}>OCR待確認</option>
+              <option value="confirmed" ${verification.status === "confirmed" ? "selected" : ""}>已人工確認</option>
+              <option value="issue" ${verification.status === "issue" ? "selected" : ""}>有疑問</option>
+            </select>
+          </label>
+          <label>
+            <span>校正備註</span>
+            <textarea data-review-note="${item.validationKey}" rows="2" placeholder="例如：醫師姓名需重查、5/28 限診、診間代號需確認">${escapeHtml(verification.note || "")}</textarea>
+          </label>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  elements.validationList.querySelectorAll("[data-review-status]").forEach((select) => {
+    select.addEventListener("change", () => updateVerification(select.dataset.reviewStatus, { status: select.value }));
+  });
+  elements.validationList.querySelectorAll("[data-review-note]").forEach((textarea) => {
+    textarea.addEventListener("change", () => updateVerification(textarea.dataset.reviewNote, { note: textarea.value }));
+  });
+}
+
+function buildValidationItems(filtered) {
+  const seen = new Set();
+  return filtered
+    .map((item) => ({
+      ...item,
+      validationKey: [
+        item.hospital.id,
+        item.doctor.id,
+        item.weekday,
+        item.period,
+        item.room,
+        item.category
+      ].join("|")
+    }))
+    .filter((item) => {
+      if (seen.has(item.validationKey)) return false;
+      seen.add(item.validationKey);
+      return true;
+    })
+    .sort((a, b) => `${a.category}${a.weekday}${a.period}${a.room}${a.doctor.name}`.localeCompare(`${b.category}${b.weekday}${b.period}${b.room}${b.doctor.name}`, "zh-Hant"));
+}
+
+function verificationFor(item) {
+  return state.verifications[item.validationKey] || { status: item.sourcePage ? "pending" : "confirmed", note: "" };
+}
+
+function updateVerification(key, patch) {
+  const previous = state.verifications[key] || { status: "pending", note: "" };
+  state.verifications[key] = { ...previous, ...patch, updatedAt: new Date().toISOString() };
+  localStorage.setItem("medlink:verifications", JSON.stringify(state.verifications));
+  render();
+}
+
+function exportValidationJson() {
+  const items = buildValidationItems(getFilteredAppointments()).map((item) => ({
+    key: item.validationKey,
+    hospital: hospitalLabel(item.hospital),
+    department: item.category,
+    doctor: item.doctor.name,
+    weekday: `星期${weekdayNames[item.weekday]}`,
+    period: item.period,
+    room: item.room,
+    sourcePage: item.sourcePage,
+    sourceUrl: item.sourceUrl,
+    verification: verificationFor(item)
+  }));
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    filters: state.filters,
+    items
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `med-link-validation-${toIsoDate(new Date())}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast(`已匯出 ${items.length} 筆校正資料。`);
+}
+
+function verificationLabel(status) {
+  return {
+    pending: "OCR待確認",
+    confirmed: "已人工確認",
+    issue: "有疑問"
+  }[status] || "OCR待確認";
+}
+
 function updateQuerySummary(filtered = getFilteredAppointments()) {
   const draftParts = Object.entries(state.draftFilters)
     .filter(([, value]) => value && value !== ALL)
@@ -828,6 +995,7 @@ function openDetail(id) {
       <div><span>標準分類</span><strong>${item.category}</strong></div>
       <div><span>原始診別</span><strong>${item.rawClinic}</strong></div>
       <div><span>PDF 科別/診別</span><strong>${item.sourceDepartment}</strong></div>
+      <div><span>來源頁碼</span><strong>${item.sourcePage ? `PDF 第 ${item.sourcePage} 頁` : "未標示"}</strong></div>
       <div><span>醫師專長</span><strong>${item.doctor.specialty}</strong></div>
       <div><span>追蹤狀態</span><strong>${isFavorite(item.doctor.id) ? "已收藏，優先推播" : "尚未收藏"}</strong></div>
       ${item.sourceUrl ? `<div><span>來源網址</span><strong><a href="${item.sourceUrl}" target="_blank" rel="noopener">開啟門診來源</a></strong></div>` : ""}
@@ -850,6 +1018,15 @@ function sourceInspectionLabel(inspection) {
   const pageCount = inspection.pageCount ? `${inspection.pageCount} 頁` : "頁數未明";
   const textChars = Number.isFinite(inspection.textChars) ? `${inspection.textChars} 字` : "文字數未明";
   return `來源診斷：${inspection.sourceKind || "來源"}，${pageCount}，可抽取文字 ${textChars}。`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function openNavigation(id) {

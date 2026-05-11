@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0e7c7b" />
     <title>醫點通 Med-Link</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260508a" />
-    <link rel="stylesheet" href="./styles.css?v=20260508a" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260511a" />
+    <link rel="stylesheet" href="./styles.css?v=20260511a" />
   </head>
   <body>
     <div class="app-shell">
@@ -82,6 +82,7 @@
             <h2>今日門診動態</h2>
           </div>
           <div class="top-actions">
+            <button class="primary-button" id="validationToggle" type="button">資料驗證</button>
             <button class="icon-button" id="notifyButton" type="button" aria-label="推播通知" title="推播通知">!</button>
             <button class="primary-button" id="installButton" type="button" hidden>安裝 PWA</button>
           </div>
@@ -137,6 +138,21 @@
             <div class="appointment-list" id="appointmentList"></div>
           </aside>
         </section>
+
+        <section class="validation-panel" id="validationPanel" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Data Review</p>
+              <h2>資料可信度驗證</h2>
+            </div>
+            <div class="top-actions">
+              <button class="ghost-button" id="exportValidation" type="button">匯出校正 JSON</button>
+              <button class="ghost-button" id="closeValidation" type="button">返回看板</button>
+            </div>
+          </div>
+          <div class="validation-summary" id="validationSummary"></div>
+          <div class="validation-list" id="validationList"></div>
+        </section>
       </main>
     </div>
 
@@ -152,6 +168,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=20260508a" defer></script>
+    <script src="./app.js?v=20260511a" defer></script>
   </body>
 </html>

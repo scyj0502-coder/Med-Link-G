@@ -136,19 +136,31 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
-  min-height: 42px;
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 0 12px;
   background: #f7fbfa;
   color: var(--ink);
   outline: none;
 }
 
+input,
+select {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+textarea {
+  min-height: 72px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: var(--accent);
 }
 
@@ -288,12 +300,144 @@ main {
 }
 
 .calendar-area,
-.day-panel {
+.day-panel,
+.validation-panel {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 18px;
   box-shadow: var(--shadow);
+}
+
+.validation-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.validation-panel[hidden] {
+  display: none;
+}
+
+.validation-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.validation-summary article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfdfc;
+}
+
+.validation-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.validation-summary strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 24px;
+}
+
+.validation-list {
+  display: grid;
+  gap: 12px;
+}
+
+.validation-card {
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--accent);
+  border-radius: 8px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  background: #fff;
+}
+
+.validation-card.confirmed {
+  border-left-color: var(--ok);
+}
+
+.validation-card.issue {
+  border-left-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.validation-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.validation-card h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+
+.validation-grid,
+.review-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.review-controls {
+  grid-template-columns: minmax(160px, 0.35fr) minmax(0, 1fr);
+}
+
+.validation-grid div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfdfc;
+}
+
+.validation-grid span,
+.review-controls span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.validation-grid strong {
+  display: block;
+  margin-top: 4px;
+}
+
+.review-controls label {
+  color: var(--ink);
+}
+
+.review-pill {
+  display: inline-flex;
+  align-items: center;
+  align-self: start;
+  justify-content: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.review-pill.pending {
+  background: #fff1c4;
+  color: #8a5a00;
+}
+
+.review-pill.confirmed {
+  background: #e8f7ef;
+  color: var(--ok);
+}
+
+.review-pill.issue {
+  background: #ffe3de;
+  color: var(--danger);
 }
 
 .weekday-row,
@@ -598,6 +742,16 @@ dialog::backdrop {
 
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .validation-summary,
+  .validation-grid,
+  .review-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .validation-card-head {
+    flex-direction: column;
   }
 }
 
