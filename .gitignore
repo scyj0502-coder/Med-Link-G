@@ -8,6 +8,9 @@ build/
 .env
 .env.*
 !.env.example
+.local-secrets.txt
+.local-secrets.*
+!.local-secrets.example
 
 __pycache__/
 *.py[cod]
