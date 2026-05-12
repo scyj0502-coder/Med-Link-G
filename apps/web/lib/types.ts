@@ -1,5 +1,6 @@
 export type PublishedSchedule = {
   id: string;
+  schedule_key: string;
   hospital_id: string;
   hospital_name: string;
   branch_name: string;
@@ -13,3 +14,11 @@ export type PublishedSchedule = {
   published_at: string;
 };
 
+export type Hospital = {
+  id: string;
+  region: string;
+  hospital_name: string;
+  branch_name: string;
+  schedule_url: string | null;
+  enabled: boolean;
+};
