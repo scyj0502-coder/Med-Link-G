@@ -46,12 +46,6 @@ function Resolve-SecretKey {
     "servicerolekey" = "SUPABASE_SERVICE_ROLE_KEY"
     "secretkey" = "SUPABASE_SERVICE_ROLE_KEY"
     "supabaseservicerolekey" = "SUPABASE_SERVICE_ROLE_KEY"
-    "projectref" = "SUPABASE_PROJECT_REF"
-    "supabaseprojectref" = "SUPABASE_PROJECT_REF"
-    "supabasedburl" = "SUPABASE_DB_URL"
-    "postgresconnectionstring" = "SUPABASE_DB_URL"
-    "databaseurl" = "SUPABASE_DB_URL"
-    "databasepassword" = "SUPABASE_DB_PASSWORD"
     "telegrambottoken" = "TELEGRAM_BOT_TOKEN"
     "bottoken" = "TELEGRAM_BOT_TOKEN"
     "telegrammaintainerchatid" = "TELEGRAM_MAINTAINER_CHAT_ID"
@@ -108,8 +102,6 @@ $webEnv = @(
 $scraperEnv = @(
   "SUPABASE_URL=$($secrets["SUPABASE_URL"])",
   "SUPABASE_SERVICE_ROLE_KEY=$($secrets["SUPABASE_SERVICE_ROLE_KEY"])",
-  "SUPABASE_PROJECT_REF=$($secrets["SUPABASE_PROJECT_REF"])",
-  "SUPABASE_DB_URL=$($secrets["SUPABASE_DB_URL"])",
   "TELEGRAM_BOT_TOKEN=$($secrets["TELEGRAM_BOT_TOKEN"])",
   "TELEGRAM_MAINTAINER_CHAT_ID=$($secrets["TELEGRAM_MAINTAINER_CHAT_ID"])"
 )

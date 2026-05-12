@@ -21,8 +21,6 @@ Copy-Item .local-secrets.example .local-secrets.txt
 ```text
 Telegram Bot
 ==========================================
-Bot name            : MedLinkBot
-Bot username        : @med_link_bot
 Bot token           : 123456:ABC-DEF...
 ```
 
@@ -31,14 +29,13 @@ Supabase can use the same notebook style:
 ```text
 Supabase
 ==========================================
-Project name        : med-link
-Region              : Tokyo
-Database password   : keep-this-local
-Project Ref         : abcdefghijk
 Project URL         : https://abcdefghijk.supabase.co
 Publishable key     : eyJ...
 Secret key          : sb_secret_...
-SUPABASE_DB_URL     : postgresql://...
+
+Telegram Chat
+==========================================
+Maintainer chat id  : 123456789
 ```
 
 The setup script also accepts classic `.env` style:
@@ -80,10 +77,12 @@ The setup script maps these labels automatically:
 | `Project URL` | `SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_URL` fallback |
 | `Anon key` / `Publishable key` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 | `Service role key` / `Secret key` | `SUPABASE_SERVICE_ROLE_KEY` |
-| `Project Ref` | `SUPABASE_PROJECT_REF` |
-| `SUPABASE_DB_URL` / `Postgres connection string` | `SUPABASE_DB_URL` |
 | `Bot token` | `TELEGRAM_BOT_TOKEN` |
 | `Maintainer chat id` / `Chat id` | `TELEGRAM_MAINTAINER_CHAT_ID` |
+
+Only the fields used by the current app are tracked here. Add project ref,
+database URL, bot display name, or other setup notes later when the code needs
+them.
 
 ## Safety Rules
 
