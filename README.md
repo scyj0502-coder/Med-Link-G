@@ -72,6 +72,7 @@ Maintainer chat id  :
 
 - [本機機密流程](docs/LOCAL_SECRETS.md)
 - [Supabase 設定流程](docs/SUPABASE_SETUP.md)
+- [Vercel 部署流程](docs/VERCEL_DEPLOY.md)
 
 ## 前端開發
 
