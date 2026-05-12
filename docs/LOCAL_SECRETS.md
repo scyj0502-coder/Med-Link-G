@@ -16,7 +16,36 @@ This file is ignored by Git and must never be committed.
 Copy-Item .local-secrets.example .local-secrets.txt
 ```
 
-2. Fill `.local-secrets.txt` locally.
+2. Fill `.local-secrets.txt` locally. It can look like a human notebook:
+
+```text
+Telegram Bot
+==========================================
+Bot name            : MedLinkBot
+Bot username        : @med_link_bot
+Bot token           : 123456:ABC-DEF...
+```
+
+Supabase can use the same notebook style:
+
+```text
+Supabase
+==========================================
+Project name        : med-link
+Region              : Tokyo
+Database password   : keep-this-local
+Project Ref         : abcdefghijk
+Project URL         : https://abcdefghijk.supabase.co
+Publishable key     : eyJ...
+Secret key          : sb_secret_...
+SUPABASE_DB_URL     : postgresql://...
+```
+
+The setup script also accepts classic `.env` style:
+
+```text
+TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+```
 
 3. Generate app-specific env files:
 
@@ -42,10 +71,23 @@ scraper/.env
 | `TELEGRAM_BOT_TOKEN` | `scraper/.env` | Telegram notification bot |
 | `TELEGRAM_MAINTAINER_CHAT_ID` | `scraper/.env` | Internal data-quality alerts |
 
+## Supported Human Labels
+
+The setup script maps these labels automatically:
+
+| Human label | Env key |
+|---|---|
+| `Project URL` | `SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_URL` fallback |
+| `Anon key` / `Publishable key` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| `Service role key` / `Secret key` | `SUPABASE_SERVICE_ROLE_KEY` |
+| `Project Ref` | `SUPABASE_PROJECT_REF` |
+| `SUPABASE_DB_URL` / `Postgres connection string` | `SUPABASE_DB_URL` |
+| `Bot token` | `TELEGRAM_BOT_TOKEN` |
+| `Maintainer chat id` / `Chat id` | `TELEGRAM_MAINTAINER_CHAT_ID` |
+
 ## Safety Rules
 
 - Do not paste `SUPABASE_SERVICE_ROLE_KEY` into chat.
 - Do not put service role keys in `apps/web`.
 - GitHub Actions should use repository Secrets with the same key names.
 - Screenshots with hidden values are okay for navigation help.
-

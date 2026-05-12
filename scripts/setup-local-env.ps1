@@ -15,14 +15,59 @@ function Read-LocalSecrets {
   Get-Content -LiteralPath $Path | ForEach-Object {
     $line = $_.Trim()
     if (-not $line -or $line.StartsWith("#")) { return }
+
     $parts = $line -split "=", 2
+    if ($parts.Count -ne 2) {
+      $parts = $line -split ":", 2
+    }
     if ($parts.Count -ne 2) { return }
-    $key = $parts[0].Trim()
+    $key = Resolve-SecretKey -Label $parts[0].Trim()
     $value = $parts[1].Trim()
     if ($key) { $secrets[$key] = $value }
   }
 
   return $secrets
+}
+
+function Resolve-SecretKey {
+  param([string]$Label)
+
+  $normalized = $Label.Trim().ToLowerInvariant()
+  $normalized = $normalized -replace "[\s_\-\/]+", ""
+
+  $map = @{
+    "supabaseurl" = "SUPABASE_URL"
+    "nextpublicsupabaseurl" = "NEXT_PUBLIC_SUPABASE_URL"
+    "projecturl" = "SUPABASE_URL"
+    "url" = "SUPABASE_URL"
+    "anonkey" = "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    "publishablekey" = "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    "nextpublicsupabaseanonkey" = "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    "servicerolekey" = "SUPABASE_SERVICE_ROLE_KEY"
+    "secretkey" = "SUPABASE_SERVICE_ROLE_KEY"
+    "supabaseservicerolekey" = "SUPABASE_SERVICE_ROLE_KEY"
+    "projectref" = "SUPABASE_PROJECT_REF"
+    "supabaseprojectref" = "SUPABASE_PROJECT_REF"
+    "supabasedburl" = "SUPABASE_DB_URL"
+    "postgresconnectionstring" = "SUPABASE_DB_URL"
+    "databaseurl" = "SUPABASE_DB_URL"
+    "databasepassword" = "SUPABASE_DB_PASSWORD"
+    "telegrambottoken" = "TELEGRAM_BOT_TOKEN"
+    "bottoken" = "TELEGRAM_BOT_TOKEN"
+    "telegrammaintainerchatid" = "TELEGRAM_MAINTAINER_CHAT_ID"
+    "maintainerchatid" = "TELEGRAM_MAINTAINER_CHAT_ID"
+    "chatid" = "TELEGRAM_MAINTAINER_CHAT_ID"
+  }
+
+  if ($map.ContainsKey($normalized)) {
+    return $map[$normalized]
+  }
+
+  if ($Label -match "^[A-Z0-9_]+$") {
+    return $Label
+  }
+
+  return $null
 }
 
 function Require-Key {
@@ -63,6 +108,8 @@ $webEnv = @(
 $scraperEnv = @(
   "SUPABASE_URL=$($secrets["SUPABASE_URL"])",
   "SUPABASE_SERVICE_ROLE_KEY=$($secrets["SUPABASE_SERVICE_ROLE_KEY"])",
+  "SUPABASE_PROJECT_REF=$($secrets["SUPABASE_PROJECT_REF"])",
+  "SUPABASE_DB_URL=$($secrets["SUPABASE_DB_URL"])",
   "TELEGRAM_BOT_TOKEN=$($secrets["TELEGRAM_BOT_TOKEN"])",
   "TELEGRAM_MAINTAINER_CHAT_ID=$($secrets["TELEGRAM_MAINTAINER_CHAT_ID"])"
 )
@@ -74,4 +121,3 @@ Write-Host "Local env files created:"
 Write-Host "- apps/web/.env.local"
 Write-Host "- scraper/.env"
 Write-Host "Secret values were not printed."
-
