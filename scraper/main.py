@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+from adapters.kmugh import KmughAdapter
+from core.diff import detect_changes
+from core.quality import partition_publishable
+from core.supabase import SupabaseScheduleWriter
+from core.telegram import TelegramNotifier
+from core.yaml_config import load_config
+
+
+ADAPTERS = {
+    "kmugh": KmughAdapter,
+}
+
+
+def run(target: str | None = None) -> None:
+    load_dotenv()
+    config = load_config(Path("config.yaml"))
+    writer = SupabaseScheduleWriter.from_env()
+    notifier = TelegramNotifier.from_env()
+
+    for source in config.hospitals:
+        if not source.enabled:
+            continue
+        if target and source.id != target and source.adapter != target:
+            continue
+
+        adapter_cls = ADAPTERS[source.adapter]
+        adapter = adapter_cls(source)
+        scraped = adapter.fetch()
+        publishable, rejected = partition_publishable(scraped)
+        previous = writer.load_published(source.id)
+        changes = detect_changes(previous, publishable)
+        writer.write_run(source, publishable, rejected, changes)
+
+        if changes:
+            notifier.send_changes(source, changes)
+        if rejected:
+            notifier.send_quality_warning(source, rejected)
+
+        print(
+            f"{source.id}: scraped={len(scraped)} "
+            f"published={len(publishable)} rejected={len(rejected)} changes={len(changes)}"
+        )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run Med-Link schedule sync.")
+    parser.add_argument("target", nargs="?", help="Hospital id or adapter name, e.g. kmugh.")
+    args = parser.parse_args()
+    run(args.target)
+
+
+if __name__ == "__main__":
+    main()
+
