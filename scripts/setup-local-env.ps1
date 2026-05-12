@@ -77,6 +77,16 @@ function Require-Key {
   }
 }
 
+function Write-Utf8NoBomLines {
+  param(
+    [string]$Path,
+    [string[]]$Lines
+  )
+
+  $encoding = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllLines((Resolve-Path -LiteralPath (Split-Path -Parent $Path)).Path + "\" + (Split-Path -Leaf $Path), $Lines, $encoding)
+}
+
 $secrets = Read-LocalSecrets -Path $SecretsPath
 
 $requiredKeys = @(
@@ -116,8 +126,8 @@ $scraperEnv = @(
   "TELEGRAM_MAINTAINER_CHAT_ID=$($secrets["TELEGRAM_MAINTAINER_CHAT_ID"])"
 )
 
-Set-Content -LiteralPath "apps/web/.env.local" -Value $webEnv -Encoding utf8
-Set-Content -LiteralPath "scraper/.env" -Value $scraperEnv -Encoding utf8
+Write-Utf8NoBomLines -Path "apps/web/.env.local" -Lines $webEnv
+Write-Utf8NoBomLines -Path "scraper/.env" -Lines $scraperEnv
 
 Write-Host "Local env files created:"
 Write-Host "- apps/web/.env.local"

@@ -1,15 +1,55 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
-from supabase import Client, create_client
+import httpx
 
 from adapters.base import HospitalSource, RawSchedule
 from core.models import RejectedSchedule, ScheduleChange, schedule_payload
 
 
+class SupabaseRestClient:
+    def __init__(self, project_url: str, api_key: str) -> None:
+        normalized_url = project_url.rstrip("/")
+        if normalized_url.endswith("/rest/v1"):
+            normalized_url = normalized_url.removesuffix("/rest/v1")
+        self.base_url = normalized_url + "/rest/v1"
+        self.headers = {
+            "apikey": api_key,
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+    def select(self, table: str, params: dict[str, str]) -> list[dict[str, Any]]:
+        with httpx.Client(timeout=30) as client:
+            response = client.get(f"{self.base_url}/{table}", headers=self.headers, params=params)
+            response.raise_for_status()
+            return response.json()
+
+    def insert(self, table: str, payload: dict[str, Any] | list[dict[str, Any]]) -> list[dict[str, Any]]:
+        headers = self.headers | {"Prefer": "return=representation"}
+        with httpx.Client(timeout=30) as client:
+            response = client.post(f"{self.base_url}/{table}", headers=headers, json=payload)
+            response.raise_for_status()
+            return response.json()
+
+    def upsert(
+        self,
+        table: str,
+        payload: list[dict[str, Any]],
+        on_conflict: str,
+    ) -> list[dict[str, Any]]:
+        headers = self.headers | {"Prefer": "resolution=merge-duplicates,return=representation"}
+        params = {"on_conflict": on_conflict}
+        with httpx.Client(timeout=30) as client:
+            response = client.post(f"{self.base_url}/{table}", headers=headers, params=params, json=payload)
+            response.raise_for_status()
+            return response.json()
+
+
 class SupabaseScheduleWriter:
-    def __init__(self, client: Client) -> None:
+    def __init__(self, client: SupabaseRestClient) -> None:
         self.client = client
 
     @classmethod
@@ -18,16 +58,13 @@ class SupabaseScheduleWriter:
         key = os.environ.get("SUPABASE_SECRET_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
         if not url or not key:
             raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SECRET_KEY.")
-        return cls(create_client(url, key))
+        return cls(SupabaseRestClient(url, key))
 
     def load_published(self, hospital_id: str) -> list[dict]:
-        response = (
-            self.client.table("published_schedules")
-            .select("*")
-            .eq("hospital_id", hospital_id)
-            .execute()
+        return self.client.select(
+            "published_schedules",
+            {"select": "*", "hospital_id": f"eq.{hospital_id}"},
         )
-        return response.data or []
 
     def write_run(
         self,
@@ -36,17 +73,26 @@ class SupabaseScheduleWriter:
         rejected: list[RejectedSchedule],
         changes: list[ScheduleChange],
     ) -> None:
-        run = self.client.table("sync_runs").insert({
+        self.client.upsert("hospitals", [{
+            "id": source.id,
+            "region": source.region,
+            "hospital_name": source.hospital_name,
+            "branch_name": source.branch_name,
+            "schedule_url": source.schedule_url,
+            "enabled": source.enabled,
+        }], on_conflict="id")
+
+        run = self.client.insert("sync_runs", {
             "hospital_id": source.id,
             "status": "ok" if not rejected else "needs_attention",
             "scraped_count": len(publishable) + len(rejected),
             "published_count": len(publishable),
             "rejected_count": len(rejected),
-        }).execute().data[0]
+        })[0]
 
         payloads = [schedule_payload(item) | {"sync_run_id": run["id"]} for item in publishable]
         if payloads:
-            self.client.table("published_schedules").upsert(payloads, on_conflict="schedule_key").execute()
+            self.client.upsert("published_schedules", payloads, on_conflict="schedule_key")
 
         rejected_payloads = [
             {
@@ -58,7 +104,7 @@ class SupabaseScheduleWriter:
             for item in rejected
         ]
         if rejected_payloads:
-            self.client.table("rejected_schedules").insert(rejected_payloads).execute()
+            self.client.insert("rejected_schedules", rejected_payloads)
 
         change_payloads = [
             {
@@ -73,4 +119,4 @@ class SupabaseScheduleWriter:
             for item in changes
         ]
         if change_payloads:
-            self.client.table("schedule_changes").insert(change_payloads).execute()
+            self.client.insert("schedule_changes", change_payloads)

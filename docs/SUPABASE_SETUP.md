@@ -90,6 +90,15 @@ db/migrations/0001_initial.sql
 業務網站只會讀取「啟用醫院」與「已發布門診資料」。
 爬蟲寫入資料時才會使用 `Secret key`。
 
+如果你是在 `0001_initial.sql` 尚未包含 Data API 權限時就已經建立資料表，
+請再執行一次：
+
+```text
+db/migrations/0002_data_api_grants.sql
+```
+
+新建立的 Supabase 專案只需要跑最新版 `0001_initial.sql` 即可。
+
 ## 5. GitHub Actions Secrets 之後再設定
 
 等本機確認可以連到 Supabase 後，之後才需要到 GitHub repository 設定 Secrets。

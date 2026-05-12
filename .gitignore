@@ -15,6 +15,7 @@ build/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.python-packages/
 .venv/
 venv/
 

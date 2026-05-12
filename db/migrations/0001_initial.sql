@@ -75,8 +75,20 @@ create policy "Public can read active hospitals"
 on hospitals for select
 using (enabled = true);
 
+grant usage on schema public to anon, service_role;
+
+grant select on table hospitals to anon;
+grant select on table published_schedules to anon;
+
+grant all privileges on table hospitals to service_role;
+grant all privileges on table sync_runs to service_role;
+grant all privileges on table published_schedules to service_role;
+grant all privileges on table rejected_schedules to service_role;
+grant all privileges on table schedule_changes to service_role;
+
+grant usage, select on all sequences in schema public to service_role;
+
 create index if not exists idx_published_schedules_hospital on published_schedules(hospital_id);
 create index if not exists idx_published_schedules_weekday on published_schedules(weekday);
 create index if not exists idx_schedule_changes_hospital on schedule_changes(hospital_id);
 create index if not exists idx_rejected_schedules_run on rejected_schedules(sync_run_id);
-
