@@ -40,12 +40,14 @@ function Resolve-SecretKey {
     "nextpublicsupabaseurl" = "NEXT_PUBLIC_SUPABASE_URL"
     "projecturl" = "SUPABASE_URL"
     "url" = "SUPABASE_URL"
-    "anonkey" = "NEXT_PUBLIC_SUPABASE_ANON_KEY"
-    "publishablekey" = "NEXT_PUBLIC_SUPABASE_ANON_KEY"
-    "nextpublicsupabaseanonkey" = "NEXT_PUBLIC_SUPABASE_ANON_KEY"
-    "servicerolekey" = "SUPABASE_SERVICE_ROLE_KEY"
-    "secretkey" = "SUPABASE_SERVICE_ROLE_KEY"
-    "supabaseservicerolekey" = "SUPABASE_SERVICE_ROLE_KEY"
+    "anonkey" = "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+    "publishablekey" = "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+    "nextpublicsupabaseanonkey" = "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+    "nextpublicsupabasepublishablekey" = "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+    "servicerolekey" = "SUPABASE_SECRET_KEY"
+    "secretkey" = "SUPABASE_SECRET_KEY"
+    "supabasesecretkey" = "SUPABASE_SECRET_KEY"
+    "supabaseservicerolekey" = "SUPABASE_SECRET_KEY"
     "telegrambottoken" = "TELEGRAM_BOT_TOKEN"
     "bottoken" = "TELEGRAM_BOT_TOKEN"
     "telegrammaintainerchatid" = "TELEGRAM_MAINTAINER_CHAT_ID"
@@ -79,9 +81,17 @@ $secrets = Read-LocalSecrets -Path $SecretsPath
 
 $requiredKeys = @(
   "SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "SUPABASE_SERVICE_ROLE_KEY"
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  "SUPABASE_SECRET_KEY"
 )
+
+if (-not $secrets.ContainsKey("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") -and $secrets.ContainsKey("NEXT_PUBLIC_SUPABASE_ANON_KEY")) {
+  $secrets["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"] = $secrets["NEXT_PUBLIC_SUPABASE_ANON_KEY"]
+}
+
+if (-not $secrets.ContainsKey("SUPABASE_SECRET_KEY") -and $secrets.ContainsKey("SUPABASE_SERVICE_ROLE_KEY")) {
+  $secrets["SUPABASE_SECRET_KEY"] = $secrets["SUPABASE_SERVICE_ROLE_KEY"]
+}
 
 foreach ($key in $requiredKeys) {
   Require-Key -Secrets $secrets -Key $key
@@ -96,12 +106,12 @@ New-Item -ItemType Directory -Force -Path "scraper" | Out-Null
 
 $webEnv = @(
   "NEXT_PUBLIC_SUPABASE_URL=$($secrets["NEXT_PUBLIC_SUPABASE_URL"])",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY=$($secrets["NEXT_PUBLIC_SUPABASE_ANON_KEY"])"
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$($secrets["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"])"
 )
 
 $scraperEnv = @(
   "SUPABASE_URL=$($secrets["SUPABASE_URL"])",
-  "SUPABASE_SERVICE_ROLE_KEY=$($secrets["SUPABASE_SERVICE_ROLE_KEY"])",
+  "SUPABASE_SECRET_KEY=$($secrets["SUPABASE_SECRET_KEY"])",
   "TELEGRAM_BOT_TOKEN=$($secrets["TELEGRAM_BOT_TOKEN"])",
   "TELEGRAM_MAINTAINER_CHAT_ID=$($secrets["TELEGRAM_MAINTAINER_CHAT_ID"])"
 )

@@ -62,9 +62,9 @@ scraper/.env
 | Key | Goes To | Purpose |
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | `apps/web/.env.local` | Frontend Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `apps/web/.env.local` | Frontend public anon key |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `apps/web/.env.local` | Frontend publishable key |
 | `SUPABASE_URL` | `scraper/.env` | Scraper Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | `scraper/.env` | Server-side database writes |
+| `SUPABASE_SECRET_KEY` | `scraper/.env` | Server-side database writes |
 | `TELEGRAM_BOT_TOKEN` | `scraper/.env` | Telegram notification bot |
 | `TELEGRAM_MAINTAINER_CHAT_ID` | `scraper/.env` | Internal data-quality alerts |
 
@@ -75,8 +75,8 @@ The setup script maps these labels automatically:
 | Human label | Env key |
 |---|---|
 | `Project URL` | `SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_URL` fallback |
-| `Anon key` / `Publishable key` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
-| `Service role key` / `Secret key` | `SUPABASE_SERVICE_ROLE_KEY` |
+| `Anon key` / `Publishable key` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
+| `Service role key` / `Secret key` | `SUPABASE_SECRET_KEY` |
 | `Bot token` | `TELEGRAM_BOT_TOKEN` |
 | `Maintainer chat id` / `Chat id` | `TELEGRAM_MAINTAINER_CHAT_ID` |
 
@@ -86,7 +86,7 @@ them.
 
 ## Safety Rules
 
-- Do not paste `SUPABASE_SERVICE_ROLE_KEY` into chat.
+- Do not paste `SUPABASE_SECRET_KEY` into chat.
 - Do not put service role keys in `apps/web`.
 - GitHub Actions should use repository Secrets with the same key names.
 - Screenshots with hidden values are okay for navigation help.

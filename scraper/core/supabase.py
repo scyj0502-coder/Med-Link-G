@@ -15,9 +15,9 @@ class SupabaseScheduleWriter:
     @classmethod
     def from_env(cls) -> "SupabaseScheduleWriter":
         url = os.environ.get("SUPABASE_URL")
-        key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        key = os.environ.get("SUPABASE_SECRET_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
         if not url or not key:
-            raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.")
+            raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SECRET_KEY.")
         return cls(create_client(url, key))
 
     def load_published(self, hospital_id: str) -> list[dict]:
@@ -74,4 +74,3 @@ class SupabaseScheduleWriter:
         ]
         if change_payloads:
             self.client.table("schedule_changes").insert(change_payloads).execute()
-
