@@ -66,6 +66,16 @@ DEPARTMENT_COLUMN = (60, 192)
 TABLE_Y_RANGE = (110, 1240)
 OCR_CANDIDATE_CONFIDENCE = 0.78
 DOCTOR_PATTERN = re.compile(r"([\u4e00-\u9fff]{2,6})(\d{4,5})")
+OCR_DIGIT_CONFUSIONS = {
+    "0": "68",
+    "1": "7",
+    "2": "7",
+    "3": "8",
+    "5": "6",
+    "6": "5",
+    "7": "12",
+    "8": "30",
+}
 NOTE_KEYWORDS = [
     "停診",
     "約診",
@@ -93,6 +103,28 @@ DEPARTMENT_ALIASES = {
     "家醫科": ["家醫科"],
     "體檢科": ["體檢科"],
     "健診中心特約門診": ["健診中心特約門診", "健診中心"],
+    "一般外科": ["一般外科"],
+    "心臟外科": ["心臟外科", "心贖外科"],
+    "大腸直腸外科": ["大腸直腸外科"],
+    "泌尿科": ["泌尿科"],
+    "腦神經外科": ["腦神經外科"],
+    "胸腔外科": ["胸腔外科", "脈膛外科"],
+    "整形外科部": ["整形外科部", "整形外科"],
+    "皮膚科": ["皮膚科", "皮屢科"],
+    "婦產部": ["婦產部", "嫣產部"],
+    "骨科部": ["骨科部"],
+    "脊椎神經重建微創中心": ["脊椎神經重建", "背椎神經重建"],
+    "復健科": ["復健科"],
+    "兒童醫學部": ["兒童醫學部", "兒臺醫學部"],
+    "內科": ["內科"],
+    "婦科": ["婦科", "嫣科"],
+    "兒科": ["兒科"],
+    "中醫針傷科": ["中醫針傷科", "中醫針僧科"],
+    "中醫": ["中醫"],
+    "乳房醫學暨乳癌整合門診": ["乳癌整合門診", "乳房"],
+    "整合醫學特別門診": ["整合醫學特別門診"],
+    "睡眠障礙特別門診": ["睡眠障礙特別門診", "睡睞障礙特別門診"],
+    "高壓氧治療中心": ["高壓氧治療中心", "客壓氬"],
 }
 
 
@@ -429,11 +461,13 @@ def resolve_doctor_candidate(candidate: DoctorCandidate, cache: dict[str, str | 
 
 
 def nearby_digit_codes(code: str) -> list[str]:
+    if len(code) < 5:
+        return []
     candidates: list[str] = []
     for index, char in enumerate(code):
         if not char.isdigit():
             continue
-        for replacement in "0123456789":
+        for replacement in OCR_DIGIT_CONFUSIONS.get(char, ""):
             if replacement == char:
                 continue
             candidate = f"{code[:index]}{replacement}{code[index + 1:]}"
