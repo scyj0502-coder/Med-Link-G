@@ -11,6 +11,12 @@ export type PublishedSchedule = {
   period: string;
   room: string | null;
   source_url: string | null;
+  source_ref: string | null;
+  note: string | null;
+  raw_text: string | null;
+  source_page: number | null;
+  parsed_at: string | null;
+  confidence: number | null;
   published_at: string;
 };
 
