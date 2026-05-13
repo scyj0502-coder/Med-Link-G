@@ -8,8 +8,8 @@ on:
         required: false
         default: ""
   schedule:
-    # Taiwan time: 08:00, 12:00, 17:00.
-    - cron: "0 0,4,9 * * *"
+    # Taiwan time: Monday 08:00.
+    - cron: "0 0 * * 1"
 
 jobs:
   sync:

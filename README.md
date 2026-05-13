@@ -107,8 +107,8 @@ python main.py kmugh
 | 資料庫 | Supabase |
 | 通知 | Telegram |
 
-GitHub Actions 排程設定於 `.github/workflows/sync-schedules.yml`，預計每日台灣時間
-08:00、12:00、17:00 自動同步。
+GitHub Actions 排程設定於 `.github/workflows/sync-schedules.yml`，預計每週一台灣時間
+08:00 自動同步。
 
 ## 安全注意事項
 

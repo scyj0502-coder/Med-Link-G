@@ -68,7 +68,7 @@ apps/web/.env.local
 ## 5. 之後才設定 GitHub Actions
 
 Vercel 只負責前端。  
-每日 08:00、12:00、17:00 的自動爬蟲同步，之後會由 GitHub Actions 負責。
+每週一 08:00 的自動爬蟲同步，之後會由 GitHub Actions 負責。
 
 到那一步才需要設定：
 
