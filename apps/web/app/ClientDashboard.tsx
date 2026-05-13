@@ -3,17 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Hospital, PublishedSchedule } from "../lib/types";
 
-const weekdayOptions = [
-  { value: "", label: "全部" },
-  { value: "1", label: "一" },
-  { value: "2", label: "二" },
-  { value: "3", label: "三" },
-  { value: "4", label: "四" },
-  { value: "5", label: "五" },
-  { value: "6", label: "六" },
-  { value: "0", label: "日" }
-];
-
 const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"];
 const favoriteStorageKey = "medlink:favorites:v2";
 
@@ -23,7 +12,7 @@ type ClientDashboardProps = {
   initialFilters: {
     q: string;
     department: string;
-    weekday: string;
+    doctor: string;
   };
 };
 
@@ -104,7 +93,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
   const [region, setRegion] = useState("");
   const [hospital, setHospital] = useState("");
   const [department, setDepartment] = useState(initialFilters.department);
-  const [weekday, setWeekday] = useState(initialFilters.weekday);
+  const [doctor, setDoctor] = useState(initialFilters.doctor);
   const [viewDate, setViewDate] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -140,6 +129,19 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
     [hospitals, region]
   );
 
+  const doctorOptions = useMemo(() => {
+    const names = schedules
+      .filter((item) => {
+        const source = hospitals.find((entry) => entry.id === item.hospital_id);
+        const regionOk = !region || source?.region === region;
+        const hospitalOk = !hospital || item.hospital_id === hospital;
+        const departmentOk = !department || item.department === department;
+        return regionOk && hospitalOk && departmentOk && scheduleMatchesQuery(item, query);
+      })
+      .map((item) => item.doctor_name);
+    return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b, "zh-Hant"));
+  }, [department, hospital, hospitals, query, region, schedules]);
+
   const filteredSchedules = useMemo(
     () =>
       schedules.filter((item) => {
@@ -147,10 +149,10 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
         const regionOk = !region || source?.region === region;
         const hospitalOk = !hospital || item.hospital_id === hospital;
         const departmentOk = !department || item.department === department;
-        const weekdayOk = !weekday || String(item.weekday) === weekday;
-        return regionOk && hospitalOk && departmentOk && weekdayOk && scheduleMatchesQuery(item, query);
+        const doctorOk = !doctor || item.doctor_name === doctor;
+        return regionOk && hospitalOk && departmentOk && doctorOk && scheduleMatchesQuery(item, query);
       }),
-    [department, hospital, hospitals, query, region, schedules, weekday]
+    [department, doctor, hospital, hospitals, query, region, schedules]
   );
 
   const monthSchedules = useMemo(() => {
@@ -190,12 +192,23 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
     setRegion("");
     setHospital("");
     setDepartment("");
-    setWeekday("");
+    setDoctor("");
   }
 
   function updateRegion(nextRegion: string) {
     setRegion(nextRegion);
     setHospital("");
+    setDoctor("");
+  }
+
+  function updateHospital(nextHospital: string) {
+    setHospital(nextHospital);
+    setDoctor("");
+  }
+
+  function updateDepartment(nextDepartment: string) {
+    setDepartment(nextDepartment);
+    setDoctor("");
   }
 
   return (
@@ -247,7 +260,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
                 <select
                   className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
                   value={hospital}
-                  onChange={(event) => setHospital(event.target.value)}
+                  onChange={(event) => updateHospital(event.target.value)}
                 >
                   <option value="">全部醫院</option>
                   {hospitalOptions.map((item) => (
@@ -262,7 +275,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
                 <select
                   className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
                   value={department}
-                  onChange={(event) => setDepartment(event.target.value)}
+                  onChange={(event) => updateDepartment(event.target.value)}
                 >
                   <option value="">全部科別</option>
                   {departments.map((item) => (
@@ -273,15 +286,16 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
                 </select>
               </label>
               <label className="grid gap-2 text-sm font-semibold text-white/80">
-                星期
+                醫師
                 <select
                   className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
-                  value={weekday}
-                  onChange={(event) => setWeekday(event.target.value)}
+                  value={doctor}
+                  onChange={(event) => setDoctor(event.target.value)}
                 >
-                  {weekdayOptions.map((item) => (
-                    <option key={item.value || "all"} value={item.value}>
-                      {item.label}
+                  <option value="">全部醫師</option>
+                  {doctorOptions.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
                     </option>
                   ))}
                 </select>

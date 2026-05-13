@@ -57,7 +57,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       initialFilters={{
         q: params.q ?? "",
         department: params.department ?? "",
-        weekday: params.weekday ?? ""
+        doctor: params.weekday ?? ""
       }}
     />
   );
