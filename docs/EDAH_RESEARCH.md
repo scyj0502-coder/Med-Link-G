@@ -18,6 +18,8 @@ https://www.edah.org.tw/ProcessDetail2/51/Download
 
 以上三間應該作為三個不同 hospital source，不要混成一間醫院。
 
+若後續來源頁或 PDF 出現澎湖相關院區或診表，先排除不納入醫點通。醫點通目前服務範圍只涵蓋台南、高雄、屏東。
+
 ## 2026-05-13 初步檢查
 
 三份檔案皆為 PDF：

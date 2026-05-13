@@ -9,6 +9,16 @@ Med-Link has two separate surfaces:
 
 Sales users should not handle OCR validation or data maintenance tasks. If data is uncertain, it must not be published to the sales app.
 
+## Service Area
+
+The production service area is limited to:
+
+- 台南
+- 高雄
+- 屏東
+
+Sources or parsed records for 澎湖 / Penghu are excluded from publication.
+
 ## Current Prototype Role
 
 The current static GitHub Pages app remains a prototype for:
@@ -40,4 +50,3 @@ Start with one enabled source:
 ## Publication Rule
 
 Only published records are visible in the sales app. Internal review records can exist for maintainers, but they are not part of the sales workflow.
-

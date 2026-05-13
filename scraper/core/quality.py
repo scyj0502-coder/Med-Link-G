@@ -5,9 +5,18 @@ from core.models import RejectedSchedule
 
 
 MIN_CONFIDENCE = 0.85
+EXCLUDED_LOCATION_KEYWORDS = {"澎湖", "Penghu", "penghu"}
 
 
 def reject_reason(item: RawSchedule) -> str | None:
+    location_text = " ".join([
+        item.hospital_name,
+        item.branch_name,
+        item.source_url,
+        item.source_ref,
+    ])
+    if any(keyword in location_text for keyword in EXCLUDED_LOCATION_KEYWORDS):
+        return "excluded_location"
     if item.confidence < MIN_CONFIDENCE:
         return "low_confidence"
     if not item.doctor_name:
@@ -31,4 +40,3 @@ def partition_publishable(items: list[RawSchedule]) -> tuple[list[RawSchedule], 
         else:
             publishable.append(item)
     return publishable, rejected
-

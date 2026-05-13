@@ -19,6 +19,8 @@ ADAPTERS = {
     "kmugh": KmughAdapter,
 }
 
+SERVICE_REGIONS = {"台南", "高雄", "屏東"}
+
 
 def run(target: str | None = None) -> None:
     load_dotenv()
@@ -28,6 +30,9 @@ def run(target: str | None = None) -> None:
 
     for source in config.hospitals:
         if not source.enabled:
+            continue
+        if source.region not in SERVICE_REGIONS:
+            print(f"{source.id}: skipped unsupported region={source.region}")
             continue
         if target and source.id != target and source.adapter != target:
             continue
