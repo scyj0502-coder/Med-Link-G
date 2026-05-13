@@ -73,6 +73,8 @@ Maintainer chat id  :
 - [本機機密流程](docs/LOCAL_SECRETS.md)
 - [Supabase 設定流程](docs/SUPABASE_SETUP.md)
 - [Vercel 部署流程](docs/VERCEL_DEPLOY.md)
+- [GitHub Actions 自動同步](docs/GITHUB_ACTIONS_SETUP.md)
+- [義大三院資料來源研究](docs/EDAH_RESEARCH.md)
 
 ## 前端開發
 

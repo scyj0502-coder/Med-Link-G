@@ -9,4 +9,27 @@ hospitals:
       - 心臟血管內科
       - 肝膽內科
     schedule_url: https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule
-
+  - id: edah-main
+    enabled: false
+    adapter: edah_pdf
+    region: 高雄
+    hospital_name: 義大醫療財團法人
+    branch_name: 義大醫院
+    departments: []
+    schedule_url: https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDAH_NEW.pdf
+  - id: edah-cancer
+    enabled: false
+    adapter: edah_pdf
+    region: 高雄
+    hospital_name: 義大醫療財團法人
+    branch_name: 義大癌治療醫院
+    departments: []
+    schedule_url: https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDAH.pdf
+  - id: edah-dachang
+    enabled: false
+    adapter: edah_pdf
+    region: 高雄
+    hospital_name: 義大醫療財團法人
+    branch_name: 義大大昌醫院
+    departments: []
+    schedule_url: https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDH_NEW.pdf

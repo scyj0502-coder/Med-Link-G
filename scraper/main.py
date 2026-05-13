@@ -5,6 +5,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from adapters.edah_pdf import EdahPdfAdapter
 from adapters.kmugh import KmughAdapter
 from core.diff import detect_changes
 from core.quality import partition_publishable
@@ -14,6 +15,7 @@ from core.yaml_config import load_config
 
 
 ADAPTERS = {
+    "edah_pdf": EdahPdfAdapter,
     "kmugh": KmughAdapter,
 }
 
@@ -58,4 +60,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

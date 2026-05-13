@@ -4,10 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: "Optional hospital id or adapter"
+        description: "Optional hospital id or adapter, e.g. kmugh"
         required: false
         default: ""
   schedule:
+    # Taiwan time: 08:00, 12:00, 17:00.
     - cron: "0 0,4,9 * * *"
 
 jobs:
