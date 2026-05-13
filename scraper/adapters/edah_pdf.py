@@ -123,6 +123,13 @@ class DoctorCandidate:
     code: str
 
 
+@dataclass(frozen=True)
+class ResolvedDoctor:
+    name: str
+    code: str
+    corrected: bool
+
+
 class EdahPdfAdapter(ScheduleAdapter):
     """E-DA image-based PDF source.
 
@@ -260,12 +267,14 @@ def parse_schedule_page(
                     psm="6",
                 )
                 for candidate in extract_doctor_candidates(cell_text):
-                    resolved_name = resolve_doctor_name(candidate.code, doctor_cache)
-                    if resolved_name and is_plausible_doctor_match(candidate.ocr_name, resolved_name):
-                        doctor_name = resolved_name
+                    resolved = resolve_doctor_candidate(candidate, doctor_cache)
+                    if resolved:
+                        doctor_name = resolved.name
+                        doctor_code = resolved.code
                         confidence = 0.91
                     else:
                         doctor_name = candidate.ocr_name
+                        doctor_code = candidate.code
                         confidence = OCR_CANDIDATE_CONFIDENCE
                     schedules.append(
                         RawSchedule(
@@ -277,11 +286,11 @@ def parse_schedule_page(
                             weekday=weekday,
                             weekday_label=weekday_label,
                             period=period,
-                            room=candidate.code,
+                            room=doctor_code,
                             source_url=source.schedule_url,
                             source_ref=(
                                 f"pdf_page:{page_number};cell:{weekday_label}-{period};"
-                                f"doctor_code:{candidate.code}"
+                                f"doctor_code:{doctor_code};ocr_code:{candidate.code}"
                             ),
                             confidence=confidence,
                             note=extract_note(cell_text),
@@ -404,6 +413,32 @@ def extract_note(text: str) -> str:
     for date_match in re.finditer(r"\d{1,2}/\d{1,2}(?:[、,，.]\d{1,2})*", compact):
         notes.append(date_match.group(0))
     return "；".join(dict.fromkeys(notes))
+
+
+def resolve_doctor_candidate(candidate: DoctorCandidate, cache: dict[str, str | None]) -> ResolvedDoctor | None:
+    resolved_name = resolve_doctor_name(candidate.code, cache)
+    if resolved_name and is_plausible_doctor_match(candidate.ocr_name, resolved_name):
+        return ResolvedDoctor(name=resolved_name, code=candidate.code, corrected=False)
+
+    for nearby_code in nearby_digit_codes(candidate.code):
+        nearby_name = resolve_doctor_name(nearby_code, cache)
+        if nearby_name and is_plausible_doctor_match(candidate.ocr_name, nearby_name):
+            return ResolvedDoctor(name=nearby_name, code=nearby_code, corrected=True)
+
+    return None
+
+
+def nearby_digit_codes(code: str) -> list[str]:
+    candidates: list[str] = []
+    for index, char in enumerate(code):
+        if not char.isdigit():
+            continue
+        for replacement in "0123456789":
+            if replacement == char:
+                continue
+            candidate = f"{code[:index]}{replacement}{code[index + 1:]}"
+            candidates.append(candidate)
+    return candidates
 
 
 def resolve_doctor_name(code: str, cache: dict[str, str | None]) -> str | None:
