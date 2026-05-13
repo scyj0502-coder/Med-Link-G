@@ -13,8 +13,8 @@ https://www.edah.org.tw/ProcessDetail2/51/Download
 | hospital id | 醫院 | 目前下載檔 |
 |---|---|---|
 | `edah-main` | 義大醫院 | `https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDAH_NEW.pdf` |
-| `edah-cancer` | 義大癌治療醫院 | `https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDAH.pdf` |
-| `edah-dachang` | 義大大昌醫院 | `https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDH_NEW.pdf` |
+| `edah-cancer` | 義大癌治療醫院 | `https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDCH_NEW.pdf` |
+| `edah-dachang` | 義大大昌醫院 | `https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDDH_NEW.pdf` |
 
 以上三間應該作為三個不同 hospital source，不要混成一間醫院。
 
@@ -27,8 +27,8 @@ https://www.edah.org.tw/ProcessDetail2/51/Download
 | 檔案 | 大小 | Last-Modified |
 |---|---:|---|
 | `EDAH_NEW.pdf` | 約 4.4 MB | 2026-04-24 |
-| `EDAH.pdf` | 約 4.7 MB | 2026-04-24 |
-| `EDH_NEW.pdf` | 約 7.8 MB | 2026-04-24 |
+| `EDCH_NEW.pdf` | 圖片型 PDF | 從義大癌治療醫院分頁取得 |
+| `EDDH_NEW.pdf` | 圖片型 PDF | 從義大大昌醫院分頁取得 |
 
 使用 `pypdf` 嘗試抽取前兩頁文字，幾乎沒有文字內容，判斷為圖片型 PDF。
 
@@ -58,8 +58,9 @@ python inspect_edah_pdf.py edah-dachang --pages 16
 | PDF | 門診頁觀察 |
 |---|---|
 | `EDAH_NEW.pdf` | 主要包含義大醫院門診頁，後段有澎湖駐診與特約門診資訊，澎湖需排除。 |
-| `EDAH.pdf` | 主要為 4 月份舊檔，內容仍含義大醫院頁與系統共用頁，不可只靠檔名判斷分院。 |
-| `EDH_NEW.pdf` | 同一份 PDF 內包含義大醫院、義大癌治療醫院、義大大昌醫院頁面，需要逐頁用標題關鍵字判斷。 |
+| `EDCH_NEW.pdf` | 義大癌治療醫院 2026 年 05 月門診表。 |
+| `EDDH_NEW.pdf` | 義大大昌醫院 2026 年 05 月門診表。 |
+| `EDH_NEW.pdf` | 義大醫療各院區門診表，屬於跨院區彙整檔，不作為單一分院主要來源。 |
 
 分院辨識策略：
 

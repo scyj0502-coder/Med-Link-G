@@ -24,7 +24,7 @@ hospitals:
     hospital_name: 義大醫療財團法人
     branch_name: 義大癌治療醫院
     departments: []
-    schedule_url: https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDAH.pdf
+    schedule_url: https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDCH_NEW.pdf
   - id: edah-dachang
     enabled: false
     adapter: edah_pdf
@@ -32,4 +32,4 @@ hospitals:
     hospital_name: 義大醫療財團法人
     branch_name: 義大大昌醫院
     departments: []
-    schedule_url: https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDH_NEW.pdf
+    schedule_url: https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDDH_NEW.pdf
