@@ -9,6 +9,26 @@ from adapters.base import HospitalSource, RawSchedule
 from core.models import RejectedSchedule, ScheduleChange, schedule_payload
 
 
+LEGACY_PUBLISHED_COLUMNS = {
+    "schedule_key",
+    "id",
+    "sync_run_id",
+    "hospital_id",
+    "hospital_name",
+    "branch_name",
+    "department",
+    "doctor_name",
+    "weekday",
+    "weekday_label",
+    "period",
+    "room",
+    "source_url",
+    "source_ref",
+    "confidence",
+    "published_at",
+}
+
+
 class SupabaseRestClient:
     def __init__(self, project_url: str, api_key: str) -> None:
         normalized_url = project_url.rstrip("/")
@@ -96,7 +116,16 @@ class SupabaseScheduleWriter:
 
         payloads = [schedule_payload(item) | {"sync_run_id": run["id"]} for item in publishable]
         if payloads:
-            self.client.upsert("published_schedules", payloads, on_conflict="schedule_key")
+            try:
+                self.client.upsert("published_schedules", payloads, on_conflict="schedule_key")
+            except httpx.HTTPStatusError as exc:
+                if not is_missing_column_error(exc):
+                    raise
+                legacy_payloads = [
+                    {key: value for key, value in payload.items() if key in LEGACY_PUBLISHED_COLUMNS}
+                    for payload in payloads
+                ]
+                self.client.upsert("published_schedules", legacy_payloads, on_conflict="schedule_key")
 
         rejected_payloads = [
             {
@@ -124,3 +153,10 @@ class SupabaseScheduleWriter:
         ]
         if change_payloads:
             self.client.insert("schedule_changes", change_payloads)
+
+
+def is_missing_column_error(exc: httpx.HTTPStatusError) -> bool:
+    if exc.response.status_code not in {400, 404}:
+        return False
+    text = exc.response.text.lower()
+    return "column" in text and ("not found" in text or "could not find" in text)
