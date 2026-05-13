@@ -101,6 +101,8 @@ function openMaps(item: PublishedSchedule) {
 
 export default function ClientDashboard({ hospitals, schedules, initialFilters }: ClientDashboardProps) {
   const [query, setQuery] = useState(initialFilters.q);
+  const [region, setRegion] = useState("");
+  const [hospital, setHospital] = useState("");
   const [department, setDepartment] = useState(initialFilters.department);
   const [weekday, setWeekday] = useState(initialFilters.weekday);
   const [viewDate, setViewDate] = useState(() => new Date());
@@ -121,14 +123,34 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
     [schedules]
   );
 
+  const regions = useMemo(
+    () => Array.from(new Set(hospitals.map((item) => item.region))).sort((a, b) => a.localeCompare(b, "zh-Hant")),
+    [hospitals]
+  );
+
+  const hospitalOptions = useMemo(
+    () =>
+      hospitals
+        .filter((item) => !region || item.region === region)
+        .map((item) => ({
+          id: item.id,
+          label: hospitalLabel(item)
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label, "zh-Hant")),
+    [hospitals, region]
+  );
+
   const filteredSchedules = useMemo(
     () =>
       schedules.filter((item) => {
+        const source = hospitals.find((entry) => entry.id === item.hospital_id);
+        const regionOk = !region || source?.region === region;
+        const hospitalOk = !hospital || item.hospital_id === hospital;
         const departmentOk = !department || item.department === department;
         const weekdayOk = !weekday || String(item.weekday) === weekday;
-        return departmentOk && weekdayOk && scheduleMatchesQuery(item, query);
+        return regionOk && hospitalOk && departmentOk && weekdayOk && scheduleMatchesQuery(item, query);
       }),
-    [department, query, schedules, weekday]
+    [department, hospital, hospitals, query, region, schedules, weekday]
   );
 
   const monthSchedules = useMemo(() => {
@@ -165,8 +187,15 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
 
   function resetFilters() {
     setQuery("");
+    setRegion("");
+    setHospital("");
     setDepartment("");
     setWeekday("");
+  }
+
+  function updateRegion(nextRegion: string) {
+    setRegion(nextRegion);
+    setHospital("");
   }
 
   return (
@@ -197,6 +226,36 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="輸入姓名、科別、診間或醫院"
                 />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-white/80">
+                地區
+                <select
+                  className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
+                  value={region}
+                  onChange={(event) => updateRegion(event.target.value)}
+                >
+                  <option value="">全部地區</option>
+                  {regions.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-white/80">
+                醫院與分院
+                <select
+                  className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
+                  value={hospital}
+                  onChange={(event) => setHospital(event.target.value)}
+                >
+                  <option value="">全部醫院</option>
+                  {hospitalOptions.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="grid gap-2 text-sm font-semibold text-white/80">
                 科別
