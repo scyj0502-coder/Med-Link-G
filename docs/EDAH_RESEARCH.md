@@ -86,6 +86,15 @@ python inspect_edah_pdf.py edah-dachang --pages 16
 - `edah-main` 可抽出候選 7 筆，其中 5 筆通過官方醫師頁校正。
 - `edah-cancer` 目前尚未抽到可發布診次，需再調整頁面/科別區塊。
 
+解析原則：
+
+- 不依照 OCR 文字順序直接解析診次。
+- 先判斷頁面類型，只解析正式門診表頁，排除封面、公告、澎湖駐診、衛教與純說明頁。
+- 以表格座標為主，先切出星期欄位、科別列與上/下/夜診時段列，再把 cell 內文字歸類。
+- 同一 cell 多位醫師需拆成多筆資料。
+- 每筆資料保留 `room`、`note`、`raw_text`、`source_page`、`source_url`、`parsed_at`，方便後續除錯與追溯。
+- 若醫師代碼或欄位歸屬不確定，維持低信心並進入 rejected，不硬塞到正式資料。
+
 ## 後續實作方向
 
 1. 先選一間醫院做 MVP，建議 `edah-main`。

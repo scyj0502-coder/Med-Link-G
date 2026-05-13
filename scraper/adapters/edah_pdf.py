@@ -66,6 +66,19 @@ DEPARTMENT_COLUMN = (60, 192)
 TABLE_Y_RANGE = (110, 1240)
 OCR_CANDIDATE_CONFIDENCE = 0.78
 DOCTOR_PATTERN = re.compile(r"([\u4e00-\u9fff]{2,6})(\d{4,5})")
+NOTE_KEYWORDS = [
+    "停診",
+    "約診",
+    "限約",
+    "限掛",
+    "限診",
+    "初診",
+    "特診",
+    "特殊",
+    "特約",
+    "限號",
+    "看報告",
+]
 DEPARTMENT_ALIASES = {
     "心臟內科": ["心臟內科", "心臟血管內科"],
     "胃腸肝膽科": ["胃腸肝膽科", "腸肝膽科", "腔腸肝膊科", "胃腸肝膊科"],
@@ -264,13 +277,16 @@ def parse_schedule_page(
                             weekday=weekday,
                             weekday_label=weekday_label,
                             period=period,
-                            room="",
+                            room=candidate.code,
                             source_url=source.schedule_url,
                             source_ref=(
                                 f"pdf_page:{page_number};cell:{weekday_label}-{period};"
                                 f"doctor_code:{candidate.code}"
                             ),
                             confidence=confidence,
+                            note=extract_note(cell_text),
+                            raw_text=compact_text(cell_text),
+                            source_page=page_number,
                         )
                     )
 
@@ -377,6 +393,17 @@ def extract_doctor_candidates(text: str) -> list[DoctorCandidate]:
             seen_codes.add(code)
             candidates.append(DoctorCandidate(ocr_name=name, code=code))
     return candidates
+
+
+def extract_note(text: str) -> str:
+    compact = compact_text(text)
+    notes: list[str] = []
+    for keyword in NOTE_KEYWORDS:
+        if keyword in compact:
+            notes.append(keyword)
+    for date_match in re.finditer(r"\d{1,2}/\d{1,2}(?:[、,，.]\d{1,2})*", compact):
+        notes.append(date_match.group(0))
+    return "；".join(dict.fromkeys(notes))
 
 
 def resolve_doctor_name(code: str, cache: dict[str, str | None]) -> str | None:

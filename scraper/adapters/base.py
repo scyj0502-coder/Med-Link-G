@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,10 @@ class RawSchedule:
     source_url: str
     source_ref: str
     confidence: float
+    note: str = ""
+    raw_text: str = ""
+    source_page: int | None = None
+    parsed_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 class ScheduleAdapter:
@@ -37,4 +42,3 @@ class ScheduleAdapter:
 
     def fetch(self) -> list[RawSchedule]:
         raise NotImplementedError
-
