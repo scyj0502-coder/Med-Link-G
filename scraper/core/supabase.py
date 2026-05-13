@@ -54,8 +54,12 @@ class SupabaseScheduleWriter:
 
     @classmethod
     def from_env(cls) -> "SupabaseScheduleWriter":
-        url = os.environ.get("SUPABASE_URL")
-        key = os.environ.get("SUPABASE_SECRET_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        url = (os.environ.get("SUPABASE_URL") or "").strip()
+        key = (
+            os.environ.get("SUPABASE_SECRET_KEY")
+            or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+            or ""
+        ).strip()
         if not url or not key:
             raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SECRET_KEY.")
         return cls(SupabaseRestClient(url, key))

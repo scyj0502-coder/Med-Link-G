@@ -16,8 +16,8 @@ class TelegramNotifier:
     @classmethod
     def from_env(cls) -> "TelegramNotifier":
         return cls(
-            os.environ.get("TELEGRAM_BOT_TOKEN"),
-            os.environ.get("TELEGRAM_MAINTAINER_CHAT_ID"),
+            (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip(),
+            (os.environ.get("TELEGRAM_MAINTAINER_CHAT_ID") or "").strip(),
         )
 
     def send_changes(self, source: HospitalSource, changes: list[ScheduleChange]) -> None:
@@ -33,4 +33,3 @@ class TelegramNotifier:
             return
         url = f"https://api.telegram.org/bot{self.token}/sendMessage"
         httpx.post(url, json={"chat_id": self.maintainer_chat_id, "text": text}, timeout=15)
-
