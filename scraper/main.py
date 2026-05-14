@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from adapters.edah_pdf import EdahPdfAdapter
 from adapters.kmugh import KmughAdapter
+from adapters.pingtung_mohw import PingtungMohwAdapter
 from adapters.shinkao import ShinkaoAdapter
 from core.diff import detect_changes
 from core.quality import partition_publishable
@@ -18,6 +19,7 @@ from core.yaml_config import load_config
 ADAPTERS = {
     "edah_pdf": EdahPdfAdapter,
     "kmugh": KmughAdapter,
+    "pingtung_mohw": PingtungMohwAdapter,
     "shinkao": ShinkaoAdapter,
 }
 

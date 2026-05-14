@@ -41,3 +41,11 @@ hospitals:
     branch_name: 總院
     departments: []
     schedule_url: https://www.shinkaohosp.com.tw/schedule.aspx
+  - id: pingtung-mohw
+    enabled: false
+    adapter: pingtung_mohw
+    region: 屏東
+    hospital_name: 衛生福利部屏東醫院
+    branch_name: 總院
+    departments: []
+    schedule_url: https://www.pntn.mohw.gov.tw/?aid=602&iid=2

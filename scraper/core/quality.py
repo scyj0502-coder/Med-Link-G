@@ -25,7 +25,7 @@ def reject_reason(item: RawSchedule) -> str | None:
         return "missing_department"
     if item.weekday < 0 or item.weekday > 6:
         return "invalid_weekday"
-    if item.period not in {"上午", "下午", "夜診"}:
+    if item.period not in {"上午", "下午", "黃昏", "夜診"}:
         return "invalid_period"
     return None
 
