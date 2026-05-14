@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import re
+from difflib import SequenceMatcher
 from dataclasses import dataclass
 from urllib.parse import urljoin
 
@@ -104,6 +105,96 @@ PAGE_DEPARTMENT_SPANS = {
     ],
 }
 
+KNOWN_DOCTORS_BY_DEPARTMENT = {
+    "一般科": {"謝易倫", "柯亞倫", "郭晉宏", "葉東奇", "輪值醫師"},
+    "神經科": {"林峰正", "沈聖偉", "林勛章", "許毓昀", "宋允文", "林煥然"},
+    "心臟科": {"李孟光", "林新進", "朱俊源", "李智雄", "陳力瀚", "林詩晴"},
+    "肝膽胰腸胃內科": {"張庭遠", "謝易倫", "劉大維", "陳震勛", "葉俊余", "莊沛霖", "盧建宇"},
+    "營養諮詢": {"陳震勛"},
+    "內分泌新陳代謝科": {"林昆正", "周炳全", "莊立倫"},
+    "胸腔內科": {"涂聖葳", "王文育", "鄭孟軒", "葉東奇", "范勝斌", "沈昱廷"},
+    "感染科": {"郭政諭", "李侑勳", "洪子倫"},
+    "腎臟內科": {"鍾承穎", "趙祐麟", "蘇威宇"},
+    "腫瘤科": {"柯亞倫", "黃炯棠"},
+    "血液科": {"柯亞倫", "黃炯棠"},
+    "家醫科": {"林直", "許禮安", "李俊德"},
+    "職業醫學科": {"何原彰"},
+    "一般消化外科": {"黃超俊", "盧文益", "蔡文豪", "黃鵬仁", "陳臨安", "楊博翔"},
+    "乳房外科": {"高捷妮", "莊捷翰", "高聖鈞", "楊博翔"},
+    "大腸直腸肛門外科": {"黃超俊", "盧文益", "楊博翔"},
+    "泌尿科": {"李威明", "劉家駒", "張哲維", "陳震亞", "張君愷", "李明儒"},
+    "骨科": {"張德華", "蘇裕捷", "陳姝蓉", "楊琮誠", "高建生", "張中嘉", "洪錫明", "簡松雄", "鄭裕民"},
+    "神經外科": {"吳宗勳", "李昆興", "于大智", "張家茂", "張書瀚"},
+    "心臟血管外科": {"黃建偉", "吳欣岱", "陳懷民", "陳英富", "謝炯昭"},
+    "整形外科": {"林治邦", "盧道覺"},
+    "胸腔外科": {"顏凡偉", "周世華", "李瑞英"},
+    "兒科": {"蕭筑元", "林長興"},
+    "婦產科": {"魏福茂", "楊曜瑜", "唐達翔"},
+    "婦癌專科": {"黃富仁"},
+    "耳鼻喉科": {"宋安", "鄭凱元", "林佳志", "姜志群"},
+    "眼科": {"詹韶恩", "陳怡先", "鄭凱畿"},
+    "牙科": {"鄭緯和", "陳怡頡", "游智凱", "周映瑜", "蘇泓瑋", "葉先倫", "洪宇翰", "魏家銓", "邱恩郁"},
+    "皮膚科": {"曾慧文", "王暉景", "陳泱伊", "張瑞朝", "楊亭亨"},
+    "精神科": {"田鴻誠", "林懷道", "陳弘仁"},
+    "替代療法": {"陳弘仁", "田鴻誠"},
+    "復健科": {"陳爾駿", "周嘉駿", "林政緯", "李志明"},
+    "戒菸特別門診": {"林直", "李俊德", "陳弘仁", "沈昱廷", "鄭孟軒", "王文育", "葉東奇", "郭政諭", "李侑勳", "洪子倫"},
+    "M痘疫苗": {"郭政諭", "李侑勳", "洪子倫"},
+}
+OCR_DOCTOR_CORRECTIONS = {
+    "謝映倒": "謝易倫",
+    "謝暢倫": "謝易倫",
+    "訌臣倫": "柯亞倫",
+    "柯臣倫": "柯亞倫",
+    "郭晉宏巨": "郭晉宏",
+    "悖東奇": "葉東奇",
+    "葉柬奇": "葉東奇",
+    "林鏗正": "林峰正",
+    "林鋸正": "林峰正",
+    "林鯨正": "林峰正",
+    "恤聖偉": "沈聖偉",
+    "忸勳章": "林勛章",
+    "忸勳章刪": "林勛章",
+    "忸毓昀": "許毓昀",
+    "忸毓昀唰": "許毓昀",
+    "許毓昀唰": "許毓昀",
+    "悖允文": "宋允文",
+    "悖允文汀": "宋允文",
+    "悖允文盯": "宋允文",
+    "悖允文惻": "宋允文",
+    "李孟兆": "李孟光",
+    "朱俊沅": "朱俊源",
+    "陳力瀚溯": "陳力瀚",
+    "陳震勸": "陳震勛",
+    "幃沛霖": "莊沛霖",
+    "周炳坊": "周炳全",
+    "囤炳金": "周炳全",
+    "涂聖葭": "涂聖葳",
+    "斗涂聖葳": "涂聖葳",
+    "寸涂聖葳": "涂聖葳",
+    "斗王文育": "王文育",
+    "鄭孟蘑于": "鄭孟軒",
+    "葉构奇": "葉東奇",
+    "斗葉构奇": "葉東奇",
+    "斗葉東奇": "葉東奇",
+    "芭勝斌": "范勝斌",
+    "范腿斌": "范勝斌",
+    "郭政諮": "郭政諭",
+    "李侑勳咒": "李侑勳",
+    "斗李侑勳": "李侑勳",
+    "鍾趕": "鍾承穎",
+    "蘇咸宇": "蘇威宇",
+    "黃鶩仁": "黃鵬仁",
+    "蔡文墊": "蔡文豪",
+    "蔡文據": "蔡文豪",
+    "陳臨二": "陳臨安",
+    "楊博翥": "楊博翔",
+    "幗搏翔": "楊博翔",
+    "幗搏翔腮": "楊博翔",
+    "怖搏翔": "楊博翔",
+    "怖搏翔惻": "楊博翔",
+}
+
 
 @dataclass
 class RowContext:
@@ -146,7 +237,7 @@ class PingtungMohwAdapter(ScheduleAdapter):
 
                 for weekday, weekday_label, left, right in WEEKDAY_COLUMNS:
                     cell_text = ocr_crop(ocr_image, (left, top, right, bottom), psm="6")
-                    for doctor_name, note in extract_doctors(cell_text):
+                    for doctor_name, note in extract_doctors(cell_text, context.department):
                         schedules.append(
                             RawSchedule(
                                 hospital_id=self.source.id,
@@ -332,15 +423,18 @@ def normalize_location(text: str) -> str:
 
 def normalize_room(text: str) -> str:
     compact = compact_text(text)
-    match = re.search(r"([一二三四五六七八九十])\s*[診詒]\s*(\d{1,2})", compact)
+    match = re.search(r"([一二三四五六七八九十])\s*[診詒詑誒肱胜訪][^\d]{0,8}(\d{1,2})", compact)
     if match:
         return f"{match.group(1)}診{match.group(2)}"
+    number_matches = re.findall(r"\b(\d{1,2})\b", compact)
+    if number_matches:
+        return f"診{number_matches[-1]}"
     if "於原" in compact or "專科診" in compact:
         return "於原專科診間"
     return ""
 
 
-def extract_doctors(text: str) -> list[tuple[str, str]]:
+def extract_doctors(text: str, department: str) -> list[tuple[str, str]]:
     raw = compact_text(text)
     if not raw:
         return []
@@ -349,18 +443,46 @@ def extract_doctors(text: str) -> list[tuple[str, str]]:
     compact = "".join(raw.split())
     seen: set[str] = set()
     matches = list(DOCTOR_PATTERN.finditer(compact))
+    matches.extend(
+        match for match in re.finditer(r"([\u4e00-\u9fff]{2,5})[^\u4e00-\u9fff]{0,4}(?:[O0]?\d{2,4})", compact)
+        if match not in matches
+    )
     if not matches and not NOTE_PATTERN.search(raw):
         matches = [
             match for match in re.finditer(r"([\u4e00-\u9fff]{2,4})", compact)
             if not should_ignore_name(match.group(1))
         ]
     for match in matches:
-        name = normalize_doctor_name(match.group(1))
+        name = correct_doctor_name(normalize_doctor_name(match.group(1)), department)
         if not name or name in seen:
             continue
         seen.add(name)
         doctors.append((name, note))
     return doctors
+
+
+def correct_doctor_name(name: str, department: str) -> str:
+    if not name:
+        return ""
+    department_candidates = KNOWN_DOCTORS_BY_DEPARTMENT.get(department, set())
+    if name in department_candidates:
+        return name
+
+    corrected = OCR_DOCTOR_CORRECTIONS.get(name)
+    if corrected and (not department_candidates or corrected in department_candidates):
+        return corrected
+
+    best_name = ""
+    best_score = 0.0
+    for candidate in department_candidates:
+        score = SequenceMatcher(None, name, candidate).ratio()
+        if score > best_score:
+            best_name = candidate
+            best_score = score
+    if best_score >= 0.67:
+        return best_name
+
+    return ""
 
 
 def normalize_doctor_name(text: str) -> str:
