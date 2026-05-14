@@ -237,7 +237,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
                   className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="輸入姓名、科別、診間或醫院"
+                  placeholder="輸入姓名、科別、樓層或醫院"
                 />
               </label>
               <label className="grid gap-2 text-sm font-semibold text-white/80">

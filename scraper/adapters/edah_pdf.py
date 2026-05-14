@@ -102,6 +102,30 @@ EDAH_DACHANG_DEPARTMENT_ROOMS = {
     "國際美容醫學中心": "二樓",
     "耳鼻喉科": "三樓",
 }
+EDAH_CANCER_DEPARTMENT_ROOMS = {
+    "一般外科": "二樓",
+    "心臟外科": "二樓",
+    "大腸直腸外科": "二樓",
+    "泌尿科": "二樓",
+    "腦神經外科": "一樓",
+    "胸腔外科": "二樓",
+    "整形外科部": "二樓",
+    "皮膚科": "二樓",
+    "婦產部": "二樓",
+    "骨科部": "一樓",
+    "脊椎神經重建微創中心": "五樓",
+    "復健科": "一樓",
+    "耳鼻喉科": "二樓",
+    "兒童醫學部": "二樓",
+    "內科": "一樓",
+    "婦科": "一樓",
+    "兒科": "一樓",
+    "中醫": "一樓",
+    "中醫針傷科": "一樓",
+    "乳房醫學暨乳癌整合門診": "一樓",
+    "睡眠障礙特別門診": "一樓",
+    "高壓氧治療中心": "一樓",
+}
 OCR_DIGIT_CONFUSIONS = {
     "0": "68",
     "1": "7",
@@ -551,6 +575,8 @@ def canonical_department(text: str) -> str:
 def department_room(source_id: str, department: str, department_text: str) -> str:
     if source_id == "edah-dachang" and department in EDAH_DACHANG_DEPARTMENT_ROOMS:
         return EDAH_DACHANG_DEPARTMENT_ROOMS[department]
+    if source_id == "edah-cancer" and department in EDAH_CANCER_DEPARTMENT_ROOMS:
+        return EDAH_CANCER_DEPARTMENT_ROOMS[department]
 
     compact = compact_text(department_text)
     match = re.search(r"(B\d|[一二三四五六七八九十])樓", compact)
