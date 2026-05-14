@@ -49,3 +49,11 @@ hospitals:
     branch_name: 總院
     departments: []
     schedule_url: https://www.pntn.mohw.gov.tw/?aid=602&iid=2
+  - id: cgmh-kaohsiung
+    enabled: false
+    adapter: cgmh_text
+    region: 高雄
+    hospital_name: 高雄長庚紀念醫院
+    branch_name: 總院
+    departments: []
+    schedule_url: https://register.cgmh.org.tw/OpTimeSheet/250429004_upload.pdf
