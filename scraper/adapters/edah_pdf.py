@@ -86,6 +86,21 @@ EDAH_DACHANG_DEPARTMENT_ROOMS = {
     "家醫科": "二樓",
     "體檢科": "七樓",
     "健診中心特約門診": "七樓",
+    "骨科部": "一樓",
+    "復健科": "二樓",
+    "婦產部": "五樓",
+    "一般外科": "一樓",
+    "乳房外科特別門診": "一樓",
+    "腦神經外科": "一樓",
+    "心臟外科": "一樓",
+    "泌尿科": "二樓",
+    "男性健康中心": "二樓",
+    "大腸直腸外科": "一樓",
+    "胸腔外科": "一樓",
+    "皮膚科": "二樓",
+    "整形外科部": "二樓",
+    "國際美容醫學中心": "二樓",
+    "耳鼻喉科": "三樓",
 }
 OCR_DIGIT_CONFUSIONS = {
     "0": "68",
@@ -142,7 +157,11 @@ DEPARTMENT_ALIASES = {
     "兒科": ["兒科"],
     "中醫針傷科": ["中醫針傷科", "中醫針僧科"],
     "中醫": ["中醫"],
-    "乳房醫學暨乳癌整合門診": ["乳癌整合門診", "乳房"],
+    "男性健康中心": ["男性健康中心"],
+    "國際美容醫學中心": ["國際美容醫學中心", "國際美容"],
+    "耳鼻喉科": ["耳鼻喉科"],
+    "乳房外科特別門診": ["乳房外科特別門診"],
+    "乳房醫學暨乳癌整合門診": ["乳癌整合門診"],
     "整合醫學特別門診": ["整合醫學特別門診"],
     "睡眠障礙特別門診": ["睡眠障礙特別門診", "睡睞障礙特別門診"],
     "高壓氧治療中心": ["高壓氧治療中心", "客壓氬"],
@@ -315,11 +334,25 @@ def parse_schedule_page(
             continue
         room = department_room(source.id, department, department_text)
 
+        for item in parse_saturday_cell(
+            source=source,
+            image=ocr_image_source,
+            page_number=page_number,
+            top=top,
+            bottom=bottom,
+            department=department,
+            room=room,
+            doctor_cache=doctor_cache,
+        ):
+            schedules.append(item)
+
         period_ranges = split_period_ranges(top, bottom)
         for period, (period_top, period_bottom) in zip(PERIODS, period_ranges):
             if period_bottom - period_top < 12:
                 continue
             for weekday, weekday_label, left, right in WEEKDAY_COLUMNS:
+                if weekday == 6:
+                    continue
                 cell_text = ocr_base_crop(
                     ocr_image_source,
                     (left + 2, period_top + 1, right - 2, period_bottom - 1),
@@ -363,6 +396,64 @@ def parse_schedule_page(
                         )
                     )
 
+    return schedules
+
+
+def parse_saturday_cell(
+    source,
+    image: Image.Image,
+    page_number: int,
+    top: int,
+    bottom: int,
+    department: str,
+    room: str,
+    doctor_cache: dict[str, str | None],
+) -> list[RawSchedule]:
+    weekday, weekday_label, left, right = WEEKDAY_COLUMNS[-1]
+    cell_text = ocr_base_crop(
+        image,
+        (left + 2, top + 1, right - 2, bottom - 1),
+        psm="6",
+    )
+    schedules: list[RawSchedule] = []
+    for candidate in extract_doctor_candidates(cell_text):
+        period = period_from_code(candidate.schedule_code)
+        if not period:
+            continue
+        resolved = resolve_doctor_candidate(candidate, doctor_cache)
+        if resolved:
+            doctor_name = resolved.name
+            schedule_code = resolved.schedule_code
+            doctor_code = resolved.doctor_code
+            confidence = 0.91
+        else:
+            doctor_name = candidate.ocr_name
+            schedule_code = candidate.schedule_code
+            doctor_code = candidate.doctor_code
+            confidence = OCR_CANDIDATE_CONFIDENCE
+        schedules.append(
+            RawSchedule(
+                hospital_id=source.id,
+                hospital_name=source.hospital_name,
+                branch_name=source.branch_name,
+                department=department,
+                doctor_name=doctor_name,
+                weekday=weekday,
+                weekday_label=weekday_label,
+                period=period,
+                room=room,
+                source_url=source.schedule_url,
+                source_ref=(
+                    f"pdf_page:{page_number};cell:{weekday_label}-{period};"
+                    f"doctor_code:{doctor_code};"
+                    f"schedule_code:{schedule_code};ocr_code:{candidate.schedule_code}"
+                ),
+                confidence=confidence,
+                note=extract_note(cell_text),
+                raw_text=compact_text(cell_text),
+                source_page=page_number,
+            )
+        )
     return schedules
 
 
