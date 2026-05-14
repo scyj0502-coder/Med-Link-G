@@ -10,7 +10,7 @@ hospitals:
       - 肝膽內科
     schedule_url: https://www.kmugh.org.tw/web/kmugh/MedicalService/OPDSchedule
   - id: edah-main
-    enabled: false
+    enabled: true
     adapter: edah_pdf
     region: 高雄
     hospital_name: 義大醫療財團法人

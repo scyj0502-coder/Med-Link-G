@@ -126,6 +126,22 @@ EDAH_CANCER_DEPARTMENT_ROOMS = {
     "睡眠障礙特別門診": "一樓",
     "高壓氧治療中心": "一樓",
 }
+EDAH_MAIN_DEPARTMENT_ROOMS = {
+    "一般外科": "一樓",
+    "呼吸胸腔科": "二樓",
+    "新陳代謝科": "二樓",
+    "整形外科部": "二樓",
+    "皮膚科": "一樓",
+    "婦產部": "二樓",
+    "骨科部": "一樓",
+    "體檢科": "二樓",
+    "耳鼻喉科": "二樓",
+    "眼科": "二樓",
+    "牙科部": "二樓",
+    "口腔外科": "二樓",
+    "放射腫瘤科": "地下一樓",
+    "睡眠障礙特別門診": "未標示",
+}
 OCR_DIGIT_CONFUSIONS = {
     "0": "68",
     "1": "7",
@@ -153,7 +169,7 @@ DEPARTMENT_ALIASES = {
     "心臟內科": ["心臟內科", "心臟血管內科"],
     "胃腸肝膽科": ["胃腸肝膽科", "腸肝膽科", "腔腸肝膊科", "胃腸肝膊科"],
     "高階胃食道逆流診治中心": ["高階胃食道逆流", "胃食道逆流"],
-    "呼吸胸腔科": ["呼吸胸腔科", "呼吸胸科"],
+    "呼吸胸腔科": ["呼吸胸腔科", "呼吸胸腔內科", "咩吸胸腔內科", "呼吸胸科"],
     "腎臟科": ["腎臟科"],
     "神經科": ["神經科"],
     "血液腫瘤科": ["血液腫瘤科", "血液睡瘤科"],
@@ -183,12 +199,33 @@ DEPARTMENT_ALIASES = {
     "中醫": ["中醫"],
     "男性健康中心": ["男性健康中心"],
     "國際美容醫學中心": ["國際美容醫學中心", "國際美容"],
-    "耳鼻喉科": ["耳鼻喉科"],
+    "耳鼻喉科": ["耳鼻喉科", "耳鼻喉頭頸部", "醫學部"],
     "乳房外科特別門診": ["乳房外科特別門診"],
     "乳房醫學暨乳癌整合門診": ["乳癌整合門診"],
     "整合醫學特別門診": ["整合醫學特別門診"],
     "睡眠障礙特別門診": ["睡眠障礙特別門診", "睡睞障礙特別門診"],
     "高壓氧治療中心": ["高壓氧治療中心", "客壓氬"],
+    "眼科": ["眼科"],
+    "牙科部": ["牙科部", "牙科", "向秘部"],
+    "口腔外科": ["口腔外科"],
+    "放射腫瘤科": ["放射腫瘤科", "放尉腫癌科"],
+    "一般兒科兼健兒門診": ["一般兒科兼健兒門診", "一般克科兼健兔門診"],
+    "新生兒科": ["新生兒科"],
+    "小兒外科": ["小兒外科"],
+    "小兒骨科": ["小兒骨科", "小兒電科"],
+    "兒童神經科": ["兒童神經科", "兒臺神經科"],
+    "兒童發展聯合評估門診": ["兒童發展聯合評估", "兒基發展"],
+    "兒童遺傳暨內分泌新陳代謝科": ["兒童遺傳暨內分泌", "兒城遽傳螺內分泥"],
+    "兒童青少年心智科": ["兒童青少年心智科", "兒寄少年心智科"],
+    "兒童腎臟泌尿科及夜尿門診": ["兒童腎臟泌尿", "兒臺胡贖泌尿"],
+    "兒童胃腸肝膽科": ["兒童胃腸肝膽科", "兔臺胃腸肝膽科"],
+    "兒童過敏氣喘風濕科": ["兒童過敏氣喘風濕科", "兔臺過敏"],
+    "兒童呼吸胸腔科": ["兒童呼吸胸腔科", "哈吸胸脖科"],
+    "兒童心臟科": ["兒童心臟科", "兒臺心臟科"],
+    "兒童感染科": ["兒童感染科"],
+    "兒童血液腫瘤科": ["兒童血液腫瘤科", "血液腸癖科"],
+    "青少年門診": ["青少年門診"],
+    "戒菸門診": ["戒菸門診"],
 }
 
 
@@ -250,7 +287,7 @@ class EdahPdfAdapter(ScheduleAdapter):
             page = document[page_index]
             markers = ocr_page_markers(page)
             branch_ids = detect_branch_ids(markers.header_text)
-            if branch_ids != [self.source.id] or not is_schedule_page(markers.header_text):
+            if not should_parse_page(self.source.id, branch_ids, markers.header_text):
                 continue
 
             for item in parse_schedule_page(self.source, page, page_index + 1, doctor_cache):
@@ -567,24 +604,41 @@ def canonical_department(text: str) -> str:
     for canonical, aliases in DEPARTMENT_ALIASES.items():
         if canonical == "內科" and "內科診" in compact:
             continue
+        if canonical in {
+            "神經科",
+            "新陳代謝科",
+            "呼吸胸腔科",
+            "心臟內科",
+            "胃腸肝膽科",
+            "感染科",
+            "血液腫瘤科",
+            "過敏免疫風濕科",
+            "腎臟科",
+        } and any(marker in compact for marker in ["兒童", "兒臺", "小兒", "兔臺"]):
+            continue
         if any(alias in compact for alias in aliases):
             return canonical
     return ""
 
 
 def department_room(source_id: str, department: str, department_text: str) -> str:
+    if source_id == "edah-main" and department in EDAH_MAIN_DEPARTMENT_ROOMS:
+        return EDAH_MAIN_DEPARTMENT_ROOMS[department]
     if source_id == "edah-dachang" and department in EDAH_DACHANG_DEPARTMENT_ROOMS:
         return EDAH_DACHANG_DEPARTMENT_ROOMS[department]
     if source_id == "edah-cancer" and department in EDAH_CANCER_DEPARTMENT_ROOMS:
         return EDAH_CANCER_DEPARTMENT_ROOMS[department]
 
     compact = compact_text(department_text)
-    match = re.search(r"(B\d|[一二三四五六七八九十])樓", compact)
-    if match:
-        return match.group(0)
     match = re.search(r"(B\d)\s*內科診區", compact)
     if match:
         return f"{match.group(1)} 內科診區"
+    match = re.search(r"(B\d|[一二三四五六七八九十])樓", compact)
+    if match:
+        return match.group(0)
+    match = re.search(r"([一二三四五六七八九十])(?:欄|櫻|標|檳|罌|襪|榴)", compact)
+    if match:
+        return f"{match.group(1)}樓"
     return "未標示"
 
 
@@ -691,7 +745,7 @@ def resolve_doctor_name(code: str, cache: dict[str, str | None]) -> str | None:
 
     soup = BeautifulSoup(response.text, "html.parser")
     text = compact_text(soup.get_text("\n"))
-    match = re.search(r"([\u4e00-\u9fff]{2,4})\([\u4e00-\u9fff]+科\)", text)
+    match = re.search(r"([\u4e00-\u9fff]{2,4})\([\u4e00-\u9fff]+(?:科|部|中心)\)", text)
     if not match:
         cache[code] = None
         return None
@@ -720,6 +774,17 @@ def branch_name_for(branch_ids: list[str]) -> str:
     if len(branch_ids) != 1:
         return ""
     return BRANCH_NAMES[branch_ids[0]]
+
+
+def should_parse_page(source_id: str, branch_ids: list[str], text: str) -> bool:
+    if not is_schedule_page(text):
+        return False
+    if branch_ids == [source_id]:
+        return True
+    if source_id == "edah-main" and not branch_ids:
+        compact = compact_text(text)
+        return "澎湖" not in compact and "駐診" not in compact
+    return False
 
 
 def is_schedule_page(text: str) -> bool:
