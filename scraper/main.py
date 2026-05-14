@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from adapters.cgmh_text import CgmhTextAdapter
+from adapters.cgmh_image import CgmhImageAdapter
 from adapters.edah_pdf import EdahPdfAdapter
 from adapters.kmugh import KmughAdapter
 from adapters.pingtung_mohw import PingtungMohwAdapter
@@ -18,6 +19,7 @@ from core.yaml_config import load_config
 
 
 ADAPTERS = {
+    "cgmh_image": CgmhImageAdapter,
     "cgmh_text": CgmhTextAdapter,
     "edah_pdf": EdahPdfAdapter,
     "kmugh": KmughAdapter,
