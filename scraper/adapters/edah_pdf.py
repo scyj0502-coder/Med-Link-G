@@ -616,6 +616,14 @@ def resolve_doctor_candidate(candidate: DoctorCandidate, cache: dict[str, str | 
                 corrected=True,
             )
 
+    if resolved_name:
+        return ResolvedDoctor(
+            name=resolved_name,
+            schedule_code=candidate.schedule_code,
+            doctor_code=candidate.doctor_code,
+            corrected=True,
+        )
+
     return None
 
 
