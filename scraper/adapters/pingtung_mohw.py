@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import io
+import hashlib
+import os
 import re
 from difflib import SequenceMatcher
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import urljoin
 
 import fitz
 import httpx
 from bs4 import BeautifulSoup
 from PIL import Image
-from PIL import ImageEnhance
-from PIL import ImageOps
 
 from adapters.base import RawSchedule, ScheduleAdapter
 from adapters.edah_pdf import ocr_base_crop
@@ -104,6 +105,64 @@ PAGE_DEPARTMENT_SPANS = {
         (1327, 1470, "M痘疫苗"),
     ],
 }
+PAGE_ROOM_SPANS = {
+    1: [
+        (198, 400, "於原專科診間"),
+        (400, 467, "一診12"),
+        (467, 534, "二診14"),
+        (534, 669, "一診12"),
+        (939, 1006, "一診10"),
+        (1006, 1074, "二診11"),
+        (1074, 1141, "一診10"),
+        (1141, 1208, "一診10 / 二診11"),
+        (1208, 1276, "一診11"),
+        (1276, 1478, "一診13"),
+    ],
+    2: [
+        (196, 260, "一診7"),
+        (260, 324, "二診8"),
+        (324, 388, "一診7"),
+        (388, 451, "二診8"),
+        (451, 515, "一診8"),
+        (515, 578, "一診7"),
+        (578, 770, "一診9"),
+        (770, 897, "一診17"),
+        (897, 961, "二診18"),
+        (961, 1025, "一診17"),
+        (1025, 1152, "一診55"),
+        (1152, 1280, "一診36"),
+        (1280, 1407, "二診37"),
+        (1407, 1470, "一診36"),
+    ],
+    5: [
+        (193, 314, "一診22"),
+        (314, 374, "二診3"),
+        (435, 556, "一診32"),
+        (616, 676, "一診33"),
+        (737, 858, "一診16"),
+        (980, 1040, "一診1"),
+        (1040, 1100, "一診2"),
+        (1100, 1161, "二診2"),
+        (1161, 1221, "三診2"),
+        (1221, 1282, "四診2"),
+        (1282, 1342, "二診2"),
+        (1342, 1403, "三診2"),
+        (1403, 1466, "四診2"),
+    ],
+    6: [
+        (195, 379, "一診34"),
+        (397, 464, "一診24"),
+        (464, 532, "二診23"),
+        (532, 666, "一診24"),
+        (666, 746, "一診50"),
+        (800, 990, "一診38"),
+        (1002, 1070, "一診36"),
+        (1070, 1137, "一診24 / 二診7"),
+        (1137, 1204, "一診37"),
+        (1204, 1327, "二診7"),
+        (1338, 1470, "一診9"),
+    ],
+}
 
 KNOWN_DOCTORS_BY_DEPARTMENT = {
     "一般科": {"謝易倫", "柯亞倫", "郭晉宏", "葉東奇", "輪值醫師"},
@@ -146,18 +205,23 @@ OCR_DOCTOR_CORRECTIONS = {
     "謝暢倫": "謝易倫",
     "訌臣倫": "柯亞倫",
     "柯臣倫": "柯亞倫",
+    "訌臣巨": "柯亞倫",
+    "扁青": "柯亞倫",
     "郭晉宏巨": "郭晉宏",
+    "郭翠宏": "郭晉宏",
     "悖東奇": "葉東奇",
     "葉柬奇": "葉東奇",
     "林鏗正": "林峰正",
     "林鋸正": "林峰正",
     "林鯨正": "林峰正",
+    "木勳": "林勛章",
     "恤聖偉": "沈聖偉",
     "忸勳章": "林勛章",
     "忸勳章刪": "林勛章",
     "忸毓昀": "許毓昀",
     "忸毓昀唰": "許毓昀",
     "許毓昀唰": "許毓昀",
+    "停毓昀": "許毓昀",
     "悖允文": "宋允文",
     "悖允文汀": "宋允文",
     "悖允文盯": "宋允文",
@@ -165,25 +229,39 @@ OCR_DOCTOR_CORRECTIONS = {
     "李孟兆": "李孟光",
     "朱俊沅": "朱俊源",
     "陳力瀚溯": "陳力瀚",
+    "悖庭違唰": "張庭遠",
+    "卜諶孟易": "謝易倫",
+    "摯隹": "劉大維",
+    "員主": "莊沛霖",
     "陳震勸": "陳震勛",
     "幃沛霖": "莊沛霖",
     "周炳坊": "周炳全",
     "囤炳金": "周炳全",
+    "周炳金": "周炳全",
     "涂聖葭": "涂聖葳",
+    "斗浹聖葉": "涂聖葳",
     "斗涂聖葳": "涂聖葳",
     "寸涂聖葳": "涂聖葳",
     "斗王文育": "王文育",
+    "孟胄": "王文育",
+    "王文背": "王文育",
     "鄭孟蘑于": "鄭孟軒",
     "葉构奇": "葉東奇",
     "斗葉构奇": "葉東奇",
     "斗葉東奇": "葉東奇",
     "芭勝斌": "范勝斌",
     "范腿斌": "范勝斌",
+    "孔范腿斌": "范勝斌",
     "郭政諮": "郭政諭",
+    "伸政諭咖": "郭政諭",
     "李侑勳咒": "李侑勳",
     "斗李侑勳": "李侑勳",
+    "共子": "洪子倫",
     "鍾趕": "鍾承穎",
+    "右町櫚": "趙祐麟",
     "蘇咸宇": "蘇威宇",
+    "蘇威珪": "蘇威宇",
+    "特炯棠叩": "黃炯棠",
     "黃鶩仁": "黃鵬仁",
     "蔡文墊": "蔡文豪",
     "蔡文據": "蔡文豪",
@@ -204,61 +282,91 @@ class RowContext:
     room: str = ""
 
 
+@dataclass
+class ParsedCell:
+    page_number: int
+    row_index: int
+    weekday: int
+    weekday_label: str
+    context: RowContext
+    raw_text: str
+    source_url: str
+
+
 class PingtungMohwAdapter(ScheduleAdapter):
     """Parse Pingtung Hospital's scanned PDF with fixed table coordinates."""
 
     def fetch(self) -> list[RawSchedule]:
-        pdf_url = latest_pdf_url(self.source.schedule_url)
-        pdf_bytes = httpx.get(pdf_url, timeout=60, follow_redirects=True).content
-        document = fitz.open(stream=pdf_bytes, filetype="pdf")
-
         schedules: list[RawSchedule] = []
-        for page_index in range(len(document)):
-            page = document[page_index]
-            base_image = render_page(page, scale=2)
-            ocr_image = render_page(page, scale=4)
-            row_edges = detect_horizontal_grid_lines(base_image)
-            if len(row_edges) < 3:
-                continue
-
-            shift_spans = detect_shift_spans(base_image)
-            for row_index, (top, bottom) in enumerate(zip(row_edges[1:], row_edges[2:]), start=1):
-                if bottom - top < 25 or bottom > 1495:
-                    continue
-                context = context_for_row(
-                    image=ocr_image,
-                    page_number=page_index + 1,
-                    top=top,
-                    bottom=bottom,
-                    shift_spans=shift_spans,
+        for cell in iter_schedule_cells(self.source.schedule_url):
+            for doctor_name, note in extract_doctors(cell.raw_text, cell.context.department):
+                schedules.append(
+                    RawSchedule(
+                        hospital_id=self.source.id,
+                        hospital_name=self.source.hospital_name,
+                        branch_name=self.source.branch_name,
+                        department=cell.context.department,
+                        doctor_name=doctor_name,
+                        weekday=cell.weekday,
+                        weekday_label=cell.weekday_label,
+                        period=cell.context.shift,
+                        room=cell.context.room or "未標示",
+                        source_url=cell.source_url,
+                        source_ref=f"pdf_page:{cell.page_number};row:{cell.row_index};weekday:{cell.weekday_label}",
+                        confidence=0.87,
+                        note=note,
+                        raw_text=compact_text(cell.raw_text),
+                        source_page=cell.page_number,
+                    )
                 )
-                if not context.department or not context.shift:
-                    continue
-
-                for weekday, weekday_label, left, right in WEEKDAY_COLUMNS:
-                    cell_text = ocr_crop(ocr_image, (left, top, right, bottom), psm="6")
-                    for doctor_name, note in extract_doctors(cell_text, context.department):
-                        schedules.append(
-                            RawSchedule(
-                                hospital_id=self.source.id,
-                                hospital_name=self.source.hospital_name,
-                                branch_name=self.source.branch_name,
-                                department=context.department,
-                                doctor_name=doctor_name,
-                                weekday=weekday,
-                                weekday_label=weekday_label,
-                                period=context.shift,
-                                room=context.room or "未標示",
-                                source_url=pdf_url,
-                                source_ref=f"pdf_page:{page_index + 1};row:{row_index};weekday:{weekday_label}",
-                                confidence=0.87,
-                                note=note,
-                                raw_text=compact_text(cell_text),
-                                source_page=page_index + 1,
-                            )
-                        )
 
         return dedupe(schedules)
+
+
+def iter_schedule_cells(source_url: str) -> list[ParsedCell]:
+    pdf_url = latest_pdf_url(source_url)
+    pdf_bytes = httpx.get(pdf_url, timeout=60, follow_redirects=True).content
+    document = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+    cells: list[ParsedCell] = []
+    for page_index in range(len(document)):
+        page = document[page_index]
+        base_image = render_page(page, scale=2)
+        ocr_image = render_page(page, scale=4)
+        row_edges = detect_horizontal_grid_lines(base_image)
+        if len(row_edges) < 3:
+            continue
+
+        shift_spans = detect_shift_spans(base_image)
+        for row_index, (top, bottom) in enumerate(zip(row_edges[1:], row_edges[2:]), start=1):
+            if bottom - top < 25 or bottom > 1495:
+                continue
+            context = context_for_row(
+                image=ocr_image,
+                page_number=page_index + 1,
+                top=top,
+                bottom=bottom,
+                shift_spans=shift_spans,
+            )
+            if not context.department or not context.shift:
+                continue
+
+            for weekday, weekday_label, left, right in WEEKDAY_COLUMNS:
+                raw_text = ocr_crop(ocr_image, (left, top, right, bottom), psm="6")
+                if not compact_text(raw_text):
+                    continue
+                cells.append(
+                    ParsedCell(
+                        page_number=page_index + 1,
+                        row_index=row_index,
+                        weekday=weekday,
+                        weekday_label=weekday_label,
+                        context=context,
+                        raw_text=raw_text,
+                        source_url=pdf_url,
+                    )
+                )
+    return cells
 
 
 def latest_pdf_url(source_url: str) -> str:
@@ -377,7 +485,7 @@ def context_for_row(
         department=department,
         shift=shift,
         location=normalize_location(location_text),
-        room=normalize_room(room_text) or "未標示",
+        room=room_override_for_row(page_number, top, bottom) or normalize_room(room_text) or "未標示",
     )
 
 
@@ -387,6 +495,14 @@ def department_span_for_row(page_number: int, top: int, bottom: int) -> tuple[in
         if span_top <= row_mid <= span_bottom:
             return span_top, span_bottom, department
     return None
+
+
+def room_override_for_row(page_number: int, top: int, bottom: int) -> str:
+    row_mid = (top + bottom) / 2
+    for span_top, span_bottom, room in PAGE_ROOM_SPANS.get(page_number, []):
+        if span_top <= row_mid <= span_bottom:
+            return room
+    return ""
 
 
 def normalize_department(text: str) -> str:
@@ -423,14 +539,16 @@ def normalize_location(text: str) -> str:
 
 def normalize_room(text: str) -> str:
     compact = compact_text(text)
-    match = re.search(r"([一二三四五六七八九十])\s*[診詒詑誒肱胜訪][^\d]{0,8}(\d{1,2})", compact)
-    if match:
-        return f"{match.group(1)}診{match.group(2)}"
+    squeezed = compact.replace(" ", "")
+    if "於原" in squeezed or "專科診" in squeezed:
+        return "於原專科診間"
+    room_matches = re.findall(r"([一二三四五六七八九十])\s*[診詒詑誒肱胜訪][^\d]{0,8}(\d{1,2})", compact)
+    if room_matches:
+        rooms = [f"{prefix}診{number}" for prefix, number in room_matches]
+        return " / ".join(dict.fromkeys(rooms))
     number_matches = re.findall(r"\b(\d{1,2})\b", compact)
     if number_matches:
         return f"診{number_matches[-1]}"
-    if "於原" in compact or "專科診" in compact:
-        return "於原專科診間"
     return ""
 
 
@@ -440,8 +558,32 @@ def extract_doctors(text: str, department: str) -> list[tuple[str, str]]:
         return []
     note = "；".join(dict.fromkeys(match.strip() for match in NOTE_PATTERN.findall(raw) if match.strip()))
     doctors: list[tuple[str, str]] = []
-    compact = "".join(raw.split())
     seen: set[str] = set()
+    for raw_name in doctor_name_candidates(raw):
+        name = correct_doctor_name(raw_name, department)
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        doctors.append((name, note))
+    return doctors
+
+
+def uncorrected_doctor_candidates(text: str, department: str) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for name in doctor_name_candidates(text):
+        if correct_doctor_name(name, department):
+            continue
+        if name in seen:
+            continue
+        seen.add(name)
+        candidates.append(name)
+    return candidates
+
+
+def doctor_name_candidates(text: str) -> list[str]:
+    raw = compact_text(text)
+    compact = "".join(raw.split())
     matches = list(DOCTOR_PATTERN.finditer(compact))
     matches.extend(
         match for match in re.finditer(r"([\u4e00-\u9fff]{2,5})[^\u4e00-\u9fff]{0,4}(?:[O0]?\d{2,4})", compact)
@@ -452,13 +594,16 @@ def extract_doctors(text: str, department: str) -> list[tuple[str, str]]:
             match for match in re.finditer(r"([\u4e00-\u9fff]{2,4})", compact)
             if not should_ignore_name(match.group(1))
         ]
+
+    candidates: list[str] = []
+    seen: set[str] = set()
     for match in matches:
-        name = correct_doctor_name(normalize_doctor_name(match.group(1)), department)
+        name = normalize_doctor_name(match.group(1))
         if not name or name in seen:
             continue
         seen.add(name)
-        doctors.append((name, note))
-    return doctors
+        candidates.append(name)
+    return candidates
 
 
 def correct_doctor_name(name: str, department: str) -> str:
@@ -524,9 +669,25 @@ def should_ignore_name(name: str) -> bool:
 
 def ocr_crop(image: Image.Image, box: tuple[int, int, int, int], psm: str) -> str:
     cropped = image.crop(tuple(round(value * image.width / 1080) for value in box))
-    grayscale = ImageOps.grayscale(cropped)
-    grayscale = ImageEnhance.Contrast(grayscale).enhance(2.5)
-    return ocr_base_crop(image, box, psm=psm) if cropped.width else ""
+    if not cropped.width:
+        return ""
+
+    cache_dir = os.environ.get("MED_LINK_OCR_CACHE_DIR")
+    if not cache_dir:
+        return ocr_base_crop(image, box, psm=psm)
+
+    cache_path = Path(cache_dir)
+    cache_path.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha1()
+    key.update(str((box, psm, cropped.size)).encode("utf-8"))
+    key.update(cropped.tobytes())
+    text_path = cache_path / f"{key.hexdigest()}.txt"
+    if text_path.exists():
+        return text_path.read_text(encoding="utf-8", errors="ignore")
+
+    text = ocr_base_crop(image, box, psm=psm)
+    text_path.write_text(text, encoding="utf-8")
+    return text
 
 
 def dedupe(items: list[RawSchedule]) -> list[RawSchedule]:

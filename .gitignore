@@ -26,5 +26,6 @@ venv/
 
 backend/*.pdf
 backend/*.jpg
+data/ocr-cache/
 data/source-probe/
 *.zip
