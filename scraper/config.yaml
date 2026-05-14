@@ -42,7 +42,7 @@ hospitals:
     departments: []
     schedule_url: https://www.shinkaohosp.com.tw/schedule.aspx
   - id: pingtung-mohw
-    enabled: false
+    enabled: true
     adapter: pingtung_mohw
     region: 屏東
     hospital_name: 衛生福利部屏東醫院

@@ -43,8 +43,10 @@ class PingtungMohwParserTest(unittest.TestCase):
     def test_room_override_for_fixed_pingtung_rows(self) -> None:
         self.assertEqual(room_override_for_row(2, 196, 260), "一診7")
         self.assertEqual(room_override_for_row(5, 1040, 1100), "一診2")
+        self.assertEqual(room_override_for_row(7, 144, 249), "一診51")
         self.assertEqual(room_override_for_row(4, 562, 684), "一診19 / 二診18")
         self.assertEqual(shift_override_for_row(4, 562, 684), "上午")
+        self.assertEqual(shift_override_for_row(7, 249, 343), "下午")
 
     def test_uncorrected_doctor_candidates_reports_dropped_names(self) -> None:
         self.assertEqual(doctor_name_candidates("林 鏗 正 ma"), ["林鏗正"])
@@ -55,6 +57,9 @@ class PingtungMohwParserTest(unittest.TestCase):
         self.assertEqual(extract_doctors("陳 姝 蕉 /037", "骨科"), [("陳姝蓉", "")])
         self.assertEqual(extract_doctors("蹄 筑 元 7206", "兒科"), [("蕭筑元", "")])
         self.assertEqual(extract_doctors("林 治 邦 7046 盧 道 覽 0357", "整形外科"), [("林治邦", ""), ("盧道覺", "")])
+        self.assertCountEqual(extract_doctors("白 立 柱 /029 陳 韓 廷 7171", "放射腫瘤科"), [("白立柱", ""), ("陳韋廷", "")])
+        self.assertEqual(extract_doctors("彭 志 祭 1520", "疼痛科"), [("彭之祥", "")])
+        self.assertEqual(extract_doctors("廿婉容馴 忙惠膏唧", "中醫科"), [("林婉容", ""), ("許惠菁", "")])
 
 
 if __name__ == "__main__":
