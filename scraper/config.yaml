@@ -33,3 +33,11 @@ hospitals:
     branch_name: 義大大昌醫院
     departments: []
     schedule_url: https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDDH_NEW.pdf
+  - id: shinkao
+    enabled: true
+    adapter: shinkao
+    region: 高雄
+    hospital_name: 新高醫院
+    branch_name: 總院
+    departments: []
+    schedule_url: https://www.shinkaohosp.com.tw/schedule.aspx

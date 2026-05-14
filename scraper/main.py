@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from adapters.edah_pdf import EdahPdfAdapter
 from adapters.kmugh import KmughAdapter
+from adapters.shinkao import ShinkaoAdapter
 from core.diff import detect_changes
 from core.quality import partition_publishable
 from core.supabase import SupabaseScheduleWriter
@@ -17,6 +18,7 @@ from core.yaml_config import load_config
 ADAPTERS = {
     "edah_pdf": EdahPdfAdapter,
     "kmugh": KmughAdapter,
+    "shinkao": ShinkaoAdapter,
 }
 
 SERVICE_REGIONS = {"台南", "高雄", "屏東"}
