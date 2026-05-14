@@ -11,6 +11,7 @@ from adapters.pingtung_mohw import (
     extract_doctors,
     normalize_room,
     room_override_for_row,
+    shift_override_for_row,
     uncorrected_doctor_candidates,
 )
 
@@ -42,10 +43,18 @@ class PingtungMohwParserTest(unittest.TestCase):
     def test_room_override_for_fixed_pingtung_rows(self) -> None:
         self.assertEqual(room_override_for_row(2, 196, 260), "一診7")
         self.assertEqual(room_override_for_row(5, 1040, 1100), "一診2")
+        self.assertEqual(room_override_for_row(4, 562, 684), "一診19 / 二診18")
+        self.assertEqual(shift_override_for_row(4, 562, 684), "上午")
 
     def test_uncorrected_doctor_candidates_reports_dropped_names(self) -> None:
         self.assertEqual(doctor_name_candidates("林 鏗 正 ma"), ["林鏗正"])
         self.assertEqual(uncorrected_doctor_candidates("未知名 9999", "一般科"), ["未知名"])
+
+    def test_second_round_high_confidence_ocr_corrections(self) -> None:
+        self.assertEqual(extract_doctors("劉 家 駟 0904", "泌尿科"), [("劉家駒", "")])
+        self.assertEqual(extract_doctors("陳 姝 蕉 /037", "骨科"), [("陳姝蓉", "")])
+        self.assertEqual(extract_doctors("蹄 筑 元 7206", "兒科"), [("蕭筑元", "")])
+        self.assertEqual(extract_doctors("林 治 邦 7046 盧 道 覽 0357", "整形外科"), [("林治邦", ""), ("盧道覺", "")])
 
 
 if __name__ == "__main__":
