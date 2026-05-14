@@ -442,7 +442,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
                           </span>
                         </div>
                         <p className="mt-3 text-sm text-slate-600">
-                          {item.weekday_label}｜{item.period}｜診間 {item.room || "未標示"}
+                          {item.weekday_label}｜{item.period}｜診 {item.room || "未標示"}
                         </p>
                         {item.note ? (
                           <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
@@ -496,7 +496,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <DetailField label="日期班別" value={`${detailItem.weekday_label} ${detailItem.period}`} />
-              <DetailField label="診間" value={detailItem.room || "未標示"} />
+              <DetailField label="診" value={detailItem.room || "未標示"} />
               <DetailField label="標準科別" value={detailItem.department} />
               <DetailField label="追蹤狀態" value={favorites.includes(favoriteKey(detailItem)) ? "已收藏，未來可優先推播" : "尚未收藏"} />
               <DetailField label="來源頁碼" value={detailItem.source_page ? `第 ${detailItem.source_page} 頁` : "未標示"} />
@@ -504,14 +504,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
               <DetailField label="資料發布時間" value={new Date(detailItem.published_at).toLocaleString("zh-TW")} />
               <DetailField label="解析時間" value={detailItem.parsed_at ? new Date(detailItem.parsed_at).toLocaleString("zh-TW") : "未標示"} />
               <DetailField label="資料來源" value={detailItem.source_url ? "可開啟來源" : "未標示"} href={detailItem.source_url ?? undefined} />
-              <DetailField label="來源定位" value={detailItem.source_ref || "未標示"} />
             </div>
-            {detailItem.raw_text ? (
-              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <span className="text-xs font-bold text-slate-500">原始文字</span>
-                <p className="mt-2 break-words text-sm font-semibold leading-6 text-ink">{detailItem.raw_text}</p>
-              </div>
-            ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
               <button className="rounded-lg bg-brand px-4 py-3 font-black text-white" onClick={() => toggleFavorite(detailItem)} type="button">
                 {favorites.includes(favoriteKey(detailItem)) ? "取消收藏" : "加入收藏"}
