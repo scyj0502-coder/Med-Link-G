@@ -18,7 +18,7 @@ hospitals:
     departments: []
     schedule_url: https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDAH_NEW.pdf
   - id: edah-cancer
-    enabled: false
+    enabled: true
     adapter: edah_pdf
     region: 高雄
     hospital_name: 義大醫療財團法人
@@ -26,7 +26,7 @@ hospitals:
     departments: []
     schedule_url: https://edhg.blob.core.windows.net/upload/userfile/Download/51/EDCH_NEW.pdf
   - id: edah-dachang
-    enabled: false
+    enabled: true
     adapter: edah_pdf
     region: 高雄
     hospital_name: 義大醫療財團法人
