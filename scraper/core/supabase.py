@@ -54,6 +54,11 @@ class SupabaseRestClient:
             response.raise_for_status()
             return response.json()
 
+    def delete(self, table: str, params: dict[str, str]) -> None:
+        with httpx.Client(timeout=30) as client:
+            response = client.delete(f"{self.base_url}/{table}", headers=self.headers, params=params)
+            response.raise_for_status()
+
     def upsert(
         self,
         table: str,
@@ -115,6 +120,10 @@ class SupabaseScheduleWriter:
         })[0]
 
         payloads = [schedule_payload(item) | {"sync_run_id": run["id"]} for item in publishable]
+        self.client.delete(
+            "published_schedules",
+            {"hospital_id": f"eq.{source.id}"},
+        )
         if payloads:
             try:
                 self.client.upsert("published_schedules", payloads, on_conflict="schedule_key")

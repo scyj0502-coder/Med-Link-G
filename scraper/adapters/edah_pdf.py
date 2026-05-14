@@ -65,7 +65,28 @@ PERIODS = ["上午", "下午", "夜診"]
 DEPARTMENT_COLUMN = (60, 192)
 TABLE_Y_RANGE = (110, 1240)
 OCR_CANDIDATE_CONFIDENCE = 0.78
-DOCTOR_PATTERN = re.compile(r"([\u4e00-\u9fff]{2,6})(\d{4,5})")
+DOCTOR_PATTERN = re.compile(r"([\u4e00-\u9fff]{2,6})(\d{5})")
+PERIOD_CODE_PREFIX = {
+    "上午": "1",
+    "下午": "2",
+    "夜診": "3",
+}
+EDAH_DACHANG_DEPARTMENT_ROOMS = {
+    "心臟內科": "二樓",
+    "胃腸肝膽科": "三樓",
+    "高階胃食道逆流診治中心": "三樓",
+    "呼吸胸腔科": "二樓",
+    "腎臟科": "三樓",
+    "神經科": "B1 內科診區",
+    "血液腫瘤科": "二樓",
+    "過敏免疫風濕科": "二樓",
+    "感染科": "二樓",
+    "新陳代謝科": "B1 內科診區",
+    "內分泌特診": "B1 內科診區",
+    "家醫科": "二樓",
+    "體檢科": "七樓",
+    "健診中心特約門診": "七樓",
+}
 OCR_DIGIT_CONFUSIONS = {
     "0": "68",
     "1": "7",
@@ -152,13 +173,18 @@ class EdahPdfInspection:
 @dataclass(frozen=True)
 class DoctorCandidate:
     ocr_name: str
-    code: str
+    schedule_code: str
+
+    @property
+    def doctor_code(self) -> str:
+        return self.schedule_code[-4:]
 
 
 @dataclass(frozen=True)
 class ResolvedDoctor:
     name: str
-    code: str
+    schedule_code: str
+    doctor_code: str
     corrected: bool
 
 
@@ -287,6 +313,7 @@ def parse_schedule_page(
         department = canonical_department(department_text)
         if not department:
             continue
+        room = department_room(source.id, department, department_text)
 
         period_ranges = split_period_ranges(top, bottom)
         for period, (period_top, period_bottom) in zip(PERIODS, period_ranges):
@@ -299,14 +326,18 @@ def parse_schedule_page(
                     psm="6",
                 )
                 for candidate in extract_doctor_candidates(cell_text):
+                    if not code_matches_period(candidate.schedule_code, period):
+                        continue
                     resolved = resolve_doctor_candidate(candidate, doctor_cache)
                     if resolved:
                         doctor_name = resolved.name
-                        doctor_code = resolved.code
+                        schedule_code = resolved.schedule_code
+                        doctor_code = resolved.doctor_code
                         confidence = 0.91
                     else:
                         doctor_name = candidate.ocr_name
-                        doctor_code = candidate.code
+                        schedule_code = candidate.schedule_code
+                        doctor_code = candidate.doctor_code
                         confidence = OCR_CANDIDATE_CONFIDENCE
                     schedules.append(
                         RawSchedule(
@@ -318,11 +349,12 @@ def parse_schedule_page(
                             weekday=weekday,
                             weekday_label=weekday_label,
                             period=period,
-                            room=doctor_code,
+                            room=room,
                             source_url=source.schedule_url,
                             source_ref=(
                                 f"pdf_page:{page_number};cell:{weekday_label}-{period};"
-                                f"doctor_code:{doctor_code};ocr_code:{candidate.code}"
+                                f"doctor_code:{doctor_code};"
+                                f"schedule_code:{schedule_code};ocr_code:{candidate.schedule_code}"
                             ),
                             confidence=confidence,
                             note=extract_note(cell_text),
@@ -418,9 +450,25 @@ def detect_branch_ids(text: str) -> list[str]:
 def canonical_department(text: str) -> str:
     compact = compact_text(text)
     for canonical, aliases in DEPARTMENT_ALIASES.items():
+        if canonical == "內科" and "內科診" in compact:
+            continue
         if any(alias in compact for alias in aliases):
             return canonical
     return ""
+
+
+def department_room(source_id: str, department: str, department_text: str) -> str:
+    if source_id == "edah-dachang" and department in EDAH_DACHANG_DEPARTMENT_ROOMS:
+        return EDAH_DACHANG_DEPARTMENT_ROOMS[department]
+
+    compact = compact_text(department_text)
+    match = re.search(r"(B\d|[一二三四五六七八九十])樓", compact)
+    if match:
+        return match.group(0)
+    match = re.search(r"(B\d)\s*內科診區", compact)
+    if match:
+        return f"{match.group(1)} 內科診區"
+    return "未標示"
 
 
 def extract_doctor_candidates(text: str) -> list[DoctorCandidate]:
@@ -432,8 +480,15 @@ def extract_doctor_candidates(text: str) -> list[DoctorCandidate]:
         code = match.group(2)
         if name and code not in seen_codes:
             seen_codes.add(code)
-            candidates.append(DoctorCandidate(ocr_name=name, code=code))
+            candidates.append(DoctorCandidate(ocr_name=name, schedule_code=code))
     return candidates
+
+
+def code_matches_period(schedule_code: str, period: str) -> bool:
+    if len(schedule_code) != 5:
+        return True
+    expected_prefix = PERIOD_CODE_PREFIX.get(period)
+    return bool(expected_prefix) and schedule_code[0] == expected_prefix
 
 
 def extract_note(text: str) -> str:
@@ -448,16 +503,38 @@ def extract_note(text: str) -> str:
 
 
 def resolve_doctor_candidate(candidate: DoctorCandidate, cache: dict[str, str | None]) -> ResolvedDoctor | None:
-    resolved_name = resolve_doctor_name(candidate.code, cache)
+    resolved_name = resolve_doctor_name(candidate.doctor_code, cache)
     if resolved_name and is_plausible_doctor_match(candidate.ocr_name, resolved_name):
-        return ResolvedDoctor(name=resolved_name, code=candidate.code, corrected=False)
+        return ResolvedDoctor(
+            name=resolved_name,
+            schedule_code=candidate.schedule_code,
+            doctor_code=candidate.doctor_code,
+            corrected=False,
+        )
 
-    for nearby_code in nearby_digit_codes(candidate.code):
-        nearby_name = resolve_doctor_name(nearby_code, cache)
+    for nearby_schedule_code in nearby_digit_codes(candidate.schedule_code):
+        if not code_matches_period(nearby_schedule_code, period_from_code(candidate.schedule_code)):
+            continue
+        nearby_doctor_code = nearby_schedule_code[-4:]
+        nearby_name = resolve_doctor_name(nearby_doctor_code, cache)
         if nearby_name and is_plausible_doctor_match(candidate.ocr_name, nearby_name):
-            return ResolvedDoctor(name=nearby_name, code=nearby_code, corrected=True)
+            return ResolvedDoctor(
+                name=nearby_name,
+                schedule_code=nearby_schedule_code,
+                doctor_code=nearby_doctor_code,
+                corrected=True,
+            )
 
     return None
+
+
+def period_from_code(schedule_code: str) -> str:
+    if len(schedule_code) != 5:
+        return ""
+    for period, prefix in PERIOD_CODE_PREFIX.items():
+        if schedule_code.startswith(prefix):
+            return period
+    return ""
 
 
 def nearby_digit_codes(code: str) -> list[str]:
@@ -479,8 +556,7 @@ def resolve_doctor_name(code: str, cache: dict[str, str | None]) -> str | None:
     if code in cache:
         return cache[code]
 
-    doctor_id = code[-4:]
-    url = f"https://webreg.edah.org.tw/Register/ChooseDoctorTime/{doctor_id}"
+    url = f"https://webreg.edah.org.tw/Register/ChooseDoctorTime/{code}"
     try:
         response = httpx.get(url, timeout=15)
         response.raise_for_status()
@@ -501,7 +577,7 @@ def resolve_doctor_name(code: str, cache: dict[str, str | None]) -> str | None:
 
 def is_plausible_doctor_match(ocr_name: str, resolved_name: str) -> bool:
     shared_chars = set(ocr_name) & set(resolved_name)
-    return len(shared_chars) >= (1 if min(len(ocr_name), len(resolved_name)) <= 2 else 2)
+    return len(shared_chars) >= 1
 
 
 def normalize_doctor_name(text: str) -> str:
