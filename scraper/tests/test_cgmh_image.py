@@ -6,7 +6,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from adapters.cgmh_image import extract_doctors, normalize_department, normalize_shift, shift_for_row
+from adapters.base import RawSchedule
+from adapters.cgmh_image import dedupe, extract_doctors, normalize_department, normalize_shift, shift_for_row
 
 
 class CgmhImageParserTest(unittest.TestCase):
@@ -62,6 +63,25 @@ class CgmhImageParserTest(unittest.TestCase):
         self.assertEqual(shift_for_row(8, 489, 519), "夜診")
         self.assertEqual(shift_for_row(9, 138, 164), "上午")
         self.assertEqual(shift_for_row(9, 190, 318), "上午")
+
+    def test_dedupe_uses_publish_key_fields(self) -> None:
+        base = RawSchedule(
+            hospital_id="cgmh-datong",
+            hospital_name="高雄市立大同醫院",
+            branch_name="總院",
+            department="一般外科",
+            doctor_name="洪國頡",
+            weekday=2,
+            weekday_label="星期二",
+            period="下午",
+            room="五樓501/502診間",
+            source_url="https://example.test/schedule.pdf",
+            source_ref="pdf_page:4;row:1134-1184;weekday:星期二",
+            confidence=0.86,
+            raw_text="14723 洪國頡",
+        )
+        duplicate = RawSchedule(**{**base.__dict__, "raw_text": "94723 洪 國 禱"})
+        self.assertEqual(len(dedupe([base, duplicate])), 1)
 
 
 if __name__ == "__main__":

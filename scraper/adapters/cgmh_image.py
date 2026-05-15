@@ -1072,7 +1072,7 @@ def dedupe(items: list[RawSchedule]) -> list[RawSchedule]:
     seen: set[tuple[str, str, str, int, str, str]] = set()
     unique: list[RawSchedule] = []
     for item in items:
-        key = (item.hospital_id, item.department, item.doctor_name, item.weekday, item.period, item.raw_text)
+        key = (item.hospital_id, item.department, item.doctor_name, item.weekday, item.period, item.room)
         if key in seen:
             continue
         seen.add(key)
