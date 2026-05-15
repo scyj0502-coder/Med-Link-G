@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { Hospital } from "../../lib/types";
 import type { DoctorSchedule, FilterState, PersonalNote } from "../../lib/dashboard";
-import { doctorKey, uniqueSorted } from "../../lib/dashboard";
+import { doctorKey, filterChips, periodOptions, uniqueSorted, weekdayOptions } from "../../lib/dashboard";
 
 type SearchTab = "all" | "doctor" | "hospital" | "department" | "note" | "favorite";
 
@@ -42,10 +42,17 @@ type SearchCenterProps = {
   items: DoctorSchedule[];
   notes: PersonalNote[];
   favorites: string[];
+  filters: FilterState;
+  regions: string[];
+  branches: string[];
+  departments: string[];
+  doctors: string[];
   query: string;
   onQueryChange: (value: string) => void;
   onOpenSchedule: (item: DoctorSchedule) => void;
+  onFilterChange: (patch: Partial<FilterState>) => void;
   onApplyFilters: (patch: Partial<FilterState>) => void;
+  onClearFilters: () => void;
   onToggleFavorite: (item: DoctorSchedule) => void;
 };
 
@@ -65,19 +72,31 @@ export function SearchCenter({
   items,
   notes,
   favorites,
+  filters,
+  regions,
+  branches,
+  departments,
+  doctors,
   query,
   onQueryChange,
   onOpenSchedule,
+  onFilterChange,
   onApplyFilters,
+  onClearFilters,
   onToggleFavorite
 }: SearchCenterProps) {
   const [activeTab, setActiveTab] = useState<SearchTab>("all");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const noteMap = useMemo(() => new Map(notes.map((note) => [note.doctorKey, note])), [notes]);
   const normalizedQuery = normalize(query);
+  const activeFilterChips = filterChips(filters, hospitals);
+
+  const scopedItems = useMemo(() => {
+    return items.filter((item) => matchesAdvancedFilters(item, filters, favorites));
+  }, [favorites, filters, items]);
 
   const searchData = useMemo(() => {
-    const doctorResults = items
+    const doctorResults = scopedItems
       .filter((item) => {
         const key = doctorKey(item);
         const note = noteMap.get(key);
@@ -110,15 +129,15 @@ export function SearchCenter({
 
     const hospitalResults = hospitals
       .map((hospital) => {
-        const schedules = items.filter((item) => item.hospital_id === hospital.id);
+        const schedules = scopedItems.filter((item) => item.hospital_id === hospital.id);
         return {
           hospital,
           count: schedules.length,
           departments: uniqueSorted(schedules.map((item) => item.department)).slice(0, 5)
         };
       })
-      .filter(({ hospital, departments }) =>
-        matchesQuery([hospital.region, hospital.hospital_name, hospital.branch_name, hospital.schedule_url ?? "", ...departments], normalizedQuery)
+      .filter(({ hospital, count, departments }) =>
+        count > 0 && matchesQuery([hospital.region, hospital.hospital_name, hospital.branch_name, hospital.schedule_url ?? "", ...departments], normalizedQuery)
       )
       .map<SearchResult>(({ hospital, count, departments }) => ({
         id: `hospital:${hospital.id}`,
@@ -129,7 +148,7 @@ export function SearchCenter({
       }));
 
     const departmentMap = new Map<string, DoctorSchedule[]>();
-    for (const item of items) {
+    for (const item of scopedItems) {
       if (!departmentMap.has(item.department)) {
         departmentMap.set(item.department, []);
       }
@@ -150,10 +169,11 @@ export function SearchCenter({
 
     const noteResults = notes
       .map((note) => {
-        const item = items.find((schedule) => doctorKey(schedule) === note.doctorKey);
+        const item = scopedItems.find((schedule) => doctorKey(schedule) === note.doctorKey);
         return { note, item };
       })
       .filter(({ note, item }) =>
+        (!filters.favoritesOnly || (item ? favorites.includes(doctorKey(item)) : false)) &&
         matchesQuery(
           [
             note.content,
@@ -186,7 +206,7 @@ export function SearchCenter({
       note: noteResults,
       favorite: favoriteResults
     };
-  }, [favorites, hospitals, items, normalizedQuery, noteMap, notes]);
+  }, [favorites, filters.favoritesOnly, hospitals, normalizedQuery, noteMap, notes, scopedItems]);
 
   const resultCounts = {
     all: searchData.all.length,
@@ -198,11 +218,11 @@ export function SearchCenter({
   };
   const results = searchData[activeTab];
   const popular = useMemo(() => {
-    const departments = uniqueSorted(items.map((item) => item.department)).slice(0, 5);
-    const rooms = uniqueSorted(items.map((item) => item.displayRoom).filter((room) => !room.includes("未標示"))).slice(0, 4);
-    const doctors = uniqueSorted(items.map((item) => item.doctor_name)).slice(0, 4);
+    const departments = uniqueSorted(scopedItems.map((item) => item.department)).slice(0, 5);
+    const rooms = uniqueSorted(scopedItems.map((item) => item.displayRoom).filter((room) => !room.includes("未標示"))).slice(0, 4);
+    const doctors = uniqueSorted(scopedItems.map((item) => item.doctor_name)).slice(0, 4);
     return [...departments, ...doctors, ...rooms].slice(0, 12);
-  }, [items]);
+  }, [scopedItems]);
 
   return (
     <section className="grid gap-5">
@@ -234,8 +254,29 @@ export function SearchCenter({
               </button>
             </div>
             {advancedOpen ? (
-              <div className="mt-3 rounded-xl bg-[#f4f8ff] p-3 text-sm font-bold leading-6 text-[#60708d]">
-                進階篩選會沿用今日門診的地區、醫院、分院、科別、醫師、星期與時段條件。下一步可把這裡改成完整篩選表單。
+              <div className="mt-4 rounded-2xl border border-[#dbe5f4] bg-[#f8fbff] p-4">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <SearchSelect label="地區" value={filters.region} onChange={(value) => onFilterChange({ region: value, hospitalId: "", branchName: "" })} options={regions} emptyLabel="全部地區" />
+                  <SearchSelect label="醫院" value={filters.hospitalId} onChange={(value) => onFilterChange({ hospitalId: value, branchName: "" })} options={hospitals.map((item) => ({ value: item.id, label: item.hospital_name }))} emptyLabel="全部醫院" />
+                  <SearchSelect label="分院" value={filters.branchName} onChange={(value) => onFilterChange({ branchName: value })} options={branches} emptyLabel="全部分院" />
+                  <SearchSelect label="科別" value={filters.department} onChange={(value) => onFilterChange({ department: value, doctorName: "" })} options={departments} emptyLabel="全部科別" />
+                  <SearchSelect label="醫師" value={filters.doctorName} onChange={(value) => onFilterChange({ doctorName: value })} options={doctors} emptyLabel="全部醫師" />
+                  <SearchSelect label="星期" value={filters.weekday} onChange={(value) => onFilterChange({ weekday: value })} options={weekdayOptions} emptyLabel="全部星期" />
+                  <SearchSelect label="時段" value={filters.period} onChange={(value) => onFilterChange({ period: value })} options={periodOptions} emptyLabel="全部時段" />
+                  <label className="flex h-[66px] items-end">
+                    <span className="flex h-11 items-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-black text-[#0d2348]">
+                      <input checked={filters.favoritesOnly} onChange={(event) => onFilterChange({ favoritesOnly: event.target.checked })} type="checkbox" />
+                      只看收藏
+                    </span>
+                  </label>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#e5edf8] pt-4">
+                  <span className="text-sm font-black text-[#061b3d]">進階條件：</span>
+                  {activeFilterChips.length ? activeFilterChips.map((chip) => <span className="rounded-lg bg-[#eaf2ff] px-3 py-2 text-xs font-black text-[#075de8]" key={chip}>{chip}</span>) : <span className="text-sm font-bold text-[#60708d]">尚未套用進階條件</span>}
+                  <button className="ml-auto h-10 rounded-xl border border-[#c9d7ea] px-4 text-sm font-black text-[#061b3d]" onClick={onClearFilters} type="button">
+                    重設條件
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>
@@ -260,6 +301,7 @@ export function SearchCenter({
           <div className="flex flex-wrap items-center gap-3 border-y border-[#dbe5f4] py-3 text-sm font-bold text-[#60708d]">
             <span className="font-black text-[#061b3d]">搜尋結果：</span>
             {query ? <SearchChip label={query} onClear={() => onQueryChange("")} /> : <span>尚未輸入關鍵字，顯示常用門診與來源資料。</span>}
+            {activeFilterChips.map((chip) => <span className="rounded-lg bg-white px-3 py-2 text-xs font-black text-[#60708d]" key={chip}>{chip}</span>)}
             {query ? (
               <button className="font-black text-[#075de8]" onClick={() => onQueryChange("")} type="button">
                 清除全部
@@ -339,6 +381,7 @@ function SearchResultCard({
         <div className="grid grid-cols-2 gap-2 md:w-28 md:grid-cols-1">
           <ActionButton label="查看門診" onClick={() => onOpenSchedule(result.item)} />
           <ActionButton label="查看備註" onClick={() => onOpenSchedule(result.item)} secondary />
+          {result.item.originalUrl ? <SourceLink href={result.item.originalUrl} label="查看來源" /> : null}
         </div>
       </article>
     );
@@ -480,11 +523,55 @@ function ActionButton({ label, onClick, secondary = false }: { label: string; on
   );
 }
 
-function SourceLink({ href }: { href: string }) {
+function SearchSelect({
+  label,
+  value,
+  options,
+  emptyLabel,
+  onChange
+}: {
+  label: string;
+  value: string;
+  options: string[] | { value: string; label: string }[];
+  emptyLabel: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="grid gap-2 text-sm font-black text-[#0d2348]">
+      {label}
+      <select
+        className="h-11 min-w-0 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-bold outline-none focus:border-[#075de8]"
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      >
+        <option value="">{emptyLabel}</option>
+        {options.map((option) => {
+          const item = typeof option === "string" ? { value: option, label: option } : option;
+          return <option key={item.value} value={item.value}>{item.label}</option>;
+        })}
+      </select>
+    </label>
+  );
+}
+
+function SourceLink({ href, label = "查看來源" }: { href: string; label?: string }) {
   return (
     <a className="grid h-10 place-items-center rounded-xl border border-[#075de8] px-3 text-sm font-black text-[#075de8]" href={href} rel="noreferrer" target="_blank">
-      查看來源
+      {label}
     </a>
+  );
+}
+
+function matchesAdvancedFilters(item: DoctorSchedule, filters: FilterState, favorites: string[]) {
+  return (
+    (!filters.region || item.region === filters.region) &&
+    (!filters.hospitalId || item.hospital_id === filters.hospitalId) &&
+    (!filters.branchName || item.branch_name === filters.branchName) &&
+    (!filters.department || item.department === filters.department) &&
+    (!filters.doctorName || item.doctor_name === filters.doctorName) &&
+    (!filters.weekday || String(item.weekday) === filters.weekday) &&
+    (!filters.period || item.displayPeriod === filters.period) &&
+    (!filters.favoritesOnly || favorites.includes(doctorKey(item)))
   );
 }
 

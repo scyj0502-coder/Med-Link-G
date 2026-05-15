@@ -191,11 +191,18 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
               </div>
             ) : activeView === "search" ? (
               <SearchCenter
+                branches={filterOptions.branches}
+                departments={filterOptions.departments}
+                doctors={filterOptions.doctors}
                 favorites={favorites}
+                filters={filters}
                 hospitals={hospitals}
                 items={doctorSchedules}
                 notes={notes}
                 query={filters.query}
+                regions={filterOptions.regions}
+                onClearFilters={clearFilters}
+                onFilterChange={updateFilters}
                 onApplyFilters={(patch) => {
                   updateFilters(patch);
                   setActiveView("today");
