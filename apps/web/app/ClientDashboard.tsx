@@ -6,6 +6,7 @@ import { DoctorList } from "../components/dashboard/DoctorList";
 import { FilterBottomSheet } from "../components/dashboard/FilterBottomSheet";
 import { FilterPanel } from "../components/dashboard/FilterPanel";
 import { MobileBottomNav } from "../components/dashboard/MobileBottomNav";
+import { FavoriteDoctorsView, NotesView } from "../components/dashboard/SavedViews";
 import { SearchCenter } from "../components/dashboard/SearchCenter";
 import { Sidebar } from "../components/dashboard/Sidebar";
 import type { DashboardView } from "../components/dashboard/Sidebar";
@@ -93,6 +94,17 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
     ? notes.find((item) => item.doctorKey === selectedDoctorKey) ?? defaultPersonalNote(selectedDoctorKey)
     : null;
   const chips = filterChips(filters, hospitals);
+  const favoriteDoctorCount = useMemo(() => {
+    return new Set(doctorSchedules.filter((item) => favorites.includes(doctorKey(item))).map((item) => doctorKey(item))).size;
+  }, [doctorSchedules, favorites]);
+  const viewMeta = {
+    today: { title: "今日門診", subtitle: undefined, count: filteredSchedules.length },
+    search: { title: "快速搜尋", subtitle: "全站搜尋中心", count: doctorSchedules.length },
+    favorites: { title: "我的收藏", subtitle: "重點醫師追蹤", count: favoriteDoctorCount },
+    notes: { title: "我的備註", subtitle: "個人拜訪資訊", count: notes.length },
+    visits: { title: "拜訪紀錄", subtitle: "拜訪歷程整理", count: 0 },
+    sources: { title: "資料來源", subtitle: "門診來源管理", count: hospitals.length }
+  }[activeView];
 
   useEffect(() => {
     if (selectedItem && selectedItem.schedule_key !== selectedKey) {
@@ -131,10 +143,10 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
         <div className="min-w-0 pb-24 lg:pb-0">
           <Topbar
             query={filters.query}
-            resultCount={activeView === "search" ? doctorSchedules.length : filteredSchedules.length}
+            resultCount={viewMeta.count}
             showFilterButton={activeView === "today"}
-            subtitle={activeView === "search" ? "全站搜尋中心" : undefined}
-            title={activeView === "search" ? "快速搜尋" : "今日門診"}
+            subtitle={viewMeta.subtitle}
+            title={viewMeta.title}
             onOpenFilters={() => setFiltersOpen(true)}
             onQueryChange={(query) => updateFilters({ query })}
           />
@@ -215,8 +227,36 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
                 onQueryChange={(query) => updateFilters({ query })}
                 onToggleFavorite={toggleFavorite}
               />
+            ) : activeView === "favorites" ? (
+              <FavoriteDoctorsView
+                favorites={favorites}
+                items={doctorSchedules}
+                notes={notes}
+                query={filters.query}
+                onGoSearch={() => setActiveView("search")}
+                onOpenSchedule={(item) => {
+                  setSelectedKey(item.schedule_key);
+                  setEditingNote(false);
+                  setActiveView("today");
+                }}
+                onToggleFavorite={toggleFavorite}
+              />
+            ) : activeView === "notes" ? (
+              <NotesView
+                favorites={favorites}
+                items={doctorSchedules}
+                notes={notes}
+                query={filters.query}
+                onGoSearch={() => setActiveView("search")}
+                onOpenSchedule={(item) => {
+                  setSelectedKey(item.schedule_key);
+                  setEditingNote(false);
+                  setActiveView("today");
+                }}
+                onToggleFavorite={toggleFavorite}
+              />
             ) : (
-              <ComingSoonView title={activeView === "favorites" ? "我的收藏" : activeView === "notes" ? "我的備註" : activeView === "visits" ? "拜訪紀錄" : "資料來源"} />
+              <ComingSoonView title={activeView === "visits" ? "拜訪紀錄" : "資料來源"} />
             )}
           </section>
         </div>
