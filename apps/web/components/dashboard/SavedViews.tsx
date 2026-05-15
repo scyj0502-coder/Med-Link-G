@@ -1,3 +1,4 @@
+import { useState, type ReactNode } from "react";
 import type { DoctorSchedule, PersonalNote } from "../../lib/dashboard";
 import { doctorKey } from "../../lib/dashboard";
 
@@ -28,41 +29,98 @@ type DoctorGroup = {
   note?: PersonalNote;
 };
 
+type FavoriteFilter = "all" | "today" | "week" | "follow" | "reminder";
+
 export function FavoriteDoctorsView({ items, notes, favorites, query, onOpenSchedule, onToggleFavorite, onGoSearch }: FavoriteDoctorsViewProps) {
+  const [activeFilter, setActiveFilter] = useState<FavoriteFilter>("all");
   const noteMap = new Map(notes.map((note) => [note.doctorKey, note]));
   const normalizedQuery = normalize(query);
-  const groups = groupDoctors(items)
+  const today = new Date().getDay();
+  const allGroups = groupDoctors(items)
     .filter((group) => favorites.includes(group.key))
     .map((group) => ({ ...group, note: noteMap.get(group.key) }))
     .filter((group) => matchesDoctorGroup(group, normalizedQuery));
-
-  if (!groups.length) {
-    return (
-      <EmptySavedState
-        title={favorites.length ? "目前條件沒有收藏醫師" : "尚未收藏醫師"}
-        description={favorites.length ? "可以清空搜尋字或改用醫師、科別、醫院名稱查找。" : "從今日門診或快速搜尋把常拜訪醫師加入收藏，就會集中在這裡。"}
-        actionLabel="前往快速搜尋"
-        onAction={onGoSearch}
-      />
-    );
-  }
+  const groups = allGroups.filter((group) => matchesFavoriteFilter(group, activeFilter, today));
+  const tagCounts = countTags(allGroups);
+  const reminderGroups = allGroups.filter((group) => group.note?.nextReminder).slice(0, 5);
+  const stats = [
+    { label: "收藏醫師", value: allGroups.length, suffix: "位" },
+    { label: "今日有門診", value: allGroups.filter((group) => hasTodaySchedule(group, today)).length, suffix: "位" },
+    { label: "本週有門診", value: allGroups.filter((group) => group.schedules.length > 0).length, suffix: "位" },
+    { label: "下次提醒", value: allGroups.filter((group) => group.note?.nextReminder).length, suffix: "位" },
+    { label: "標籤總數", value: tagCounts.length, suffix: "個" }
+  ];
+  const filters: { value: FavoriteFilter; label: string; count: number }[] = [
+    { value: "all", label: "全部", count: allGroups.length },
+    { value: "today", label: "今日有門診", count: allGroups.filter((group) => hasTodaySchedule(group, today)).length },
+    { value: "week", label: "本週有門診", count: allGroups.filter((group) => group.schedules.length > 0).length },
+    { value: "follow", label: "需追蹤", count: allGroups.filter((group) => group.note?.visitStatus === "需追蹤").length },
+    { value: "reminder", label: "有提醒", count: allGroups.filter((group) => group.note?.nextReminder).length }
+  ];
 
   return (
     <section className="grid gap-5">
       <div>
         <h2 className="text-2xl font-black text-[#061b3d]">我的收藏</h2>
-        <p className="mt-2 text-sm font-bold text-[#60708d]">集中管理重點醫師，拜訪前快速確認門診、診間與個人備註。</p>
+        <p className="mt-2 text-sm font-bold text-[#60708d]">常拜訪醫師管理中心，快速掌握今日門診、追蹤提醒與拜訪優先順序。</p>
       </div>
-      <div className="grid gap-3">
-        {groups.map((group) => (
-          <SavedDoctorCard
-            favorite
-            group={group}
-            key={group.key}
-            onOpenSchedule={() => onOpenSchedule(group.primary)}
-            onToggleFavorite={() => onToggleFavorite(group.primary)}
-          />
+
+      <div className="grid gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] md:grid-cols-5">
+        {stats.map((stat) => (
+          <div className="rounded-2xl bg-[#f8fbff] p-4" key={stat.label}>
+            <div className="text-sm font-black text-[#60708d]">{stat.label}</div>
+            <div className="mt-3 flex items-end gap-1">
+              <span className="text-3xl font-black text-[#061b3d]">{stat.value}</span>
+              <span className="pb-1 text-sm font-black text-[#60708d]">{stat.suffix}</span>
+            </div>
+          </div>
         ))}
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {filters.map((filter) => (
+              <button
+                className={`h-11 shrink-0 rounded-xl border px-4 text-sm font-black transition ${
+                  activeFilter === filter.value
+                    ? "border-[#075de8] bg-[#075de8] text-white shadow-lg shadow-blue-600/20"
+                    : "border-[#dbe5f4] bg-white text-[#0d2348] hover:border-[#075de8]"
+                }`}
+                key={filter.value}
+                onClick={() => setActiveFilter(filter.value)}
+                type="button"
+              >
+                {filter.label} ({filter.count})
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-3">
+            {groups.length ? (
+              groups.map((group) => (
+                <SavedDoctorCard
+                  favorite
+                  group={group}
+                  key={group.key}
+                  today={today}
+                  onEditNote={() => onOpenSchedule(group.primary)}
+                  onOpenSchedule={() => onOpenSchedule(bestScheduleForVisit(group, today))}
+                  onToggleFavorite={() => onToggleFavorite(group.primary)}
+                />
+              ))
+            ) : (
+              <EmptySavedState
+                title={favorites.length ? "目前條件沒有收藏醫師" : "尚未收藏醫師"}
+                description={favorites.length ? "可以切換上方分類，或清空搜尋字再查看收藏醫師。" : "從今日門診或快速搜尋把常拜訪醫師加入收藏，就會集中在這裡。"}
+                actionLabel="前往快速搜尋"
+                onAction={onGoSearch}
+              />
+            )}
+          </div>
+        </div>
+
+        <FavoriteSidePanel groups={allGroups} reminderGroups={reminderGroups} tagCounts={tagCounts} today={today} />
       </div>
     </section>
   );
@@ -145,19 +203,25 @@ export function NotesView({ items, notes, favorites, query, onOpenSchedule, onTo
 function SavedDoctorCard({
   group,
   favorite,
+  today,
   onOpenSchedule,
+  onEditNote,
   onToggleFavorite
 }: {
   group: DoctorGroup;
   favorite: boolean;
+  today: number;
   onOpenSchedule: () => void;
+  onEditNote: () => void;
   onToggleFavorite: () => void;
 }) {
-  const visibleSchedules = group.schedules.slice(0, 4);
+  const visitSchedule = bestScheduleForVisit(group, today);
+  const nextReminder = group.note?.nextReminder || "未設定提醒";
+  const tags = group.note?.tags ?? [];
 
   return (
     <article className="rounded-2xl border border-[#dbe5f4] bg-white p-4 shadow-[0_8px_18px_rgba(8,35,80,.055)]">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.75fr)_180px] lg:items-center">
         <div className="min-w-0">
           <div className="flex items-start gap-3">
             <button className={`text-2xl ${favorite ? "text-[#f7b928]" : "text-[#9bb0cb]"}`} onClick={onToggleFavorite} type="button" aria-label={favorite ? "取消收藏" : "加入收藏"}>
@@ -171,30 +235,105 @@ function SavedDoctorCard({
                 <h3 className="text-xl font-black text-[#061b3d]">{group.primary.doctor_name}</h3>
                 <span className="text-sm font-black text-[#60708d]">醫師</span>
                 <span className="rounded-md bg-[#eaf2ff] px-2 py-1 text-xs font-black text-[#075de8]">{group.primary.department}</span>
+                {group.note?.visitStatus ? <span className={visitBadgeClass(group.note.visitStatus)}>{group.note.visitStatus}</span> : null}
               </div>
               <p className="mt-1 text-sm font-bold text-[#60708d]">
                 {group.primary.hospital_name} <span className="text-[#0d2348]">{group.primary.branchLabel}</span>
               </p>
             </div>
           </div>
-          {group.note?.content ? <p className="mt-3 rounded-xl bg-[#f4f8ff] p-3 text-sm font-bold leading-6 text-[#0d2348]">備註：{group.note.content}</p> : null}
-          {group.note?.tags.length ? (
+          {tags.length ? (
             <div className="mt-3 flex flex-wrap gap-2">
-              {group.note.tags.map((tag) => <span className="rounded-lg bg-[#eaf2ff] px-3 py-2 text-xs font-black text-[#075de8]" key={tag}>{tag}</span>)}
+              {tags.map((tag) => <span className="rounded-lg bg-[#eaf2ff] px-3 py-2 text-xs font-black text-[#075de8]" key={tag}>{tag}</span>)}
             </div>
           ) : null}
         </div>
-        <div className="grid gap-2">
-          {visibleSchedules.map((item) => (
-            <button className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-3 py-2 text-left text-sm font-black text-[#0d2348]" key={item.schedule_key} onClick={onOpenSchedule} type="button">
-              <span className="mr-2 rounded-md bg-[#075de8] px-2 py-1 text-xs text-white">{item.displayPeriod}</span>
-              {item.weekday_label}｜{item.displayRoom}
-            </button>
-          ))}
+
+        <div className="grid gap-2 rounded-2xl border border-[#dbe5f4] bg-[#f8fbff] p-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-black text-[#0d2348]">
+            <span className="rounded-md bg-[#075de8] px-2 py-1 text-xs text-white">{visitSchedule ? scheduleTimingLabel(visitSchedule, today) : "無門診"}</span>
+            <span>{visitSchedule?.displayPeriod ?? "未標示"}</span>
+            <span>{visitSchedule?.start_time || "時間未標示"}</span>
+          </div>
+          <div className="text-sm font-black text-[#0d2348]">{visitSchedule?.displayRoom ?? "診間 未標示"}</div>
+          <div className={visitSchedule?.status === "正常開診" ? "text-sm font-black text-[#168a5d]" : "text-sm font-black text-[#f97316]"}>
+            {visitSchedule?.status ?? "無門診"}
+          </div>
+          <div className="border-t border-[#dbe5f4] pt-2 text-sm font-bold leading-6 text-[#60708d]">
+            <span className="block font-black text-[#061b3d]">下次提醒</span>
+            {nextReminder}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
           <ActionButton label="查看門診" onClick={onOpenSchedule} />
+          <ActionButton label="編輯備註" onClick={onEditNote} secondary />
         </div>
       </div>
     </article>
+  );
+}
+
+function FavoriteSidePanel({
+  groups,
+  reminderGroups,
+  tagCounts,
+  today
+}: {
+  groups: DoctorGroup[];
+  reminderGroups: DoctorGroup[];
+  tagCounts: { tag: string; count: number }[];
+  today: number;
+}) {
+  const todayCount = groups.filter((group) => hasTodaySchedule(group, today)).length;
+  const followCount = groups.filter((group) => group.note?.visitStatus === "需追蹤").length;
+
+  return (
+    <aside className="grid content-start gap-4">
+      <SideCard title="收藏概況">
+        <div className="grid gap-3 text-sm font-bold text-[#60708d]">
+          <SummaryLine label="收藏醫師" value={`${groups.length} 位`} />
+          <SummaryLine label="今日有門診" value={`${todayCount} 位`} />
+          <SummaryLine label="需追蹤" value={`${followCount} 位`} highlight={followCount > 0} />
+          <SummaryLine label="已設定提醒" value={`${reminderGroups.length} 位`} />
+        </div>
+      </SideCard>
+
+      <SideCard title="標籤分布">
+        {tagCounts.length ? (
+          <div className="grid gap-3">
+            {tagCounts.slice(0, 6).map((item) => (
+              <div className="grid gap-1" key={item.tag}>
+                <div className="flex items-center justify-between text-sm font-black text-[#0d2348]">
+                  <span>{item.tag}</span>
+                  <span>{item.count}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-[#eaf2ff]">
+                  <div className="h-full rounded-full bg-[#075de8]" style={{ width: `${Math.max(12, (item.count / Math.max(1, groups.length)) * 100)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm font-bold leading-6 text-[#60708d]">尚未建立標籤，之後可用重點醫師、需追蹤、熟客等標籤管理拜訪優先順序。</p>
+        )}
+      </SideCard>
+
+      <SideCard title="提醒摘要">
+        {reminderGroups.length ? (
+          <div className="grid gap-3">
+            {reminderGroups.map((group) => (
+              <div className="rounded-xl bg-[#f8fbff] p-3" key={group.key}>
+                <div className="font-black text-[#061b3d]">{group.primary.doctor_name}</div>
+                <div className="mt-1 text-sm font-bold leading-6 text-[#60708d]">{group.note?.nextReminder}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm font-bold leading-6 text-[#60708d]">尚未設定下次提醒。建議替重點醫師設定拜訪前提醒。</p>
+        )}
+      </SideCard>
+    </aside>
   );
 }
 
@@ -207,6 +346,24 @@ function EmptySavedState({ title, description, actionLabel, onAction }: { title:
         {actionLabel}
       </button>
     </section>
+  );
+}
+
+function SideCard({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-[18px] border border-[#dbe5f4] bg-white p-5 shadow-[0_12px_30px_rgba(8,35,80,.08)]">
+      <h3 className="mb-4 font-black text-[#061b3d]">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+function SummaryLine({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-[#eef3fb] pb-2 last:border-0 last:pb-0">
+      <span>{label}</span>
+      <span className={highlight ? "font-black text-[#f97316]" : "font-black text-[#061b3d]"}>{value}</span>
+    </div>
   );
 }
 
@@ -250,6 +407,38 @@ function matchesDoctorGroup(group: DoctorGroup, query: string) {
     group.note?.visitStatus ?? "",
     ...(group.note?.tags ?? [])
   ].join(" ")).includes(query);
+}
+
+function matchesFavoriteFilter(group: DoctorGroup, filter: FavoriteFilter, today: number) {
+  if (filter === "today") return hasTodaySchedule(group, today);
+  if (filter === "week") return group.schedules.length > 0;
+  if (filter === "follow") return group.note?.visitStatus === "需追蹤";
+  if (filter === "reminder") return Boolean(group.note?.nextReminder);
+  return true;
+}
+
+function hasTodaySchedule(group: DoctorGroup, today: number) {
+  return group.schedules.some((item) => item.weekday === today);
+}
+
+function bestScheduleForVisit(group: DoctorGroup, today: number) {
+  return group.schedules.find((item) => item.weekday === today) ?? group.schedules[0] ?? group.primary;
+}
+
+function scheduleTimingLabel(item: DoctorSchedule, today: number) {
+  return item.weekday === today ? "今日門診" : "本週門診";
+}
+
+function countTags(groups: DoctorGroup[]) {
+  const map = new Map<string, number>();
+  for (const group of groups) {
+    for (const tag of group.note?.tags ?? []) {
+      map.set(tag, (map.get(tag) ?? 0) + 1);
+    }
+  }
+  return Array.from(map.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-Hant"));
 }
 
 function matchesNoteRow(row: { note: PersonalNote; primary?: DoctorSchedule; schedules: DoctorSchedule[] }, query: string) {
