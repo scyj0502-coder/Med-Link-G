@@ -55,6 +55,14 @@ class CgmhImageParserTest(unittest.TestCase):
         self.assertEqual(shift_for_row(6, 1018, 1060), "上午")
         self.assertEqual(shift_for_row(6, 1334, 1414), "夜診")
 
+    def test_datong_page_seven_to_nine_shift_templates(self) -> None:
+        self.assertEqual(shift_for_row(7, 70, 126), "上午")
+        self.assertEqual(shift_for_row(7, 891, 966), "下午")
+        self.assertEqual(shift_for_row(8, 221, 370), "上午")
+        self.assertEqual(shift_for_row(8, 489, 519), "夜診")
+        self.assertEqual(shift_for_row(9, 138, 164), "上午")
+        self.assertEqual(shift_for_row(9, 190, 318), "上午")
+
 
 if __name__ == "__main__":
     unittest.main()
