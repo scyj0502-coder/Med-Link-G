@@ -1,5 +1,20 @@
-export function Sidebar() {
-  const items = ["今日門診", "快速搜尋", "我的收藏", "我的備註", "拜訪紀錄", "資料來源"];
+export type DashboardView = "today" | "search" | "favorites" | "notes" | "visits" | "sources";
+
+type SidebarProps = {
+  activeView: DashboardView;
+  onNavigate: (view: DashboardView) => void;
+};
+
+const items: { label: string; view: DashboardView }[] = [
+  { label: "今日門診", view: "today" },
+  { label: "快速搜尋", view: "search" },
+  { label: "我的收藏", view: "favorites" },
+  { label: "我的備註", view: "notes" },
+  { label: "拜訪紀錄", view: "visits" },
+  { label: "資料來源", view: "sources" }
+];
+
+export function Sidebar({ activeView, onNavigate }: SidebarProps) {
 
   return (
     <aside className="hidden min-h-screen bg-[#061b3d] px-5 py-6 text-white shadow-xl lg:flex lg:flex-col">
@@ -14,14 +29,15 @@ export function Sidebar() {
       </div>
 
       <nav className="grid gap-2">
-        {items.map((item, index) => (
-          <a
-            className={`rounded-xl px-4 py-3 text-[15px] font-bold transition ${index === 0 ? "bg-[#075de8] text-white shadow-lg shadow-blue-900/30" : "text-white/80 hover:bg-white/10"}`}
-            href="#"
-            key={item}
+        {items.map((item) => (
+          <button
+            className={`rounded-xl px-4 py-3 text-left text-[15px] font-bold transition ${activeView === item.view ? "bg-[#075de8] text-white shadow-lg shadow-blue-900/30" : "text-white/80 hover:bg-white/10"}`}
+            key={item.view}
+            onClick={() => onNavigate(item.view)}
+            type="button"
           >
-            {item}
-          </a>
+            {item.label}
+          </button>
         ))}
       </nav>
 

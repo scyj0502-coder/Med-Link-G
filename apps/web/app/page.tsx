@@ -7,6 +7,7 @@ type HomePageProps = {
     q?: string;
     department?: string;
     doctor?: string;
+    view?: string;
   }>;
 };
 
@@ -81,6 +82,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         department: params.department ?? "",
         doctor: params.doctor ?? ""
       }}
+      initialView={params.view === "search" ? "search" : "today"}
     />
   );
 }

@@ -6,7 +6,9 @@ import { DoctorList } from "../components/dashboard/DoctorList";
 import { FilterBottomSheet } from "../components/dashboard/FilterBottomSheet";
 import { FilterPanel } from "../components/dashboard/FilterPanel";
 import { MobileBottomNav } from "../components/dashboard/MobileBottomNav";
+import { SearchCenter } from "../components/dashboard/SearchCenter";
 import { Sidebar } from "../components/dashboard/Sidebar";
+import type { DashboardView } from "../components/dashboard/Sidebar";
 import { Topbar } from "../components/dashboard/Topbar";
 import {
   buildDoctorSchedules,
@@ -32,9 +34,10 @@ type ClientDashboardProps = {
     department: string;
     doctor: string;
   };
+  initialView?: DashboardView;
 };
 
-export default function ClientDashboard({ hospitals, schedules, initialFilters }: ClientDashboardProps) {
+export default function ClientDashboard({ hospitals, schedules, initialFilters, initialView = "today" }: ClientDashboardProps) {
   const [filters, setFilters] = useState<FilterState>({
     ...emptyFilters,
     query: initialFilters.q,
@@ -46,6 +49,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
   const [selectedKey, setSelectedKey] = useState("");
   const [editingNote, setEditingNote] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [activeView, setActiveView] = useState<DashboardView>(initialView);
 
   useEffect(() => {
     try {
@@ -123,28 +127,33 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
   return (
     <main className="min-h-screen bg-[#f4f8ff] text-[#0d2348]">
       <div className="grid min-h-screen lg:grid-cols-[268px_1fr]">
-        <Sidebar />
+        <Sidebar activeView={activeView} onNavigate={setActiveView} />
         <div className="min-w-0 pb-24 lg:pb-0">
           <Topbar
             query={filters.query}
-            resultCount={filteredSchedules.length}
+            resultCount={activeView === "search" ? doctorSchedules.length : filteredSchedules.length}
+            showFilterButton={activeView === "today"}
+            subtitle={activeView === "search" ? "全站搜尋中心" : undefined}
+            title={activeView === "search" ? "快速搜尋" : "今日門診"}
             onOpenFilters={() => setFiltersOpen(true)}
             onQueryChange={(query) => updateFilters({ query })}
           />
 
           <section className="grid gap-5 px-4 py-4 lg:px-7 lg:py-6">
-            <FilterPanel
-              branches={filterOptions.branches}
-              departments={filterOptions.departments}
-              doctors={filterOptions.doctors}
-              filters={filters}
-              hospitals={filterOptions.hospitals}
-              regions={filterOptions.regions}
-              onChange={updateFilters}
-              onClear={clearFilters}
-            />
+            {activeView === "today" ? (
+              <FilterPanel
+                branches={filterOptions.branches}
+                departments={filterOptions.departments}
+                doctors={filterOptions.doctors}
+                filters={filters}
+                hospitals={filterOptions.hospitals}
+                regions={filterOptions.regions}
+                onChange={updateFilters}
+                onClear={clearFilters}
+              />
+            ) : null}
 
-            <div className="flex flex-wrap gap-2 lg:hidden">
+            {activeView === "today" ? <div className="flex flex-wrap gap-2 lg:hidden">
               {chips.length ? (
                 chips.map((chip) => <span className="rounded-full bg-[#eaf2ff] px-3 py-1 text-xs font-black text-[#075de8]" key={chip}>{chip}</span>)
               ) : (
@@ -155,30 +164,53 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
                   清除
                 </button>
               ) : null}
-            </div>
+            </div> : null}
 
-            <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,430px)]">
-              <DoctorList
+            {activeView === "today" ? (
+              <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,430px)]">
+                <DoctorList
+                  favorites={favorites}
+                  items={filteredSchedules}
+                  selectedKey={selectedItem?.schedule_key ?? ""}
+                  onSelect={(item) => {
+                    setSelectedKey(item.schedule_key);
+                    setEditingNote(false);
+                  }}
+                  onToggleFavorite={toggleFavorite}
+                />
+                <DoctorDetailPanel
+                  editing={editingNote}
+                  favorite={selectedItem ? favorites.includes(doctorKey(selectedItem)) : false}
+                  item={selectedItem}
+                  note={selectedNote}
+                  onCancelEdit={() => setEditingNote(false)}
+                  onEditNote={() => setEditingNote(true)}
+                  onSaveNote={saveNote}
+                  onToggleFavorite={() => selectedItem && toggleFavorite(selectedItem)}
+                />
+              </div>
+            ) : activeView === "search" ? (
+              <SearchCenter
                 favorites={favorites}
-                items={filteredSchedules}
-                selectedKey={selectedItem?.schedule_key ?? ""}
-                onSelect={(item) => {
+                hospitals={hospitals}
+                items={doctorSchedules}
+                notes={notes}
+                query={filters.query}
+                onApplyFilters={(patch) => {
+                  updateFilters(patch);
+                  setActiveView("today");
+                }}
+                onOpenSchedule={(item) => {
                   setSelectedKey(item.schedule_key);
                   setEditingNote(false);
+                  setActiveView("today");
                 }}
+                onQueryChange={(query) => updateFilters({ query })}
                 onToggleFavorite={toggleFavorite}
               />
-              <DoctorDetailPanel
-                editing={editingNote}
-                favorite={selectedItem ? favorites.includes(doctorKey(selectedItem)) : false}
-                item={selectedItem}
-                note={selectedNote}
-                onCancelEdit={() => setEditingNote(false)}
-                onEditNote={() => setEditingNote(true)}
-                onSaveNote={saveNote}
-                onToggleFavorite={() => selectedItem && toggleFavorite(selectedItem)}
-              />
-            </div>
+            ) : (
+              <ComingSoonView title={activeView === "favorites" ? "我的收藏" : activeView === "notes" ? "我的備註" : activeView === "visits" ? "拜訪紀錄" : "資料來源"} />
+            )}
           </section>
         </div>
       </div>
@@ -195,7 +227,16 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
         onClear={clearFilters}
         onClose={() => setFiltersOpen(false)}
       />
-      <MobileBottomNav />
+      <MobileBottomNav activeView={activeView} onNavigate={setActiveView} />
     </main>
+  );
+}
+
+function ComingSoonView({ title }: { title: string }) {
+  return (
+    <section className="rounded-[18px] border border-[#dbe5f4] bg-white p-8 shadow-[0_12px_30px_rgba(8,35,80,.08)]">
+      <h2 className="text-2xl font-black text-[#061b3d]">{title}</h2>
+      <p className="mt-3 text-sm font-bold leading-6 text-[#60708d]">這個區塊會接著整理成正式工作頁，目前可先透過今日門診與快速搜尋查看資料。</p>
+    </section>
   );
 }

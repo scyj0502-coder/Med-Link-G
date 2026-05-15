@@ -3,9 +3,12 @@ type TopbarProps = {
   onQueryChange: (value: string) => void;
   onOpenFilters: () => void;
   resultCount: number;
+  title?: string;
+  subtitle?: string;
+  showFilterButton?: boolean;
 };
 
-export function Topbar({ query, onQueryChange, onOpenFilters, resultCount }: TopbarProps) {
+export function Topbar({ query, onQueryChange, onOpenFilters, resultCount, title = "今日門診", subtitle, showFilterButton = true }: TopbarProps) {
   const today = new Date();
   const dateText = today.toLocaleDateString("zh-TW", {
     year: "numeric",
@@ -39,7 +42,7 @@ export function Topbar({ query, onQueryChange, onOpenFilters, resultCount }: Top
             說明
           </button>
           <button
-            className="h-11 shrink-0 rounded-xl bg-[#075de8] px-4 text-sm font-black text-white shadow-lg shadow-blue-600/20 lg:hidden"
+            className={`h-11 shrink-0 rounded-xl bg-[#075de8] px-4 text-sm font-black text-white shadow-lg shadow-blue-600/20 lg:hidden ${showFilterButton ? "" : "hidden"}`}
             onClick={onOpenFilters}
             type="button"
           >
@@ -50,8 +53,8 @@ export function Topbar({ query, onQueryChange, onOpenFilters, resultCount }: Top
 
       <div className="px-4 pb-5 lg:px-7">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
-          <h2 className="text-3xl font-black tracking-tight text-[#061b3d]">今日門診</h2>
-          <span className="text-base font-black text-[#061b3d]">{dateText}</span>
+          <h2 className="text-3xl font-black tracking-tight text-[#061b3d]">{title}</h2>
+          {subtitle ? <span className="text-sm font-bold text-[#60708d]">{subtitle}</span> : <span className="text-base font-black text-[#061b3d]">{dateText}</span>}
           <span className="text-sm font-bold text-[#60708d]">資料更新：2026/05/15 18:30</span>
           <span className="text-sm font-bold text-[#60708d]">目前 {resultCount} 筆</span>
         </div>
