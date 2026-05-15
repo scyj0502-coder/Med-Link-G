@@ -157,7 +157,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
               ) : null}
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
+            <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,430px)]">
               <DoctorList
                 favorites={favorites}
                 items={filteredSchedules}

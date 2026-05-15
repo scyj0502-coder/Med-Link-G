@@ -12,7 +12,7 @@ type DoctorListProps = {
 
 export function DoctorList({ items, selectedKey, favorites, onSelect, onToggleFavorite }: DoctorListProps) {
   return (
-    <section className="grid gap-3" aria-label="今日門診醫師列表">
+    <section className="grid min-w-0 content-start gap-3" aria-label="今日門診醫師列表">
       <div className="flex items-baseline justify-between gap-3">
         <div>
           <h2 className="text-xl font-black text-[#061b3d]">今日門診醫師</h2>

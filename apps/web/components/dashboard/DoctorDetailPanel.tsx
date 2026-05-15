@@ -36,7 +36,7 @@ export function DoctorDetailPanel({
   }
 
   return (
-    <aside className="grid gap-4 rounded-[18px] border border-[#dbe5f4] bg-[#f8fbff] p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] lg:sticky lg:top-24 lg:self-start">
+    <aside className="grid min-w-0 gap-4 rounded-[18px] border border-[#dbe5f4] bg-[#f8fbff] p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] lg:sticky lg:top-24 lg:self-start">
       <section className="rounded-2xl border border-[#dbe5f4] bg-white p-4">
         <div className="flex items-start gap-4">
           <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-[#dbe5f4] bg-[#eef5ff] text-2xl font-black text-[#075de8]">
