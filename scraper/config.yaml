@@ -58,7 +58,7 @@ hospitals:
     departments: []
     schedule_url: https://register.cgmh.org.tw/OpTimeSheet/250429004_upload.pdf
   - id: cgmh-datong
-    enabled: false
+    enabled: true
     adapter: cgmh_image
     region: 高雄
     hospital_name: 高雄市立大同醫院
