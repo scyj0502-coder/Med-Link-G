@@ -62,6 +62,18 @@ KNOWN_DEPARTMENTS = [
 ]
 PAGE_SEGMENT_DEPARTMENTS = {
     2: ["一般內科", "胃腸肝膽科", "胸腔內科", "血液腫瘤科", "腎臟科", "內分泌暨新陳代謝科"],
+    3: ["糖尿病衛教", "心臟內科", "風濕過敏免疫科", "感染醫學科", "法定感染症門診", "肺癌篩檢門診", "肌少症門診"],
+}
+PAGE_SEGMENT_RANGES = {
+    3: [
+        (333, 390),
+        (390, 669),
+        (702, 792),
+        (830, 921),
+        (957, 1050),
+        (1085, 1357),
+        (1392, 1440),
+    ],
 }
 PAGE_SHIFT_SPANS = {
     2: [
@@ -80,6 +92,24 @@ PAGE_SHIFT_SPANS = {
         (1275, 1328, "下午"),
         (1366, 1390, "上午"),
         (1390, 1409, "下午"),
+    ],
+    3: [
+        (333, 390, "上午"),
+        (390, 538, "上午"),
+        (538, 605, "下午"),
+        (605, 669, "夜診"),
+        (702, 732, "上午"),
+        (732, 762, "下午"),
+        (762, 792, "夜診"),
+        (830, 860, "上午"),
+        (860, 921, "下午"),
+        (957, 988, "上午"),
+        (988, 1019, "下午"),
+        (1019, 1050, "夜診"),
+        (1085, 1162, "上午"),
+        (1162, 1317, "下午"),
+        (1317, 1357, "夜診"),
+        (1392, 1440, "上午"),
     ],
 }
 
@@ -104,6 +134,7 @@ class CgmhImageAdapter(ScheduleAdapter):
             if page_index not in PAGE_SEGMENT_DEPARTMENTS:
                 continue
             image = render_page(page)
+            image._med_link_source_page = page_index
             row_edges = detect_row_edges(image)
             if len(row_edges) < 4:
                 continue
@@ -169,7 +200,7 @@ def parse_page_rows(
             context = RowContext(top=top, bottom=bottom, department=current_department, shift=current_shift)
             for weekday, weekday_label, left, right in WEEKDAY_COLUMNS:
                 raw_text = ocr_cached(image, (left, top, right, bottom), psm="6")
-                doctors = extract_doctors(raw_text)
+                doctors = extract_doctors(raw_text, allow_fallback=page_number >= 3)
                 for doctor_name, note in doctors:
                     items.append(
                         RawSchedule(
@@ -195,6 +226,10 @@ def parse_page_rows(
 
 
 def table_segments(image: Image.Image, row_edges: list[int]) -> list[tuple[int, int]]:
+    page_hint = getattr(image, "_med_link_source_page", None)
+    if page_hint in PAGE_SEGMENT_RANGES:
+        return PAGE_SEGMENT_RANGES[page_hint]
+
     headers: list[tuple[int, int]] = []
     for top, bottom in zip(row_edges, row_edges[1:]):
         if bottom - top < 16:
@@ -279,13 +314,23 @@ def department_room(department: str) -> str:
     return "依現場診區"
 
 
-def extract_doctors(text: str) -> list[tuple[str, str]]:
+def extract_doctors(text: str, allow_fallback: bool = True) -> list[tuple[str, str]]:
     raw = text.replace("\n", " ")
     compact = re.sub(r"\s+", "", raw)
     note = "；".join(dict.fromkeys(match.strip() for match in NOTE_PATTERN.findall(raw) if match.strip()))
     doctors: list[tuple[str, str]] = []
     seen: set[str] = set()
     for match in DOCTOR_PATTERN.finditer(compact):
+        name = normalize_doctor_name(match.group(1))
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        doctors.append((name, note))
+    if doctors or not allow_fallback:
+        return doctors
+
+    fallback_text = re.sub(r"[A-Za-z0-9#＃◎▲△※|_=\-—﹍ˍˉ﹁﹂、，。﹚﹛﹜（）()；:：]+", " ", raw)
+    for match in re.finditer(r"([\u4e00-\u9fff](?:\s+[\u4e00-\u9fff]){1,3})", fallback_text):
         name = normalize_doctor_name(match.group(1))
         if not name or name in seen:
             continue
@@ -299,9 +344,51 @@ def normalize_doctor_name(name: str) -> str:
     clean = DOCTOR_CORRECTIONS.get(clean, clean)
     if len(clean) < 2 or len(clean) > 4:
         return ""
+    if len(clean) == 4 and clean[:2] == "星期":
+        return ""
     if clean in IGNORED_DOCTOR_NAMES:
         return ""
-    if any(token in clean for token in ["診區", "診間", "上午", "下午", "夜間"]):
+    if any(
+        token in clean
+        for token in [
+            "診區",
+            "診間",
+            "上午",
+            "下午",
+            "夜間",
+            "科別",
+            "時段",
+            "地下",
+            "三樓",
+            "一樓",
+            "二樓",
+            "星期",
+            "日期",
+            "期二",
+            "期三",
+            "期四",
+            "期五",
+            "詮",
+            "誥",
+            "誌",
+            "診",
+            "泌",
+            "唱",
+            "檳",
+            "護",
+            "向",
+            "欄",
+            "橫",
+            "圖",
+            "啶",
+            "岡",
+            "閻",
+            "琢",
+            "壅",
+            "泉",
+            "汙",
+        ]
+    ):
         return ""
     return clean
 

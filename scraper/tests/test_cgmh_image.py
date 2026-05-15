@@ -13,6 +13,7 @@ class CgmhImageParserTest(unittest.TestCase):
     def test_extract_doctors_from_scanned_cell_text(self) -> None:
         self.assertEqual(extract_doctors("16560 黃文琦 #14620 鄭本忠"), [("黃文琦", ""), ("鄭本忠", "")])
         self.assertEqual(extract_doctors("26516 蔡 褲 晏 1407 詮 周"), [("蔡青晏", "")])
+        self.assertEqual(extract_doctors("13 李 建 和 | 18K"), [("李建和", "")])
 
     def test_extract_doctors_keeps_note(self) -> None:
         self.assertEqual(extract_doctors("19043 吳柏融（地下樓B12診間）"), [("吳柏融", "地下樓B12診間")])
