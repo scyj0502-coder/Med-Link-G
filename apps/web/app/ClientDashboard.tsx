@@ -88,6 +88,10 @@ function openMaps(item: PublishedSchedule) {
   window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, "_blank", "noopener");
 }
 
+function originalScheduleUrl(item: PublishedSchedule) {
+  return item.source_file_url || item.source_url || "";
+}
+
 export default function ClientDashboard({ hospitals, schedules, initialFilters }: ClientDashboardProps) {
   const [query, setQuery] = useState(initialFilters.q);
   const [region, setRegion] = useState("");
@@ -463,6 +467,16 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
                           <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-black text-brand" onClick={() => openMaps(item)} type="button">
                             導航
                           </button>
+                          {originalScheduleUrl(item) ? (
+                            <a
+                              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-black text-brand"
+                              href={originalScheduleUrl(item)}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              查看原始門診表
+                            </a>
+                          ) : null}
                         </div>
                       </article>
                     );
@@ -500,10 +514,12 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
               <DetailField label="標準科別" value={detailItem.department} />
               <DetailField label="追蹤狀態" value={favorites.includes(favoriteKey(detailItem)) ? "已收藏，未來可優先推播" : "尚未收藏"} />
               <DetailField label="來源頁碼" value={detailItem.source_page ? `第 ${detailItem.source_page} 頁` : "未標示"} />
-              <DetailField label="解析信心" value={detailItem.confidence ? `${Math.round(detailItem.confidence * 100)}%` : "未標示"} />
+              <DetailField label="資料月份" value={detailItem.source_month || "未標示"} />
+              <DetailField label="解析狀態" value={detailItem.parse_status || "ok"} />
+              <DetailField label="解析信心" value={detailItem.confidence_score || detailItem.confidence ? `${Math.round((detailItem.confidence_score || detailItem.confidence || 0) * 100)}%` : "未標示"} />
               <DetailField label="資料發布時間" value={new Date(detailItem.published_at).toLocaleString("zh-TW")} />
               <DetailField label="解析時間" value={detailItem.parsed_at ? new Date(detailItem.parsed_at).toLocaleString("zh-TW") : "未標示"} />
-              <DetailField label="資料來源" value={detailItem.source_url ? "可開啟來源" : "未標示"} href={detailItem.source_url ?? undefined} />
+              <DetailField label="資料來源" value={originalScheduleUrl(detailItem) ? "查看原始門診表" : "未標示"} href={originalScheduleUrl(detailItem) || undefined} />
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <button className="rounded-lg bg-brand px-4 py-3 font-black text-white" onClick={() => toggleFavorite(detailItem)} type="button">

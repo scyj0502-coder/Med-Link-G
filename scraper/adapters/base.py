@@ -34,6 +34,15 @@ class RawSchedule:
     raw_text: str = ""
     source_page: int | None = None
     parsed_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    source_file_url: str = ""
+    file_hash: str = ""
+    parse_status: str = "ok"
+    parse_error: str = ""
+    source_type: str = ""
+    source_month: str = ""
+    fetched_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    start_time: str = ""
+    end_time: str = ""
 
 
 class ScheduleAdapter:

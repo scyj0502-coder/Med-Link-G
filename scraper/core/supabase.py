@@ -9,7 +9,7 @@ from adapters.base import HospitalSource, RawSchedule
 from core.models import RejectedSchedule, ScheduleChange, schedule_payload
 
 
-LEGACY_PUBLISHED_COLUMNS = {
+BASE_PUBLISHED_COLUMNS = {
     "schedule_key",
     "id",
     "sync_run_id",
@@ -26,6 +26,12 @@ LEGACY_PUBLISHED_COLUMNS = {
     "source_ref",
     "confidence",
     "published_at",
+}
+PARSE_METADATA_COLUMNS = BASE_PUBLISHED_COLUMNS | {
+    "note",
+    "raw_text",
+    "source_page",
+    "parsed_at",
 }
 
 
@@ -113,29 +119,13 @@ class SupabaseScheduleWriter:
 
         run = self.client.insert("sync_runs", {
             "hospital_id": source.id,
-            "status": "ok" if not rejected else "needs_attention",
+            "status": "ok" if publishable and not rejected else "needs_attention" if publishable else "parse_failed",
             "scraped_count": len(publishable) + len(rejected),
             "published_count": len(publishable),
             "rejected_count": len(rejected),
         })[0]
 
         payloads = [schedule_payload(item) | {"sync_run_id": run["id"]} for item in publishable]
-        self.client.delete(
-            "published_schedules",
-            {"hospital_id": f"eq.{source.id}"},
-        )
-        if payloads:
-            try:
-                self.client.upsert("published_schedules", payloads, on_conflict="schedule_key")
-            except httpx.HTTPStatusError as exc:
-                if not is_missing_column_error(exc):
-                    raise
-                legacy_payloads = [
-                    {key: value for key, value in payload.items() if key in LEGACY_PUBLISHED_COLUMNS}
-                    for payload in payloads
-                ]
-                self.client.upsert("published_schedules", legacy_payloads, on_conflict="schedule_key")
-
         rejected_payloads = [
             {
                 "sync_run_id": run["id"],
@@ -147,6 +137,12 @@ class SupabaseScheduleWriter:
         ]
         if rejected_payloads:
             self.client.insert("rejected_schedules", rejected_payloads)
+
+        if not payloads:
+            return
+
+        written_payloads = self.upsert_published(payloads)
+        self.delete_stale_published(source.id, {item["schedule_key"] for item in written_payloads})
 
         change_payloads = [
             {
@@ -162,6 +158,56 @@ class SupabaseScheduleWriter:
         ]
         if change_payloads:
             self.client.insert("schedule_changes", change_payloads)
+
+    def write_failed_run(self, source: HospitalSource, error: str) -> None:
+        self.client.upsert("hospitals", [{
+            "id": source.id,
+            "region": source.region,
+            "hospital_name": source.hospital_name,
+            "branch_name": source.branch_name,
+            "schedule_url": source.schedule_url,
+            "enabled": source.enabled,
+        }], on_conflict="id")
+        self.client.insert("sync_runs", {
+            "hospital_id": source.id,
+            "status": "parse_failed",
+            "scraped_count": 0,
+            "published_count": 0,
+            "rejected_count": 0,
+        })
+
+    def upsert_published(self, payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        try:
+            self.client.upsert("published_schedules", payloads, on_conflict="schedule_key")
+            return payloads
+        except httpx.HTTPStatusError as exc:
+            if not is_missing_column_error(exc):
+                raise
+
+        metadata_payloads = [
+            {key: value for key, value in payload.items() if key in PARSE_METADATA_COLUMNS}
+            for payload in payloads
+        ]
+        try:
+            self.client.upsert("published_schedules", metadata_payloads, on_conflict="schedule_key")
+            return metadata_payloads
+        except httpx.HTTPStatusError as metadata_exc:
+            if not is_missing_column_error(metadata_exc):
+                raise
+
+        base_payloads = [
+            {key: value for key, value in payload.items() if key in BASE_PUBLISHED_COLUMNS}
+            for payload in payloads
+        ]
+        self.client.upsert("published_schedules", base_payloads, on_conflict="schedule_key")
+        return base_payloads
+
+    def delete_stale_published(self, hospital_id: str, current_keys: set[str]) -> None:
+        existing = self.load_published(hospital_id)
+        for row in existing:
+            key = row.get("schedule_key")
+            if key and key not in current_keys:
+                self.client.delete("published_schedules", {"schedule_key": f"eq.{key}"})
 
 
 def is_missing_column_error(exc: httpx.HTTPStatusError) -> bool:

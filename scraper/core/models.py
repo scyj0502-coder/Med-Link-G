@@ -34,5 +34,5 @@ def schedule_key(item: RawSchedule) -> str:
 def schedule_payload(item: RawSchedule) -> dict:
     payload = asdict(item)
     payload["schedule_key"] = schedule_key(item)
+    payload["confidence_score"] = item.confidence
     return payload
-

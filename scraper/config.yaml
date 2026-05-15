@@ -65,3 +65,19 @@ hospitals:
     branch_name: 總院
     departments: []
     schedule_url: https://register.cgmh.org.tw/OpTimeSheet/260421001W_upload.pdf
+  - id: antai
+    enabled: false
+    adapter: antai_image
+    region: 屏東
+    hospital_name: 安泰醫療社團法人安泰醫院
+    branch_name: 總院
+    departments: []
+    schedule_url: https://www.tsmh.org.tw/sites/web_dg/show_web_page.php?edsno=1003
+  - id: ptvgh
+    enabled: true
+    adapter: ptvgh_pdf
+    region: 屏東
+    hospital_name: 屏東榮民總醫院
+    branch_name: 總院
+    departments: []
+    schedule_url: https://www.ptvgh.gov.tw/cp.aspx?n=2EA7048AC15C840A

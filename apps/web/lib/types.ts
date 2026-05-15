@@ -11,12 +11,22 @@ export type PublishedSchedule = {
   period: string;
   room: string | null;
   source_url: string | null;
+  source_file_url: string | null;
   source_ref: string | null;
+  source_type: string | null;
+  source_month: string | null;
+  file_hash: string | null;
+  parse_status: string | null;
+  parse_error: string | null;
   note: string | null;
   raw_text: string | null;
   source_page: number | null;
   parsed_at: string | null;
+  fetched_at: string | null;
+  start_time: string | null;
+  end_time: string | null;
   confidence: number | null;
+  confidence_score: number | null;
   published_at: string;
 };
 

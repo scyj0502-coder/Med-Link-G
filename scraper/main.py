@@ -8,8 +8,10 @@ from dotenv import load_dotenv
 from adapters.cgmh_text import CgmhTextAdapter
 from adapters.cgmh_image import CgmhImageAdapter
 from adapters.edah_pdf import EdahPdfAdapter
+from adapters.antai_image import AntaiImageAdapter
 from adapters.kmugh import KmughAdapter
 from adapters.pingtung_mohw import PingtungMohwAdapter
+from adapters.ptvgh_pdf import PtvghPdfAdapter
 from adapters.shinkao import ShinkaoAdapter
 from core.diff import detect_changes
 from core.quality import partition_publishable
@@ -22,8 +24,10 @@ ADAPTERS = {
     "cgmh_image": CgmhImageAdapter,
     "cgmh_text": CgmhTextAdapter,
     "edah_pdf": EdahPdfAdapter,
+    "antai_image": AntaiImageAdapter,
     "kmugh": KmughAdapter,
     "pingtung_mohw": PingtungMohwAdapter,
+    "ptvgh_pdf": PtvghPdfAdapter,
     "shinkao": ShinkaoAdapter,
 }
 
@@ -47,7 +51,12 @@ def run(target: str | None = None) -> None:
 
         adapter_cls = ADAPTERS[source.adapter]
         adapter = adapter_cls(source)
-        scraped = adapter.fetch()
+        try:
+            scraped = adapter.fetch()
+        except Exception as exc:
+            writer.write_failed_run(source, str(exc))
+            print(f"{source.id}: parse_failed error={exc}")
+            continue
         publishable, rejected = partition_publishable(scraped)
         previous = writer.load_published(source.id)
         changes = detect_changes(previous, publishable)
