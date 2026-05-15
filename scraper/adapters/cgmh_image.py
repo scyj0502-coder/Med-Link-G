@@ -36,6 +36,68 @@ DOCTOR_CORRECTIONS = {
     "張國錮": "張國欽",
     "噌雅文": "蕭雅文",
     "郴仲課": "郭仲謙",
+    "林客潤": "林宥潤",
+    "花銓樂": "許銓榮",
+    "蔡背璜": "蔡育璋",
+    "許俊傣": "許俊傑",
+    "許俊傣星": "許俊傑",
+    "林岑絜": "林岑紘",
+    "林岑絮": "林岑紘",
+    "王鈴立": "王鈞立",
+    "蔡鎧隅": "蔡鎧隆",
+    "胡萬荒": "胡萬詳",
+    "吳建鎮": "吳建堂",
+    "李偉熊": "李偉豪",
+    "藤牧奎": "蔡牧堯",
+    "蔡牧奠": "蔡牧堯",
+    "陳子岑": "陳子烈",
+    "沈元瑤": "沈元璋",
+    "王引仁": "王弘仁",
+    "羅湖倫": "羅浩倫",
+    "糠翋雄": "康智雄",
+    "子宗玉": "于宗玉",
+    "劉憲瑛": "劉惠瑛",
+    "花燿丑": "莊耀吉",
+    "沈元琦": "沈元璋",
+    "蓀牧輿": "蔡牧堯",
+    "陳子收": "陳子烈",
+    "王弗仁": "王弘仁",
+    "陳枸謊": "陳柏諺",
+    "羅活倫": "羅浩倫",
+    "石窄元": "石富元",
+    "陳彥何": "陳彥佑",
+    "春期六": "",
+    "花鎔冢": "莊鎧豪",
+    "都家經": "郭家豪",
+    "蔡岳懺": "蔡岳儒",
+    "一騙一": "",
+    "蔡鍺隈": "蔡鎧隆",
+    "李克釗": "李宗釗",
+    "王命玫": "王皓平",
+    "王除平": "王皓平",
+    "王陣平": "王皓平",
+    "王院平": "王皓平",
+    "蔡胄樺": "蔡青樺",
+    "藤裶橡": "蔡青樺",
+    "蒯裶樺": "蔡青樺",
+    "周違復": "周達復",
+    "周遂復": "周達復",
+    "周邃復": "周達復",
+    "劉毓霍": "劉毓惠",
+    "洪國禦": "洪國頡",
+    "洪國禱": "洪國頡",
+    "洪國稠": "洪國頡",
+    "洪國顛": "洪國頡",
+    "洪國褻": "洪國頡",
+    "郭聖浴": "郭聖治",
+    "松齊": "李齊",
+    "林胄弗": "林育弘",
+    "劉紡絕": "劉約維",
+    "王世初": "王世和",
+    "周聖怒": "周聖恩",
+    "紀頭裕": "紀順裕",
+    "國拐括": "",
+    "一一": "",
 }
 IGNORED_DOCTOR_NAMES = {"詮周", "訴唱", "診陶", "誥腕", "誌唱", "詮咐"}
 KNOWN_DEPARTMENTS = [
@@ -59,10 +121,37 @@ KNOWN_DEPARTMENTS = [
     "精神科",
     "復健科",
     "牙科",
+    "泌尿科",
+    "神經外科",
+    "心臟血管外科",
+    "胸腔外科",
+    "整形外科",
+    "大腸直腸肛門外科",
+    "外傷科",
+    "靜脈曲張門診",
+    "乳房外科",
+    "甲狀腺外科",
 ]
 PAGE_SEGMENT_DEPARTMENTS = {
     2: ["一般內科", "胃腸肝膽科", "胸腔內科", "血液腫瘤科", "腎臟科", "內分泌暨新陳代謝科"],
     3: ["糖尿病衛教", "心臟內科", "風濕過敏免疫科", "感染醫學科", "法定感染症門診", "肺癌篩檢門診", "肌少症門診"],
+    4: [
+        "泌尿科",
+        "神經外科",
+        "心臟血管外科",
+        "胸腔外科",
+        "整形外科",
+        "大腸直腸肛門外科",
+        "大腸直腸肛門外科",
+        "外傷科",
+        "靜脈曲張門診",
+        "一般外科",
+        "乳房外科",
+        "甲狀腺外科",
+    ],
+}
+PAGE_EXTRA_ROW_EDGES = {
+    4: [806, 835, 864, 895, 981, 1015, 1050, 1085],
 }
 PAGE_SEGMENT_RANGES = {
     3: [
@@ -73,6 +162,20 @@ PAGE_SEGMENT_RANGES = {
         (957, 1050),
         (1085, 1357),
         (1392, 1440),
+    ],
+    4: [
+        (134, 286),
+        (315, 395),
+        (395, 516),
+        (516, 609),
+        (609, 688),
+        (688, 778),
+        (778, 806),
+        (835, 923),
+        (948, 1015),
+        (1085, 1234),
+        (1265, 1373),
+        (1399, 1450),
     ],
 }
 PAGE_SHIFT_SPANS = {
@@ -111,6 +214,36 @@ PAGE_SHIFT_SPANS = {
         (1317, 1357, "夜診"),
         (1392, 1440, "上午"),
     ],
+    4: [
+        (134, 210, "上午"),
+        (210, 235, "下午"),
+        (235, 286, "夜診"),
+        (315, 341, "上午"),
+        (341, 395, "下午"),
+        (395, 451, "上午"),
+        (451, 516, "下午"),
+        (516, 542, "上午"),
+        (542, 583, "下午"),
+        (609, 635, "上午"),
+        (635, 662, "下午"),
+        (662, 688, "夜診"),
+        (688, 749, "上午"),
+        (749, 778, "下午"),
+        (778, 806, "夜診"),
+        (835, 864, "上午"),
+        (864, 895, "下午"),
+        (895, 923, "夜診"),
+        (948, 981, "上午"),
+        (981, 1015, "下午"),
+        (1085, 1134, "上午"),
+        (1134, 1209, "下午"),
+        (1209, 1234, "夜診"),
+        (1265, 1291, "上午"),
+        (1291, 1317, "下午"),
+        (1317, 1373, "夜診"),
+        (1399, 1426, "上午"),
+        (1426, 1450, "下午"),
+    ],
 }
 
 
@@ -136,6 +269,7 @@ class CgmhImageAdapter(ScheduleAdapter):
             image = render_page(page)
             image._med_link_source_page = page_index
             row_edges = detect_row_edges(image)
+            row_edges = sorted(set(row_edges + PAGE_EXTRA_ROW_EDGES.get(page_index, [])))
             if len(row_edges) < 4:
                 continue
             items.extend(parse_page_rows(self.source, image, row_edges, page_index, parsed_at))
@@ -154,8 +288,10 @@ def detect_row_edges(image: Image.Image) -> list[int]:
     right = round(TABLE_X_RANGE[1] * width / 1080)
     threshold = 145
     minimum_dark_pixels = max(90, round((right - left) * 0.58))
+    page_hint = getattr(image, "_med_link_source_page", None)
+    scan_start = 50 if page_hint == 4 else 170
     ys: list[int] = []
-    for y in range(round(170 * height / 1289), min(height - 25, round(1210 * height / 1289))):
+    for y in range(round(scan_start * height / 1289), min(height - 25, round(1210 * height / 1289))):
         dark = sum(1 for x in range(left, right) if gray.getpixel((x, y)) < threshold)
         if dark >= minimum_dark_pixels:
             ys.append(y)
@@ -169,7 +305,7 @@ def detect_row_edges(image: Image.Image) -> list[int]:
 
     scale = 1080 / width
     edges = [round((group[0] + group[-1]) / 2 * scale) for group in groups]
-    return [edge for edge in edges if 170 <= edge <= 1450]
+    return [edge for edge in edges if scan_start <= edge <= 1450]
 
 
 def parse_page_rows(
@@ -183,10 +319,10 @@ def parse_page_rows(
     for segment_index, (segment_top, segment_bottom) in enumerate(table_segments(image, row_edges)):
         current_department = segment_department(image, page_number, segment_index, segment_top, segment_bottom)
         current_shift = ""
-        for top, bottom in zip(
-            [edge for edge in row_edges if segment_top <= edge < segment_bottom],
-            [edge for edge in row_edges if segment_top < edge <= segment_bottom],
-        ):
+        segment_edges = [segment_top]
+        segment_edges.extend(edge for edge in row_edges if segment_top < edge < segment_bottom)
+        segment_edges.append(segment_bottom)
+        for top, bottom in zip(segment_edges, segment_edges[1:]):
             if bottom - top < 16:
                 continue
             shift = shift_for_row(page_number, top, bottom) or normalize_shift(ocr_cached(image, (SHIFT_BOX[0], top, SHIFT_BOX[2], bottom), psm="6"))
@@ -311,6 +447,26 @@ def department_room(department: str) -> str:
         return "三樓胸腔內科診區"
     if any(token in department for token in ["一般內科", "胃腸肝膽科", "血液腫瘤科", "腎臟科", "內分泌"]):
         return "地下樓內科診區"
+    if "泌尿科" in department:
+        return "二樓泌尿科診區"
+    if "神經外科" in department:
+        return "地下一樓外科診區 B23/B27診間"
+    if "心臟血管外科" in department:
+        return "地下一樓外科診區 B25診間"
+    if "胸腔外科" in department:
+        return "地下一樓外科診區 B26診間"
+    if "整形外科" in department:
+        return "地下一樓外科診區 B29診間"
+    if "大腸直腸肛門外科" in department:
+        return "地下一樓外科診區 B28診間"
+    if "外傷科" in department:
+        return "五樓501/502診間"
+    if "靜脈曲張門診" in department:
+        return "地下一樓外科診區 B25診間"
+    if any(token in department for token in ["一般外科", "乳房外科"]):
+        return "五樓501/502診間"
+    if "甲狀腺外科" in department:
+        return "五樓501診間"
     return "依現場診區"
 
 
@@ -342,6 +498,8 @@ def extract_doctors(text: str, allow_fallback: bool = True) -> list[tuple[str, s
 def normalize_doctor_name(name: str) -> str:
     clean = re.sub(r"[^\u4e00-\u9fff]", "", name)
     clean = DOCTOR_CORRECTIONS.get(clean, clean)
+    if not clean:
+        return ""
     if len(clean) < 2 or len(clean) > 4:
         return ""
     if len(clean) == 4 and clean[:2] == "星期":
