@@ -4,7 +4,7 @@ import type { Hospital } from "../../lib/types";
 import type { DoctorSchedule, FilterState, PersonalNote } from "../../lib/dashboard";
 import { doctorKey, filterChips, periodOptions, uniqueSorted, weekdayOptions } from "../../lib/dashboard";
 
-type SearchTab = "all" | "doctor" | "hospital" | "department" | "note" | "favorite";
+type SearchTab = "all" | "doctor" | "hospital" | "department" | "room" | "note" | "favorite";
 
 type SearchResult =
   | {
@@ -27,6 +27,15 @@ type SearchResult =
       department: string;
       count: number;
       hospitals: string[];
+      sample?: DoctorSchedule;
+    }
+  | {
+      id: string;
+      type: "room";
+      room: string;
+      count: number;
+      hospitals: string[];
+      departments: string[];
       sample?: DoctorSchedule;
     }
   | {
@@ -61,6 +70,7 @@ const tabs: { value: SearchTab; label: string }[] = [
   { value: "doctor", label: "醫師" },
   { value: "hospital", label: "醫院" },
   { value: "department", label: "科別" },
+  { value: "room", label: "診間" },
   { value: "note", label: "我的備註" },
   { value: "favorite", label: "收藏" }
 ];
@@ -167,6 +177,28 @@ export function SearchCenter({
         sample: schedules[0]
       }));
 
+    const roomMap = new Map<string, DoctorSchedule[]>();
+    for (const item of scopedItems) {
+      if (!item.displayRoom || item.displayRoom.includes("未標示")) continue;
+      if (!roomMap.has(item.displayRoom)) {
+        roomMap.set(item.displayRoom, []);
+      }
+      roomMap.get(item.displayRoom)?.push(item);
+    }
+    const roomResults = Array.from(roomMap.entries())
+      .filter(([room, schedules]) =>
+        matchesQuery([room, ...schedules.flatMap((item) => [item.doctor_name, item.department, item.hospital_name, item.branch_name])], normalizedQuery)
+      )
+      .map<SearchResult>(([room, schedules]) => ({
+        id: `room:${room}`,
+        type: "room",
+        room,
+        count: schedules.length,
+        hospitals: uniqueSorted(schedules.map((item) => item.hospital_name)).slice(0, 4),
+        departments: uniqueSorted(schedules.map((item) => item.department)).slice(0, 5),
+        sample: schedules[0]
+      }));
+
     const noteResults = notes
       .map((note) => {
         const item = scopedItems.find((schedule) => doctorKey(schedule) === note.doctorKey);
@@ -199,10 +231,11 @@ export function SearchCenter({
     const favoriteResults = doctorResults.filter((result) => result.type === "doctor" && result.favorite);
 
     return {
-      all: [...doctorResults.slice(0, 8), ...hospitalResults.slice(0, 3), ...departmentResults.slice(0, 4), ...noteResults.slice(0, 4)],
+      all: [...doctorResults, ...hospitalResults, ...departmentResults, ...roomResults, ...noteResults],
       doctor: doctorResults,
       hospital: hospitalResults,
       department: departmentResults,
+      room: roomResults,
       note: noteResults,
       favorite: favoriteResults
     };
@@ -213,6 +246,7 @@ export function SearchCenter({
     doctor: searchData.doctor.length,
     hospital: searchData.hospital.length,
     department: searchData.department.length,
+    room: searchData.room.length,
     note: searchData.note.length,
     favorite: searchData.favorite.length
   };
@@ -246,7 +280,7 @@ export function SearchCenter({
                 />
               </label>
               <button
-                className="h-12 rounded-xl border border-[#c9d7ea] bg-white px-4 text-sm font-black text-[#075de8] hover:bg-[#f4f8ff]"
+                className="h-12 rounded-xl border border-[#c9d7ea] bg-white px-4 text-sm font-black text-[#075de8] hover:bg-[#f4f8ff] xl:hidden"
                 onClick={() => setAdvancedOpen((value) => !value)}
                 type="button"
               >
@@ -254,29 +288,18 @@ export function SearchCenter({
               </button>
             </div>
             {advancedOpen ? (
-              <div className="mt-4 rounded-2xl border border-[#dbe5f4] bg-[#f8fbff] p-4">
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <SearchSelect label="地區" value={filters.region} onChange={(value) => onFilterChange({ region: value, hospitalId: "", branchName: "" })} options={regions} emptyLabel="全部地區" />
-                  <SearchSelect label="醫院" value={filters.hospitalId} onChange={(value) => onFilterChange({ hospitalId: value, branchName: "" })} options={hospitals.map((item) => ({ value: item.id, label: item.hospital_name }))} emptyLabel="全部醫院" />
-                  <SearchSelect label="分院" value={filters.branchName} onChange={(value) => onFilterChange({ branchName: value })} options={branches} emptyLabel="全部分院" />
-                  <SearchSelect label="科別" value={filters.department} onChange={(value) => onFilterChange({ department: value, doctorName: "" })} options={departments} emptyLabel="全部科別" />
-                  <SearchSelect label="醫師" value={filters.doctorName} onChange={(value) => onFilterChange({ doctorName: value })} options={doctors} emptyLabel="全部醫師" />
-                  <SearchSelect label="星期" value={filters.weekday} onChange={(value) => onFilterChange({ weekday: value })} options={weekdayOptions} emptyLabel="全部星期" />
-                  <SearchSelect label="時段" value={filters.period} onChange={(value) => onFilterChange({ period: value })} options={periodOptions} emptyLabel="全部時段" />
-                  <label className="flex h-[66px] items-end">
-                    <span className="flex h-11 items-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-black text-[#0d2348]">
-                      <input checked={filters.favoritesOnly} onChange={(event) => onFilterChange({ favoritesOnly: event.target.checked })} type="checkbox" />
-                      只看收藏
-                    </span>
-                  </label>
-                </div>
-                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#e5edf8] pt-4">
-                  <span className="text-sm font-black text-[#061b3d]">進階條件：</span>
-                  {activeFilterChips.length ? activeFilterChips.map((chip) => <span className="rounded-lg bg-[#eaf2ff] px-3 py-2 text-xs font-black text-[#075de8]" key={chip}>{chip}</span>) : <span className="text-sm font-bold text-[#60708d]">尚未套用進階條件</span>}
-                  <button className="ml-auto h-10 rounded-xl border border-[#c9d7ea] px-4 text-sm font-black text-[#061b3d]" onClick={onClearFilters} type="button">
-                    重設條件
-                  </button>
-                </div>
+              <div className="mt-4 rounded-2xl border border-[#dbe5f4] bg-[#f8fbff] p-4 xl:hidden">
+                <SearchFilterControls
+                  activeFilterChips={activeFilterChips}
+                  branches={branches}
+                  departments={departments}
+                  doctors={doctors}
+                  filters={filters}
+                  hospitals={hospitals}
+                  regions={regions}
+                  onClearFilters={onClearFilters}
+                  onFilterChange={onFilterChange}
+                />
               </div>
             ) : null}
           </div>
@@ -331,7 +354,20 @@ export function SearchCenter({
           </div>
         </div>
 
-        <SearchSidePanel popular={popular} recent={query ? [query, ...recentFallback].slice(0, 5) : recentFallback} onSearch={onQueryChange} />
+        <SearchSidePanel
+          activeFilterChips={activeFilterChips}
+          branches={branches}
+          departments={departments}
+          doctors={doctors}
+          filters={filters}
+          hospitals={hospitals}
+          popular={popular}
+          recent={query ? [query, ...recentFallback].slice(0, 5) : recentFallback}
+          regions={regions}
+          onClearFilters={onClearFilters}
+          onFilterChange={onFilterChange}
+          onSearch={onQueryChange}
+        />
       </div>
     </section>
   );
@@ -423,6 +459,23 @@ function SearchResultCard({
     );
   }
 
+  if (result.type === "room") {
+    return (
+      <article className="grid gap-3 rounded-2xl border border-[#dbe5f4] bg-white p-4 shadow-[0_8px_18px_rgba(8,35,80,.055)] md:grid-cols-[64px_minmax(0,1fr)_auto] md:items-center">
+        <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[#eaf2ff] text-xl font-black text-[#075de8]">診</div>
+        <div>
+          <h3 className="text-lg font-black text-[#061b3d]">{result.room}</h3>
+          <p className="mt-1 text-sm font-bold text-[#60708d]">共 {result.count} 筆門診，分布於 {result.hospitals.join("、") || "未標示"}。</p>
+          <p className="mt-2 line-clamp-2 text-sm font-bold text-[#0d2348]">科別：{result.departments.join("、") || "未標示"}</p>
+        </div>
+        <div className="grid gap-2 md:w-28">
+          {result.sample ? <ActionButton label="查看門診" onClick={() => onOpenSchedule(result.sample as DoctorSchedule)} /> : null}
+          <ActionButton label="搜尋診間" onClick={() => onQueryChange(result.room)} secondary />
+        </div>
+      </article>
+    );
+  }
+
   const noteItem = result.item;
 
   return (
@@ -444,9 +497,49 @@ function SearchResultCard({
   );
 }
 
-function SearchSidePanel({ recent, popular, onSearch }: { recent: string[]; popular: string[]; onSearch: (value: string) => void }) {
+function SearchSidePanel({
+  recent,
+  popular,
+  filters,
+  hospitals,
+  regions,
+  branches,
+  departments,
+  doctors,
+  activeFilterChips,
+  onSearch,
+  onFilterChange,
+  onClearFilters
+}: {
+  recent: string[];
+  popular: string[];
+  filters: FilterState;
+  hospitals: Hospital[];
+  regions: string[];
+  branches: string[];
+  departments: string[];
+  doctors: string[];
+  activeFilterChips: string[];
+  onSearch: (value: string) => void;
+  onFilterChange: (patch: Partial<FilterState>) => void;
+  onClearFilters: () => void;
+}) {
   return (
     <aside className="grid content-start gap-4">
+      <SideCard title="篩選條件" action={activeFilterChips.length ? "可重設" : undefined}>
+        <SearchFilterControls
+          activeFilterChips={activeFilterChips}
+          branches={branches}
+          departments={departments}
+          doctors={doctors}
+          filters={filters}
+          hospitals={hospitals}
+          regions={regions}
+          compact
+          onClearFilters={onClearFilters}
+          onFilterChange={onFilterChange}
+        />
+      </SideCard>
       <SideCard title="最近搜尋" action="全部清除">
         <div className="grid gap-3">
           {recent.map((item) => (
@@ -475,6 +568,57 @@ function SearchSidePanel({ recent, popular, onSearch }: { recent: string[]; popu
         </ul>
       </SideCard>
     </aside>
+  );
+}
+
+function SearchFilterControls({
+  filters,
+  hospitals,
+  regions,
+  branches,
+  departments,
+  doctors,
+  activeFilterChips,
+  compact = false,
+  onFilterChange,
+  onClearFilters
+}: {
+  filters: FilterState;
+  hospitals: Hospital[];
+  regions: string[];
+  branches: string[];
+  departments: string[];
+  doctors: string[];
+  activeFilterChips: string[];
+  compact?: boolean;
+  onFilterChange: (patch: Partial<FilterState>) => void;
+  onClearFilters: () => void;
+}) {
+  return (
+    <div className="grid gap-4">
+      <div className={compact ? "grid gap-3" : "grid gap-3 md:grid-cols-2 xl:grid-cols-4"}>
+        <SearchSelect label="地區" value={filters.region} onChange={(value) => onFilterChange({ region: value, hospitalId: "", branchName: "" })} options={regions} emptyLabel="全部地區" />
+        <SearchSelect label="醫院" value={filters.hospitalId} onChange={(value) => onFilterChange({ hospitalId: value, branchName: "" })} options={hospitals.map((item) => ({ value: item.id, label: item.hospital_name }))} emptyLabel="全部醫院" />
+        <SearchSelect label="分院" value={filters.branchName} onChange={(value) => onFilterChange({ branchName: value })} options={branches} emptyLabel="全部分院" />
+        <SearchSelect label="科別" value={filters.department} onChange={(value) => onFilterChange({ department: value, doctorName: "" })} options={departments} emptyLabel="全部科別" />
+        <SearchSelect label="醫師" value={filters.doctorName} onChange={(value) => onFilterChange({ doctorName: value })} options={doctors} emptyLabel="全部醫師" />
+        <SearchSelect label="星期" value={filters.weekday} onChange={(value) => onFilterChange({ weekday: value })} options={weekdayOptions} emptyLabel="全部星期" />
+        <SearchSelect label="時段" value={filters.period} onChange={(value) => onFilterChange({ period: value })} options={periodOptions} emptyLabel="全部時段" />
+        <label className="flex h-[66px] items-end">
+          <span className="flex h-11 items-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-black text-[#0d2348]">
+            <input checked={filters.favoritesOnly} onChange={(event) => onFilterChange({ favoritesOnly: event.target.checked })} type="checkbox" />
+            只看收藏
+          </span>
+        </label>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 border-t border-[#e5edf8] pt-4">
+        <span className="text-sm font-black text-[#061b3d]">目前條件：</span>
+        {activeFilterChips.length ? activeFilterChips.map((chip) => <span className="rounded-lg bg-[#eaf2ff] px-3 py-2 text-xs font-black text-[#075de8]" key={chip}>{chip}</span>) : <span className="text-sm font-bold text-[#60708d]">尚未套用篩選</span>}
+        <button className="ml-auto h-10 rounded-xl border border-[#c9d7ea] px-4 text-sm font-black text-[#061b3d]" onClick={onClearFilters} type="button">
+          重設
+        </button>
+      </div>
+    </div>
   );
 }
 
