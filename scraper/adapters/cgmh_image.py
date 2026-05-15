@@ -784,8 +784,10 @@ class RowContext:
 
 class CgmhImageAdapter(ScheduleAdapter):
     def fetch(self) -> list[RawSchedule]:
+        fetched_at = datetime.now(UTC).isoformat()
         response = httpx.get(self.source.schedule_url, timeout=90, follow_redirects=True)
         response.raise_for_status()
+        file_hash = hashlib.sha256(response.content).hexdigest()
         doc = fitz.open(stream=response.content, filetype="pdf")
 
         items: list[RawSchedule] = []
@@ -799,8 +801,8 @@ class CgmhImageAdapter(ScheduleAdapter):
             row_edges = sorted(set(row_edges + PAGE_EXTRA_ROW_EDGES.get(page_index, [])))
             if len(row_edges) < 4:
                 continue
-            items.extend(parse_page_rows(self.source, image, row_edges, page_index, parsed_at))
-        items.extend(manual_schedules(self.source, parsed_at))
+            items.extend(parse_page_rows(self.source, image, row_edges, page_index, parsed_at, file_hash, fetched_at))
+        items.extend(manual_schedules(self.source, parsed_at, file_hash, fetched_at))
         return dedupe(items)
 
 
@@ -842,6 +844,8 @@ def parse_page_rows(
     row_edges: list[int],
     page_number: int,
     parsed_at: str,
+    file_hash: str,
+    fetched_at: str,
 ) -> list[RawSchedule]:
     items: list[RawSchedule] = []
     for segment_index, (segment_top, segment_bottom) in enumerate(table_segments(image, row_edges)):
@@ -884,12 +888,16 @@ def parse_page_rows(
                             raw_text=raw_text,
                             source_page=page_number,
                             parsed_at=parsed_at,
+                            source_file_url=source.schedule_url,
+                            file_hash=file_hash,
+                            source_type="pdf-ocr-table",
+                            fetched_at=fetched_at,
                         )
                     )
     return items
 
 
-def manual_schedules(source, parsed_at: str) -> list[RawSchedule]:
+def manual_schedules(source, parsed_at: str, file_hash: str, fetched_at: str) -> list[RawSchedule]:
     items: list[RawSchedule] = []
     for page_number, department, weekday, weekday_label, period, doctor_name in MANUAL_SCHEDULES:
         items.append(
@@ -910,6 +918,10 @@ def manual_schedules(source, parsed_at: str) -> list[RawSchedule]:
                 raw_text=f"{department} {weekday_label} {period} {doctor_name}",
                 source_page=page_number,
                 parsed_at=parsed_at,
+                source_file_url=source.schedule_url,
+                file_hash=file_hash,
+                source_type="pdf-ocr-table",
+                fetched_at=fetched_at,
             )
         )
     return items
