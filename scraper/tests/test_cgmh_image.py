@@ -19,6 +19,13 @@ class CgmhImageParserTest(unittest.TestCase):
     def test_extract_doctors_keeps_note(self) -> None:
         self.assertEqual(extract_doctors("19043 吳柏融（地下樓B12診間）"), [("吳柏融", "地下樓B12診間")])
 
+    def test_extract_doctors_corrects_datong_ocr_variants(self) -> None:
+        self.assertEqual(extract_doctors("29408 戴 十 翔"), [("戴千翔", "")])
+        self.assertEqual(extract_doctors("14782 當 柏 霖"), [("曾柏霖", "")])
+        self.assertEqual(extract_doctors("24973 虧 勝 男"), [("盧勝男", "")])
+        self.assertEqual(extract_doctors("16284 邱 鼎 脣"), [("邱鼎育", "")])
+        self.assertEqual(extract_doctors("34007 陳 英 州"), [("陳英州", "")])
+
     def test_normalize_shift(self) -> None:
         self.assertEqual(normalize_shift("上午"), "上午")
         self.assertEqual(normalize_shift("下午"), "下午")

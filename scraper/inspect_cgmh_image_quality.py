@@ -42,6 +42,8 @@ KNOWN_TWO_CHAR_DOCTORS = {"陳聿", "鄭筠"}
 
 def suspicious_reason(item: RawSchedule, name_counts: Counter[str]) -> str | None:
     name = item.doctor_name
+    if "manual:" in item.source_ref:
+        return None
     if any(token in name for token in SUSPICIOUS_NAME_TOKENS):
         return "name_contains_non_doctor_token"
     if len(name) < 2 or len(name) > 4:

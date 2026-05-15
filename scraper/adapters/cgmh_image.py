@@ -330,6 +330,54 @@ DOCTOR_CORRECTIONS = {
     "林昀葆浪": "林昀萱",
     "周上惱黃": "周上愉",
     "子庭": "黃子庭",
+    "戴十翔": "戴千翔",
+    "戴十翕": "戴千翔",
+    "戴十翅": "戴千翔",
+    "楊承務": "楊承勤",
+    "楊活動": "楊承勤",
+    "楊拐動": "楊承勤",
+    "黃文琶": "黃文琦",
+    "黃文琺": "黃文琦",
+    "黃文琦許": "黃文琦",
+    "蔡脕昱": "蔡青晏",
+    "蔡青甾": "蔡青晏",
+    "許書琪": "許詠琪",
+    "吳柏蟲": "吳柏融",
+    "曾口成": "曾嘉成",
+    "曾轍成": "曾嘉成",
+    "張咪晶": "張晃智",
+    "當柏霖": "曾柏霖",
+    "阮致梁": "阮致榮",
+    "虧勝男": "盧勝男",
+    "王景弗": "王景弘",
+    "李背麟": "李育麒",
+    "劉世罡": "劉世豐",
+    "劉世豈": "劉世豐",
+    "劉鴻霑": "劉鴻霖",
+    "黃減霑": "黃泰霖",
+    "蘇祟立": "蘇祐立",
+    "邱鼎脣": "邱鼎育",
+    "楊翁超": "楊智超",
+    "郴柄辰": "郭炳辰",
+    "陳熵鞠": "陳嘉峯",
+    "韜漢明": "賴漢明",
+    "黃煦恆": "黃煦恩",
+    "黃煦峈": "黃煦恩",
+    "方映榮讀": "方映棠",
+    "黃國棄三": "黃國棟",
+    "林妮佑三": "林炯佑",
+    "陳莉君切": "陳莉君",
+    "豈揀油員": "",
+    "揀油員": "",
+    "訴間乞下": "",
+    "當噌成": "曾嘉成",
+    "趙東漢三": "趙東瀛",
+    "趙東瀕": "趙東瀛",
+    "騏聰成映": "駱聰成",
+    "陳苔州一": "陳英州",
+    "倉職阮": "曾嘉成",
+    "陳莫州": "陳英州",
+    "蔡思耘": "蔡孟耘",
 }
 IGNORED_DOCTOR_NAMES = {"詮周", "訴唱", "診陶", "誥腕", "誌唱", "詮咐"}
 KNOWN_DEPARTMENTS = [
@@ -696,6 +744,35 @@ PAGE_SHIFT_SPANS = {
     ],
 }
 
+MANUAL_SCHEDULES = [
+    (3, "肺癌篩檢門診", 1, "星期一", "上午", "李穗豪"),
+    (3, "肺癌篩檢門診", 1, "星期一", "上午", "王金洲"),
+    (3, "肺癌篩檢門診", 2, "星期二", "上午", "方毓琦"),
+    (3, "肺癌篩檢門診", 2, "星期二", "上午", "林炯佑"),
+    (3, "肺癌篩檢門診", 2, "星期二", "上午", "林孟志"),
+    (3, "肺癌篩檢門診", 3, "星期三", "上午", "方映棠"),
+    (3, "肺癌篩檢門診", 3, "星期三", "上午", "趙東瀛"),
+    (3, "肺癌篩檢門診", 4, "星期四", "上午", "黃國棟"),
+    (3, "肺癌篩檢門診", 4, "星期四", "上午", "蔡孟耘"),
+    (3, "肺癌篩檢門診", 5, "星期五", "上午", "林鏡語"),
+    (3, "肺癌篩檢門診", 5, "星期五", "上午", "曾嘉成"),
+    (3, "肺癌篩檢門診", 6, "星期六", "上午", "曾嘉成"),
+    (3, "肺癌篩檢門診", 1, "星期一", "下午", "陳莉君"),
+    (3, "肺癌篩檢門診", 1, "星期一", "下午", "蔡孟耘"),
+    (3, "肺癌篩檢門診", 1, "星期一", "下午", "林孟志"),
+    (3, "肺癌篩檢門診", 2, "星期二", "下午", "劉世豐"),
+    (3, "肺癌篩檢門診", 2, "星期二", "下午", "趙東瀛"),
+    (3, "肺癌篩檢門診", 3, "星期三", "下午", "曾嘉成"),
+    (3, "肺癌篩檢門診", 3, "星期三", "下午", "鍾聿修"),
+    (3, "肺癌篩檢門診", 3, "星期三", "下午", "呂宏益"),
+    (3, "肺癌篩檢門診", 4, "星期四", "下午", "陳莉君"),
+    (3, "肺癌篩檢門診", 4, "星期四", "下午", "趙東瀛"),
+    (3, "肺癌篩檢門診", 5, "星期五", "下午", "莊豐豪"),
+    (3, "肺癌篩檢門診", 5, "星期五", "下午", "方映棠"),
+    (3, "肺癌篩檢門診", 3, "星期三", "夜診", "張晃智"),
+    (3, "肺癌篩檢門診", 4, "星期四", "夜診", "陳莉君"),
+]
+
 
 @dataclass(frozen=True)
 class RowContext:
@@ -723,6 +800,7 @@ class CgmhImageAdapter(ScheduleAdapter):
             if len(row_edges) < 4:
                 continue
             items.extend(parse_page_rows(self.source, image, row_edges, page_index, parsed_at))
+        items.extend(manual_schedules(self.source, parsed_at))
         return dedupe(items)
 
 
@@ -808,6 +886,32 @@ def parse_page_rows(
                             parsed_at=parsed_at,
                         )
                     )
+    return items
+
+
+def manual_schedules(source, parsed_at: str) -> list[RawSchedule]:
+    items: list[RawSchedule] = []
+    for page_number, department, weekday, weekday_label, period, doctor_name in MANUAL_SCHEDULES:
+        items.append(
+            RawSchedule(
+                hospital_id=source.id,
+                hospital_name=source.hospital_name,
+                branch_name=source.branch_name,
+                department=department,
+                doctor_name=doctor_name,
+                weekday=weekday,
+                weekday_label=weekday_label,
+                period=period,
+                room=department_room(department),
+                source_url=source.schedule_url,
+                source_ref=f"pdf_page:{page_number};manual:{department};weekday:{weekday_label};period:{period}",
+                confidence=0.94,
+                note="PDF特殊表格補齊",
+                raw_text=f"{department} {weekday_label} {period} {doctor_name}",
+                source_page=page_number,
+                parsed_at=parsed_at,
+            )
+        )
     return items
 
 
@@ -897,6 +1001,8 @@ def department_room(department: str) -> str:
         return "地下一樓內科診區 B08/B09/B10診間"
     if "胸腔內科" in department:
         return "三樓胸腔內科診區"
+    if "肺癌篩檢門診" in department:
+        return "依原表診區"
     if any(token in department for token in ["一般內科", "胃腸肝膽科", "血液腫瘤科", "腎臟科", "內分泌"]):
         return "地下樓內科診區"
     if "泌尿科" in department:
