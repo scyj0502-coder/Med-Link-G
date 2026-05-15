@@ -43,13 +43,17 @@ export function FilterPanel({
         </label>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {chips.length ? chips.map((chip) => <span className="rounded-full bg-[#eaf2ff] px-3 py-1 text-xs font-black text-[#075de8]" key={chip}>{chip}</span>) : <span className="text-sm font-bold text-[#60708d]">目前未套用篩選</span>}
-        {chips.length ? (
-          <button className="ml-auto text-sm font-black text-[#075de8]" onClick={onClear} type="button">
-            清除篩選
+      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[#eef3fb] pt-4">
+        <span className="text-sm font-black text-[#061b3d]">目前篩選條件：</span>
+        {chips.length ? chips.map((chip) => <span className="rounded-xl bg-[#eaf2ff] px-3 py-2 text-xs font-black text-[#075de8]" key={chip}>{chip}</span>) : <span className="text-sm font-bold text-[#60708d]">尚未套用篩選</span>}
+        <div className="ml-auto flex gap-3">
+          <button className="h-10 rounded-xl border border-[#c9d7ea] px-6 text-sm font-black text-[#061b3d]" onClick={onClear} type="button">
+            重設
           </button>
-        ) : null}
+          <button className="h-10 rounded-xl bg-[#075de8] px-6 text-sm font-black text-white shadow-lg shadow-blue-600/20" type="button">
+            套用篩選
+          </button>
+        </div>
       </div>
     </section>
   );

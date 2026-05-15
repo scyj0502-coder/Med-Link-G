@@ -58,6 +58,18 @@ export function DoctorDetailPanel({
         </div>
       </section>
 
+      <div className="grid grid-cols-3 border-b border-[#dbe5f4] bg-white px-2 text-center text-sm font-black text-[#60708d]">
+        <button className="border-b-2 border-[#075de8] py-3 text-[#075de8]" type="button">
+          門診資訊
+        </button>
+        <button className="py-3" type="button">
+          醫師資訊
+        </button>
+        <button className="py-3" type="button">
+          備註
+        </button>
+      </div>
+
       <ScheduleInfoCard item={item} />
       <SourceInfoCard item={item} />
       {editing ? (

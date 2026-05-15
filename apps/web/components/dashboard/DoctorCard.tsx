@@ -11,7 +11,7 @@ type DoctorCardProps = {
 export function DoctorCard({ item, active, favorite, onSelect, onToggleFavorite }: DoctorCardProps) {
   return (
     <article
-      className={`grid grid-cols-[28px_1fr_24px] gap-3 rounded-2xl border bg-white p-4 shadow-[0_8px_18px_rgba(8,35,80,.055)] transition hover:-translate-y-0.5 hover:shadow-lg md:grid-cols-[32px_64px_minmax(220px,1fr)_230px_118px_28px] md:items-center md:gap-4 ${active ? "border-[#075de8] shadow-blue-600/10" : "border-[#dbe5f4]"}`}
+      className={`grid grid-cols-[28px_1fr_24px] gap-3 rounded-2xl border bg-white p-4 shadow-[0_8px_18px_rgba(8,35,80,.055)] transition hover:-translate-y-0.5 hover:shadow-lg md:grid-cols-[32px_64px_minmax(220px,1fr)_1px_210px_118px_28px] md:items-center md:gap-4 ${active ? "border-[#075de8] shadow-blue-600/10" : "border-[#dbe5f4]"}`}
     >
       <button aria-label={favorite ? "取消收藏" : "收藏"} className={`text-2xl leading-none ${favorite ? "text-[#f7b928]" : "text-[#9bb0cb]"}`} onClick={onToggleFavorite} type="button">
         {favorite ? "★" : "☆"}
@@ -32,6 +32,8 @@ export function DoctorCard({ item, active, favorite, onSelect, onToggleFavorite 
         </div>
       </button>
 
+      <div className="hidden h-16 w-px bg-[#dbe5f4] md:block" />
+
       <button className="col-span-2 grid gap-2 text-left md:col-span-1" onClick={onSelect} type="button">
         <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-[#60708d]">
           <span className="rounded-full bg-[#eaf2ff] px-3 py-1 font-black text-[#075de8]">{item.displayPeriod}</span>
@@ -40,7 +42,7 @@ export function DoctorCard({ item, active, favorite, onSelect, onToggleFavorite 
         <div className="text-base font-black text-[#0d2348]">{item.displayRoom}</div>
       </button>
 
-      <span className={`hidden rounded-full px-3 py-2 text-center text-xs font-black md:inline-block ${item.status === "正常開診" ? "bg-[#dff7ec] text-[#168a5d]" : item.status === "停診" ? "bg-red-50 text-red-600" : "bg-[#fff1e8] text-[#f97316]"}`}>
+      <span className={`col-start-2 justify-self-start rounded-full px-3 py-2 text-center text-xs font-black md:col-start-auto md:inline-block ${item.status === "正常開診" ? "bg-[#dff7ec] text-[#168a5d]" : item.status === "停診" ? "bg-red-50 text-red-600" : "bg-[#fff1e8] text-[#f97316]"}`}>
         {item.status}
       </span>
 

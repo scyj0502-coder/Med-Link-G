@@ -18,6 +18,21 @@ export function DoctorList({ items, selectedKey, favorites, onSelect, onToggleFa
           <h2 className="text-xl font-black text-[#061b3d]">今日門診醫師</h2>
           <p className="mt-1 text-sm font-bold text-[#60708d]">共 {items.length} 筆診次</p>
         </div>
+        <div className="hidden items-center gap-3 md:flex">
+          <div className="flex rounded-xl border border-[#dbe5f4] bg-white p-1">
+            <button className="h-8 w-9 rounded-lg bg-[#075de8] text-sm font-black text-white" type="button" aria-label="卡片檢視">
+              ▦
+            </button>
+            <button className="h-8 w-9 rounded-lg text-sm font-black text-[#60708d]" type="button" aria-label="列表檢視">
+              ☷
+            </button>
+          </div>
+          <select className="h-10 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#061b3d]">
+            <option>排序：科別</option>
+            <option>排序：醫院</option>
+            <option>排序：時段</option>
+          </select>
+        </div>
       </div>
 
       {items.length ? (
