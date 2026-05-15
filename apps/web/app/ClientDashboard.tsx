@@ -1,10 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DoctorDetailPanel } from "../components/dashboard/DoctorDetailPanel";
+import { DoctorList } from "../components/dashboard/DoctorList";
+import { FilterBottomSheet } from "../components/dashboard/FilterBottomSheet";
+import { FilterPanel } from "../components/dashboard/FilterPanel";
+import { MobileBottomNav } from "../components/dashboard/MobileBottomNav";
+import { Sidebar } from "../components/dashboard/Sidebar";
+import { Topbar } from "../components/dashboard/Topbar";
+import {
+  buildDoctorSchedules,
+  doctorKey,
+  emptyFilters,
+  filterChips,
+  filterSchedules,
+  uniqueSorted,
+  type DoctorSchedule,
+  type FilterState,
+  type PersonalNote
+} from "../lib/dashboard";
+import { defaultPersonalNote, mockPersonalNotes } from "../lib/mockPersonalNotes";
 import type { Hospital, PublishedSchedule } from "../lib/types";
 
-const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"];
-const favoriteStorageKey = "medlink:favorites:v2";
+const favoriteStorageKey = "medlink:favorites:v3";
 
 type ClientDashboardProps = {
   hospitals: Hospital[];
@@ -16,92 +34,18 @@ type ClientDashboardProps = {
   };
 };
 
-type CalendarDay = {
-  date: Date;
-  inMonth: boolean;
-  count: number;
-  preview: PublishedSchedule[];
-};
-
-function normalize(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function dateKey(date: Date) {
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0")
-  ].join("-");
-}
-
-function monthTitle(date: Date) {
-  return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月看板`;
-}
-
-function favoriteKey(item: PublishedSchedule) {
-  return [item.hospital_id, item.department, item.doctor_name].join("|");
-}
-
-function hospitalLabel(hospital: Hospital) {
-  return `${hospital.hospital_name} ${hospital.branch_name}`;
-}
-
-function scheduleMatchesQuery(item: PublishedSchedule, query: string) {
-  if (!query) return true;
-  const target = normalize([
-    item.doctor_name,
-    item.department,
-    item.hospital_name,
-    item.branch_name,
-    item.weekday_label,
-    item.period,
-    item.room ?? ""
-  ].join(" "));
-  return target.includes(normalize(query));
-}
-
-function schedulesForDate(schedules: PublishedSchedule[], date: Date) {
-  return schedules.filter((item) => item.weekday === date.getDay());
-}
-
-function buildCalendarDays(viewDate: Date, schedules: PublishedSchedule[]) {
-  const first = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
-  const start = new Date(first);
-  start.setDate(start.getDate() - start.getDay());
-
-  return Array.from({ length: 42 }, (_, index): CalendarDay => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    const items = schedulesForDate(schedules, date);
-    return {
-      date,
-      inMonth: date.getMonth() === viewDate.getMonth(),
-      count: items.length,
-      preview: items.slice(0, 2)
-    };
-  });
-}
-
-function openMaps(item: PublishedSchedule) {
-  const query = encodeURIComponent(`${item.hospital_name} ${item.branch_name}`);
-  window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, "_blank", "noopener");
-}
-
-function originalScheduleUrl(item: PublishedSchedule) {
-  return item.source_file_url || item.source_url || "";
-}
-
 export default function ClientDashboard({ hospitals, schedules, initialFilters }: ClientDashboardProps) {
-  const [query, setQuery] = useState(initialFilters.q);
-  const [region, setRegion] = useState("");
-  const [hospital, setHospital] = useState("");
-  const [department, setDepartment] = useState(initialFilters.department);
-  const [doctor, setDoctor] = useState(initialFilters.doctor);
-  const [viewDate, setViewDate] = useState(() => new Date());
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [filters, setFilters] = useState<FilterState>({
+    ...emptyFilters,
+    query: initialFilters.q,
+    department: initialFilters.department,
+    doctorName: initialFilters.doctor
+  });
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [detailItem, setDetailItem] = useState<PublishedSchedule | null>(null);
+  const [notes, setNotes] = useState<PersonalNote[]>(mockPersonalNotes);
+  const [selectedKey, setSelectedKey] = useState("");
+  const [editingNote, setEditingNote] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -111,442 +55,147 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters }
     }
   }, []);
 
-  const departments = useMemo(
-    () => Array.from(new Set(schedules.map((item) => item.department))).sort((a, b) => a.localeCompare(b, "zh-Hant")),
-    [schedules]
-  );
+  const doctorSchedules = useMemo(() => buildDoctorSchedules(schedules, hospitals), [hospitals, schedules]);
 
-  const regions = useMemo(
-    () => Array.from(new Set(hospitals.map((item) => item.region))).sort((a, b) => a.localeCompare(b, "zh-Hant")),
-    [hospitals]
-  );
+  const filterOptions = useMemo(() => {
+    const scoped = doctorSchedules.filter((item) => {
+      const regionOk = !filters.region || item.region === filters.region;
+      const hospitalOk = !filters.hospitalId || item.hospital_id === filters.hospitalId;
+      const branchOk = !filters.branchName || item.branch_name === filters.branchName;
+      const departmentOk = !filters.department || item.department === filters.department;
+      return regionOk && hospitalOk && branchOk && departmentOk;
+    });
 
-  const hospitalOptions = useMemo(
-    () =>
-      hospitals
-        .filter((item) => !region || item.region === region)
-        .map((item) => ({
-          id: item.id,
-          label: hospitalLabel(item)
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label, "zh-Hant")),
-    [hospitals, region]
-  );
-
-  const doctorOptions = useMemo(() => {
-    const names = schedules
-      .filter((item) => {
-        const source = hospitals.find((entry) => entry.id === item.hospital_id);
-        const regionOk = !region || source?.region === region;
-        const hospitalOk = !hospital || item.hospital_id === hospital;
-        const departmentOk = !department || item.department === department;
-        return regionOk && hospitalOk && departmentOk && scheduleMatchesQuery(item, query);
-      })
-      .map((item) => item.doctor_name);
-    return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b, "zh-Hant"));
-  }, [department, hospital, hospitals, query, region, schedules]);
+    return {
+      regions: uniqueSorted(hospitals.map((item) => item.region)),
+      hospitals: hospitals.filter((item) => !filters.region || item.region === filters.region),
+      branches: uniqueSorted(scoped.map((item) => item.branch_name)),
+      departments: uniqueSorted(scoped.map((item) => item.department)),
+      doctors: uniqueSorted(scoped.map((item) => item.doctor_name))
+    };
+  }, [doctorSchedules, filters.branchName, filters.department, filters.hospitalId, filters.region, hospitals]);
 
   const filteredSchedules = useMemo(
-    () =>
-      schedules.filter((item) => {
-        const source = hospitals.find((entry) => entry.id === item.hospital_id);
-        const regionOk = !region || source?.region === region;
-        const hospitalOk = !hospital || item.hospital_id === hospital;
-        const departmentOk = !department || item.department === department;
-        const doctorOk = !doctor || item.doctor_name === doctor;
-        return regionOk && hospitalOk && departmentOk && doctorOk && scheduleMatchesQuery(item, query);
-      }),
-    [department, doctor, hospital, hospitals, query, region, schedules]
+    () => filterSchedules(doctorSchedules, filters, favorites),
+    [doctorSchedules, favorites, filters]
   );
 
-  const monthSchedules = useMemo(() => {
-    const days = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-    return Array.from({ length: days }, (_, index) => {
-      const date = new Date(viewDate.getFullYear(), viewDate.getMonth(), index + 1);
-      return schedulesForDate(filteredSchedules, date).length;
-    }).reduce((sum, count) => sum + count, 0);
-  }, [filteredSchedules, viewDate]);
+  const selectedItem = useMemo(() => {
+    return filteredSchedules.find((item) => item.schedule_key === selectedKey) ?? filteredSchedules[0] ?? doctorSchedules[0] ?? null;
+  }, [doctorSchedules, filteredSchedules, selectedKey]);
 
-  const todaySchedules = useMemo(() => schedulesForDate(filteredSchedules, new Date()), [filteredSchedules]);
-  const selectedDateSchedules = useMemo(
-    () => schedulesForDate(filteredSchedules, selectedDate),
-    [filteredSchedules, selectedDate]
-  );
-  const calendarDays = useMemo(() => buildCalendarDays(viewDate, filteredSchedules), [filteredSchedules, viewDate]);
-  const favoriteCount = useMemo(
-    () => filteredSchedules.filter((item) => favorites.includes(favoriteKey(item))).length,
-    [favorites, filteredSchedules]
-  );
+  const selectedDoctorKey = selectedItem ? doctorKey(selectedItem) : "";
+  const selectedNote = selectedDoctorKey
+    ? notes.find((item) => item.doctorKey === selectedDoctorKey) ?? defaultPersonalNote(selectedDoctorKey)
+    : null;
+  const chips = filterChips(filters, hospitals);
 
-  function toggleFavorite(item: PublishedSchedule) {
-    const key = favoriteKey(item);
-    const next = favorites.includes(key)
-      ? favorites.filter((value) => value !== key)
-      : [...favorites, key];
+  useEffect(() => {
+    if (selectedItem && selectedItem.schedule_key !== selectedKey) {
+      setSelectedKey(selectedItem.schedule_key);
+      setEditingNote(false);
+    }
+  }, [selectedItem, selectedKey]);
+
+  function updateFilters(patch: Partial<FilterState>) {
+    setFilters((current) => ({ ...current, ...patch }));
+  }
+
+  function clearFilters() {
+    setFilters(emptyFilters);
+  }
+
+  function toggleFavorite(item: DoctorSchedule) {
+    const key = doctorKey(item);
+    const next = favorites.includes(key) ? favorites.filter((value) => value !== key) : [...favorites, key];
     setFavorites(next);
     localStorage.setItem(favoriteStorageKey, JSON.stringify(next));
   }
 
-  function moveMonth(delta: number) {
-    setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
-  }
-
-  function resetFilters() {
-    setQuery("");
-    setRegion("");
-    setHospital("");
-    setDepartment("");
-    setDoctor("");
-  }
-
-  function updateRegion(nextRegion: string) {
-    setRegion(nextRegion);
-    setHospital("");
-    setDoctor("");
-  }
-
-  function updateHospital(nextHospital: string) {
-    setHospital(nextHospital);
-    setDoctor("");
-  }
-
-  function updateDepartment(nextDepartment: string) {
-    setDepartment(nextDepartment);
-    setDoctor("");
+  function saveNote(nextNote: PersonalNote) {
+    setNotes((current) => {
+      const exists = current.some((item) => item.doctorKey === nextNote.doctorKey);
+      return exists ? current.map((item) => (item.doctorKey === nextNote.doctorKey ? nextNote : item)) : [...current, nextNote];
+    });
+    setEditingNote(false);
   }
 
   return (
-    <main className="min-h-screen bg-paper">
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[340px_1fr] lg:px-8">
-        <aside className="rounded-lg bg-[#0d3535] p-5 text-white shadow-sm lg:sticky lg:top-6 lg:self-start">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#ffb703] font-black text-ink">M</div>
-            <div>
-              <p className="text-xs font-bold uppercase opacity-70">Med-Link</p>
-              <h1 className="text-2xl font-black">醫點通</h1>
-            </div>
-          </div>
+    <main className="min-h-screen bg-[#f4f8ff] text-[#0d2348]">
+      <div className="grid min-h-screen lg:grid-cols-[268px_1fr]">
+        <Sidebar />
+        <div className="min-w-0 pb-24 lg:pb-0">
+          <Topbar
+            query={filters.query}
+            resultCount={filteredSchedules.length}
+            onOpenFilters={() => setFiltersOpen(true)}
+            onQueryChange={(query) => updateFilters({ query })}
+          />
 
-          <section className="rounded-lg border border-white/15 bg-white/10 p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-black">智慧查詢</h2>
-              <button className="rounded-lg bg-white/15 px-3 py-2 text-sm font-bold" onClick={resetFilters} type="button">
-                重設
-              </button>
-            </div>
-            <div className="grid gap-4">
-              <label className="grid gap-2 text-sm font-semibold text-white/80">
-                快速搜尋醫師
-                <input
-                  className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="輸入姓名、科別、樓層或醫院"
-                />
-              </label>
-              <label className="grid gap-2 text-sm font-semibold text-white/80">
-                地區
-                <select
-                  className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
-                  value={region}
-                  onChange={(event) => updateRegion(event.target.value)}
-                >
-                  <option value="">全部地區</option>
-                  {regions.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-2 text-sm font-semibold text-white/80">
-                醫院與分院
-                <select
-                  className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
-                  value={hospital}
-                  onChange={(event) => updateHospital(event.target.value)}
-                >
-                  <option value="">全部醫院</option>
-                  {hospitalOptions.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-2 text-sm font-semibold text-white/80">
-                科別
-                <select
-                  className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
-                  value={department}
-                  onChange={(event) => updateDepartment(event.target.value)}
-                >
-                  <option value="">全部科別</option>
-                  {departments.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-2 text-sm font-semibold text-white/80">
-                醫師
-                <select
-                  className="h-12 rounded-lg border border-transparent bg-white px-4 text-base text-ink outline-none focus:border-[#ffb703]"
-                  value={doctor}
-                  onChange={(event) => setDoctor(event.target.value)}
-                >
-                  <option value="">全部醫師</option>
-                  {doctorOptions.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <p className="rounded-lg bg-white/10 p-3 text-sm leading-6 text-white/75">
-                目前篩選 {filteredSchedules.length} 筆診次。收藏與詳細資料只保存在你的裝置，不會寫回資料庫。
-              </p>
-            </div>
-          </section>
+          <section className="grid gap-5 px-4 py-4 lg:px-7 lg:py-6">
+            <FilterPanel
+              branches={filterOptions.branches}
+              departments={filterOptions.departments}
+              doctors={filterOptions.doctors}
+              filters={filters}
+              hospitals={filterOptions.hospitals}
+              regions={filterOptions.regions}
+              onChange={updateFilters}
+              onClear={clearFilters}
+            />
 
-          <section className="mt-4 rounded-lg border border-white/15 bg-white/10 p-4">
-            <h2 className="text-xl font-black">資料來源</h2>
-            <div className="mt-3 grid gap-3">
-              {hospitals.map((hospital) => (
-                <article key={hospital.id} className="rounded-lg bg-white/10 p-3">
-                  <p className="text-xs font-bold text-[#ffdf7e]">{hospital.region}</p>
-                  <h3 className="mt-1 font-black">{hospitalLabel(hospital)}</h3>
-                  {hospital.schedule_url ? (
-                    <a className="mt-2 inline-block text-sm font-bold text-[#a7f3d0]" href={hospital.schedule_url}>
-                      原始門診連結
-                    </a>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-          </section>
-        </aside>
-
-        <section className="min-w-0">
-          <header className="mb-5 flex flex-col gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-brand">南台灣醫療通路診表整合</p>
-              <h2 className="mt-2 text-4xl font-black text-ink">今日門診動態</h2>
-              <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-                新版已接上 Supabase，並補回收藏、詳細資料、導航與月曆看板。
-              </p>
-            </div>
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-              Supabase 已連線
-            </div>
-          </header>
-
-          <section className="mb-5 grid gap-4 md:grid-cols-4">
-            <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <span className="text-sm font-semibold text-slate-500">本月診次</span>
-              <strong className="mt-2 block text-3xl text-ink">{monthSchedules}</strong>
-            </article>
-            <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <span className="text-sm font-semibold text-slate-500">今日開診</span>
-              <strong className="mt-2 block text-3xl text-ink">{todaySchedules.length}</strong>
-            </article>
-            <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <span className="text-sm font-semibold text-slate-500">收藏追蹤</span>
-              <strong className="mt-2 block text-3xl text-ink">{favoriteCount}</strong>
-            </article>
-            <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <span className="text-sm font-semibold text-slate-500">已發布診次</span>
-              <strong className="mt-2 block text-3xl text-ink">{schedules.length}</strong>
-            </article>
-          </section>
-
-          <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.75fr)]">
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold uppercase text-slate-500">Calendar</p>
-                  <h2 className="mt-1 text-2xl font-black text-ink">{monthTitle(viewDate)}</h2>
-                </div>
-                <div className="flex gap-2">
-                  <button className="grid h-11 w-11 place-items-center rounded-lg bg-slate-100 text-xl font-black text-brand" onClick={() => moveMonth(-1)} type="button">
-                    ‹
-                  </button>
-                  <button className="grid h-11 w-11 place-items-center rounded-lg bg-slate-100 text-xl font-black text-brand" onClick={() => moveMonth(1)} type="button">
-                    ›
-                  </button>
-                </div>
-              </div>
-              <div className="mb-2 grid grid-cols-7 gap-2 text-center text-sm font-black text-slate-500">
-                {weekdayLabels.map((item) => (
-                  <span key={item}>{item}</span>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-2">
-                {calendarDays.map((day) => {
-                  const selected = dateKey(day.date) === dateKey(selectedDate);
-                  return (
-                    <button
-                      className={[
-                        "min-h-24 rounded-lg border p-2 text-left transition",
-                        day.inMonth ? "bg-white" : "bg-slate-50 opacity-45",
-                        selected ? "border-brand ring-2 ring-brand" : "border-slate-200",
-                        day.count ? "hover:border-brand" : ""
-                      ].join(" ")}
-                      key={dateKey(day.date)}
-                      onClick={() => setSelectedDate(day.date)}
-                      type="button"
-                    >
-                      <span className="flex items-center justify-between font-black text-ink">
-                        {day.date.getDate()}
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-brand">{day.count}</span>
-                      </span>
-                      <span className="mt-2 hidden gap-1 text-xs text-slate-500 sm:grid">
-                        {day.preview.map((item) => (
-                          <span className="truncate" key={`${dateKey(day.date)}-${item.schedule_key}`}>
-                            {item.period} {item.doctor_name}
-                          </span>
-                        ))}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="flex flex-wrap gap-2 lg:hidden">
+              {chips.length ? (
+                chips.map((chip) => <span className="rounded-full bg-[#eaf2ff] px-3 py-1 text-xs font-black text-[#075de8]" key={chip}>{chip}</span>)
+              ) : (
+                <span className="text-sm font-bold text-[#60708d]">尚未套用篩選</span>
+              )}
+              {chips.length ? (
+                <button className="text-sm font-black text-[#075de8]" onClick={clearFilters} type="button">
+                  清除
+                </button>
+              ) : null}
             </div>
 
-            <aside className="rounded-lg border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-200 p-5">
-                <p className="text-sm font-semibold uppercase text-slate-500">Schedule</p>
-                <div className="mt-1 flex items-center justify-between gap-3">
-                  <h2 className="text-2xl font-black text-ink">
-                    {selectedDate.getMonth() + 1}/{selectedDate.getDate()} 診次
-                  </h2>
-                  <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700" onClick={() => setSelectedDate(new Date())} type="button">
-                    今天
-                  </button>
-                </div>
-              </div>
-              <div className="grid max-h-[720px] gap-3 overflow-auto p-5">
-                {selectedDateSchedules.length ? (
-                  selectedDateSchedules.map((item) => {
-                    const favorited = favorites.includes(favoriteKey(item));
-                    return (
-                      <article className="rounded-lg border border-slate-200 border-l-4 border-l-brand bg-white p-4" key={item.schedule_key}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="text-lg font-black text-ink">
-                              {item.doctor_name} · {item.department}
-                            </h3>
-                            <p className="mt-1 text-sm text-slate-600">
-                              {item.hospital_name} {item.branch_name}
-                            </p>
-                          </div>
-                          <span className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">
-                            正常開診
-                          </span>
-                        </div>
-                        <p className="mt-3 text-sm text-slate-600">
-                          {item.weekday_label}｜{item.period}｜診 {item.room || "未標示"}
-                        </p>
-                        {item.note ? (
-                          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
-                            {item.note}
-                          </p>
-                        ) : null}
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <button
-                            className={`rounded-lg border px-3 py-2 text-sm font-black ${favorited ? "border-amber-300 bg-amber-50 text-amber-800" : "border-slate-300 text-brand"}`}
-                            onClick={() => toggleFavorite(item)}
-                            type="button"
-                          >
-                            {favorited ? "已收藏" : "收藏"}
-                          </button>
-                          <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-black text-brand" onClick={() => setDetailItem(item)} type="button">
-                            詳細資料
-                          </button>
-                          <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-black text-brand" onClick={() => openMaps(item)} type="button">
-                            導航
-                          </button>
-                          {originalScheduleUrl(item) ? (
-                            <a
-                              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-black text-brand"
-                              href={originalScheduleUrl(item)}
-                              rel="noreferrer"
-                              target="_blank"
-                            >
-                              查看原始門診表
-                            </a>
-                          ) : null}
-                        </div>
-                      </article>
-                    );
-                  })
-                ) : (
-                  <p className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-500">
-                    目前條件在此日期沒有門診資料。
-                  </p>
-                )}
-              </div>
-            </aside>
-          </section>
-        </section>
-      </div>
-
-      {detailItem ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#0d3535]/50 p-4">
-          <section className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-2xl">
-            <div className="mb-4 flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
-              <div>
-                <p className="text-sm font-bold text-brand">
-                  {detailItem.hospital_name} {detailItem.branch_name}
-                </p>
-                <h2 className="mt-1 text-2xl font-black text-ink">
-                  {detailItem.doctor_name} · {detailItem.department}
-                </h2>
-              </div>
-              <button className="grid h-10 w-10 place-items-center rounded-lg bg-slate-100 font-black text-slate-700" onClick={() => setDetailItem(null)} type="button">
-                x
-              </button>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <DetailField label="日期班別" value={`${detailItem.weekday_label} ${detailItem.period}`} />
-              <DetailField label="診" value={detailItem.room || "未標示"} />
-              <DetailField label="標準科別" value={detailItem.department} />
-              <DetailField label="追蹤狀態" value={favorites.includes(favoriteKey(detailItem)) ? "已收藏，未來可優先推播" : "尚未收藏"} />
-              <DetailField label="來源頁碼" value={detailItem.source_page ? `第 ${detailItem.source_page} 頁` : "未標示"} />
-              <DetailField label="資料月份" value={detailItem.source_month || "未標示"} />
-              <DetailField label="解析狀態" value={detailItem.parse_status || "ok"} />
-              <DetailField label="解析信心" value={detailItem.confidence_score || detailItem.confidence ? `${Math.round((detailItem.confidence_score || detailItem.confidence || 0) * 100)}%` : "未標示"} />
-              <DetailField label="資料發布時間" value={new Date(detailItem.published_at).toLocaleString("zh-TW")} />
-              <DetailField label="解析時間" value={detailItem.parsed_at ? new Date(detailItem.parsed_at).toLocaleString("zh-TW") : "未標示"} />
-              <DetailField label="資料來源" value={originalScheduleUrl(detailItem) ? "查看原始門診表" : "未標示"} href={originalScheduleUrl(detailItem) || undefined} />
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button className="rounded-lg bg-brand px-4 py-3 font-black text-white" onClick={() => toggleFavorite(detailItem)} type="button">
-                {favorites.includes(favoriteKey(detailItem)) ? "取消收藏" : "加入收藏"}
-              </button>
-              <button className="rounded-lg border border-slate-300 px-4 py-3 font-black text-brand" onClick={() => openMaps(detailItem)} type="button">
-                導航至醫院
-              </button>
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
+              <DoctorList
+                favorites={favorites}
+                items={filteredSchedules}
+                selectedKey={selectedItem?.schedule_key ?? ""}
+                onSelect={(item) => {
+                  setSelectedKey(item.schedule_key);
+                  setEditingNote(false);
+                }}
+                onToggleFavorite={toggleFavorite}
+              />
+              <DoctorDetailPanel
+                editing={editingNote}
+                favorite={selectedItem ? favorites.includes(doctorKey(selectedItem)) : false}
+                item={selectedItem}
+                note={selectedNote}
+                onCancelEdit={() => setEditingNote(false)}
+                onEditNote={() => setEditingNote(true)}
+                onSaveNote={saveNote}
+                onToggleFavorite={() => selectedItem && toggleFavorite(selectedItem)}
+              />
             </div>
           </section>
         </div>
-      ) : null}
-    </main>
-  );
-}
+      </div>
 
-function DetailField({ label, value, href }: { label: string; value: string; href?: string }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <span className="text-xs font-bold text-slate-500">{label}</span>
-      {href ? (
-        <a className="mt-1 block font-black text-brand hover:underline" href={href}>
-          {value}
-        </a>
-      ) : (
-        <strong className="mt-1 block text-ink">{value}</strong>
-      )}
-    </div>
+      <FilterBottomSheet
+        branches={filterOptions.branches}
+        departments={filterOptions.departments}
+        doctors={filterOptions.doctors}
+        filters={filters}
+        hospitals={filterOptions.hospitals}
+        open={filtersOpen}
+        regions={filterOptions.regions}
+        onChange={updateFilters}
+        onClear={clearFilters}
+        onClose={() => setFiltersOpen(false)}
+      />
+      <MobileBottomNav />
+    </main>
   );
 }

@@ -6,7 +6,7 @@ type HomePageProps = {
   searchParams?: Promise<{
     q?: string;
     department?: string;
-    weekday?: string;
+    doctor?: string;
   }>;
 };
 
@@ -79,7 +79,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       initialFilters={{
         q: params.q ?? "",
         department: params.department ?? "",
-        doctor: params.weekday ?? ""
+        doctor: params.doctor ?? ""
       }}
     />
   );
