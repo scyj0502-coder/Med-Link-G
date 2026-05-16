@@ -104,7 +104,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
     favorites: { title: "我的收藏", subtitle: "重點醫師追蹤", count: favoriteDoctorCount },
     notes: { title: "我的備註", subtitle: "個人拜訪資訊", count: notes.length },
     visits: { title: "拜訪紀錄", subtitle: "歷史拜訪與追蹤時間軸", count: notes.length },
-    reminders: { title: "行程提醒", subtitle: "業務拜訪行程管理", count: doctorSchedules.length },
+    reminders: { title: "行程提醒", subtitle: "業務拜訪行程管理中心", count: doctorSchedules.length },
     sources: { title: "資料來源", subtitle: "門診來源管理", count: hospitals.length }
   }[activeView];
 

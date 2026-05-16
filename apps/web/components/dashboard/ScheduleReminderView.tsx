@@ -58,7 +58,7 @@ export function ScheduleReminderView({ items, notes, query, onOpenSchedule, onOp
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-2xl font-black text-[#061b3d]">行程提醒</h2>
-          <p className="mt-2 text-sm font-bold text-[#60708d]">業務拜訪行程管理中心，掌握今天要去哪裡、什麼時間拜訪與下一步提醒。</p>
+          <p className="mt-2 text-sm font-bold text-[#60708d]">業務拜訪行程管理中心，用今日、本週、本月與全部視角管理拜訪安排、門診資訊與下一步提醒。</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button className="h-10 rounded-xl bg-[#075de8] px-4 text-sm font-black text-white shadow-lg shadow-blue-600/20" type="button">新增行程</button>
@@ -97,7 +97,7 @@ export function ScheduleReminderView({ items, notes, query, onOpenSchedule, onOp
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-lg font-black text-[#061b3d]">{scopeLabel(scope)}行程</h3>
+            <h3 className="text-lg font-black text-[#061b3d]">{scopeTitle(scope)}</h3>
             <span className="text-sm font-bold text-[#60708d]">共 {reminders.length} 件</span>
           </div>
           {reminders.length ? (
@@ -114,7 +114,7 @@ export function ScheduleReminderView({ items, notes, query, onOpenSchedule, onOp
           ) : (
             <section className="rounded-[18px] border border-dashed border-[#b8c7dd] bg-white p-8 text-center shadow-[0_12px_30px_rgba(8,35,80,.08)]">
               <h3 className="text-xl font-black text-[#061b3d]">目前沒有行程</h3>
-              <p className="mt-2 text-sm font-bold text-[#60708d]">可以切換今日、本週、本月或全部查看。</p>
+              <p className="mt-2 text-sm font-bold text-[#60708d]">可以切換今日、本週、本月或全部拜訪行程查看。</p>
             </section>
           )}
         </div>
@@ -298,11 +298,11 @@ function statusBadgeClass(status: ReminderStatus) {
   return `rounded-md px-2 py-1 text-xs font-black ${statusStyles[status]}`;
 }
 
-function scopeLabel(scope: ReminderScope) {
-  if (scope === "week") return "本週";
-  if (scope === "month") return "本月";
-  if (scope === "all") return "全部";
-  return "今日";
+function scopeTitle(scope: ReminderScope) {
+  if (scope === "week") return "本週拜訪行程";
+  if (scope === "month") return "本月拜訪行程";
+  if (scope === "all") return "全部拜訪行程";
+  return "今日拜訪行程";
 }
 
 function fallbackStartTime(index: number) {
