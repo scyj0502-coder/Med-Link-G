@@ -1,4 +1,4 @@
-export type DashboardView = "today" | "search" | "favorites" | "notes" | "visits" | "sources";
+export type DashboardView = "today" | "search" | "favorites" | "notes" | "visits" | "reminders" | "sources";
 
 type SidebarProps = {
   activeView: DashboardView;
@@ -11,6 +11,7 @@ const items: { label: string; view: DashboardView }[] = [
   { label: "我的收藏", view: "favorites" },
   { label: "我的備註", view: "notes" },
   { label: "拜訪紀錄", view: "visits" },
+  { label: "行程提醒", view: "reminders" },
   { label: "資料來源", view: "sources" }
 ];
 

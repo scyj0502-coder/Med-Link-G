@@ -10,7 +10,7 @@ const items: { label: string; view: DashboardView }[] = [
   { label: "搜尋", view: "search" },
   { label: "收藏", view: "favorites" },
   { label: "備註", view: "notes" },
-  { label: "我的", view: "visits" }
+  { label: "行程", view: "reminders" }
 ];
 
 export function MobileBottomNav({ activeView, onNavigate }: MobileBottomNavProps) {

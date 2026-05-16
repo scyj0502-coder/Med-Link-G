@@ -6,6 +6,7 @@ import { DoctorList } from "../components/dashboard/DoctorList";
 import { FilterBottomSheet } from "../components/dashboard/FilterBottomSheet";
 import { FilterPanel } from "../components/dashboard/FilterPanel";
 import { MobileBottomNav } from "../components/dashboard/MobileBottomNav";
+import { ScheduleReminderView } from "../components/dashboard/ScheduleReminderView";
 import { FavoriteDoctorsView, NotesView, VisitHistoryView } from "../components/dashboard/SavedViews";
 import { SearchCenter } from "../components/dashboard/SearchCenter";
 import { Sidebar } from "../components/dashboard/Sidebar";
@@ -103,6 +104,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
     favorites: { title: "我的收藏", subtitle: "重點醫師追蹤", count: favoriteDoctorCount },
     notes: { title: "我的備註", subtitle: "個人拜訪資訊", count: notes.length },
     visits: { title: "拜訪紀錄", subtitle: "歷史拜訪與追蹤時間軸", count: notes.length },
+    reminders: { title: "行程提醒", subtitle: "業務拜訪行程管理", count: doctorSchedules.length },
     sources: { title: "資料來源", subtitle: "門診來源管理", count: hospitals.length }
   }[activeView];
 
@@ -264,6 +266,22 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
                 onOpenSchedule={(item) => {
                   setSelectedKey(item.schedule_key);
                   setEditingNote(true);
+                  setActiveView("today");
+                }}
+              />
+            ) : activeView === "reminders" ? (
+              <ScheduleReminderView
+                items={doctorSchedules}
+                notes={notes}
+                query={filters.query}
+                onOpenNote={(item) => {
+                  setSelectedKey(item.schedule_key);
+                  setEditingNote(true);
+                  setActiveView("today");
+                }}
+                onOpenSchedule={(item) => {
+                  setSelectedKey(item.schedule_key);
+                  setEditingNote(false);
                   setActiveView("today");
                 }}
               />

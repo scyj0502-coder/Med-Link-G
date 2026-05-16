@@ -82,7 +82,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         department: params.department ?? "",
         doctor: params.doctor ?? ""
       }}
-      initialView={["search", "favorites", "notes", "visits"].includes(params.view ?? "") ? (params.view as "search" | "favorites" | "notes" | "visits") : "today"}
+      initialView={["search", "favorites", "notes", "visits", "reminders"].includes(params.view ?? "") ? (params.view as "search" | "favorites" | "notes" | "visits" | "reminders") : "today"}
     />
   );
 }
