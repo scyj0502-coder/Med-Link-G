@@ -58,7 +58,7 @@ export function ScheduleReminderView({ items, notes, query, onOpenSchedule, onOp
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-2xl font-black text-[#061b3d]">行程提醒</h2>
-          <p className="mt-2 text-sm font-bold text-[#60708d]">業務拜訪行程管理中心，用今日、本週、本月與全部視角管理拜訪安排、門診資訊與下一步提醒。</p>
+          <p className="mt-2 text-sm font-bold text-[#60708d]">業務拜訪行程管理中心，重點是安排拜訪順序、掌握下一步行動，月曆只作為輔助檢視。</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button className="h-10 rounded-xl bg-[#075de8] px-4 text-sm font-black text-white shadow-lg shadow-blue-600/20" type="button">新增行程</button>
@@ -174,7 +174,7 @@ function ScheduleReminderCard({
             <span className={statusBadgeClass(item.status)}>{item.status}</span>
           </div>
           <div>
-            <span className="block text-xs font-black text-[#60708d]">提醒內容</span>
+            <span className="block text-xs font-black text-[#60708d]">下一步行動</span>
             <span className="font-black text-[#0d2348]">{item.reminder}</span>
           </div>
         </div>
@@ -189,8 +189,28 @@ function ScheduleReminderCard({
 }
 
 function ScheduleReminderSidePanel({ reminders, upcoming }: { reminders: ReminderItem[]; upcoming: ReminderItem[] }) {
+  const priorityItems = [...upcoming].sort((a, b) => priorityScore(b) - priorityScore(a)).slice(0, 5);
+
   return (
     <aside className="grid content-start gap-4">
+      <SideCard title="拜訪優先順序">
+        <div className="grid gap-3">
+          {priorityItems.length ? priorityItems.map((item, index) => (
+            <div className="grid grid-cols-[28px_1fr] gap-3 rounded-xl bg-[#f8fbff] p-3" key={item.id}>
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#075de8] text-xs font-black text-white">{index + 1}</span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-black text-[#061b3d]">{item.schedule.doctor_name} 醫師</span>
+                  <span className={statusBadgeClass(item.status)}>{item.status}</span>
+                </div>
+                <div className="mt-1 text-xs font-bold leading-5 text-[#60708d]">{formatShortDate(item.date)} {item.startTime} | {item.schedule.displayRoom}</div>
+                <div className="mt-1 text-xs font-black leading-5 text-[#0d2348]">下一步：{item.reminder}</div>
+              </div>
+            </div>
+          )) : <p className="text-sm font-bold leading-6 text-[#60708d]">目前沒有需要排序的拜訪行程。</p>}
+        </div>
+      </SideCard>
+
       <SideCard title="即將到來的行程">
         <div className="grid gap-3">
           {upcoming.length ? upcoming.map((item) => (
@@ -198,14 +218,14 @@ function ScheduleReminderSidePanel({ reminders, upcoming }: { reminders: Reminde
               <div className="text-sm font-black text-[#075de8]">{formatShortDate(item.date)} {item.startTime}</div>
               <div className="min-w-0">
                 <div className="font-black text-[#061b3d]">{item.schedule.doctor_name} 醫師</div>
-                <div className="mt-1 text-xs font-bold text-[#60708d]">{item.reminder}</div>
+                <div className="mt-1 text-xs font-bold text-[#60708d]">下一步：{item.reminder}</div>
               </div>
             </div>
           )) : <p className="text-sm font-bold leading-6 text-[#60708d]">目前沒有即將到來的行程。</p>}
         </div>
       </SideCard>
 
-      <SideCard title="月曆視圖">
+      <SideCard title="輔助月曆視圖">
         <div className="mb-3 flex items-center justify-between">
           <strong className="text-[#061b3d]">2026 年 5 月</strong>
           <span className="text-sm font-black text-[#075de8]">本月</span>
@@ -218,6 +238,7 @@ function ScheduleReminderSidePanel({ reminders, upcoming }: { reminders: Reminde
             </span>
           ))}
         </div>
+        <p className="mt-3 text-xs font-bold leading-5 text-[#60708d]">月曆用來辨識哪幾天有行程，實際拜訪順序以上方優先順序為主。</p>
       </SideCard>
 
       <SideCard title="行程狀態說明">
@@ -317,6 +338,18 @@ function statusDotClass(status: ReminderStatus) {
   if (status === "即將開始") return "bg-[#ef4444]";
   if (status === "已取消") return "bg-[#94a3b8]";
   return "bg-[#f59e0b]";
+}
+
+function priorityScore(item: ReminderItem) {
+  const statusWeight: Record<ReminderStatus, number> = {
+    即將開始: 40,
+    待拜訪: 30,
+    已完成: 10,
+    已取消: 0
+  };
+  const reminderWeight = item.note?.nextReminder ? 8 : 0;
+  const dateWeight = item.date === "2026-05-16" ? 12 : 0;
+  return statusWeight[item.status] + reminderWeight + dateWeight;
 }
 
 function scopeTitle(scope: ReminderScope) {
