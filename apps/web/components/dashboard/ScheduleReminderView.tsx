@@ -143,6 +143,7 @@ function ScheduleReminderCard({
   return (
     <article className="relative rounded-2xl border border-[#dbe5f4] bg-white p-4 shadow-[0_8px_18px_rgba(8,35,80,.055)]">
       <div className="absolute -left-16 top-5 w-12 text-right">
+        <div className="text-[11px] font-black text-[#60708d]">拜訪時間</div>
         <div className="font-black text-[#061b3d]">{item.startTime}</div>
         <div className="text-sm font-bold text-[#60708d]">{item.endTime}</div>
       </div>
@@ -154,25 +155,26 @@ function ScheduleReminderCard({
               {item.schedule.doctor_name.slice(0, 1)}
             </div>
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-xl font-black text-[#061b3d]">{item.schedule.doctor_name}</h3>
-                <span className="text-sm font-black text-[#60708d]">醫師</span>
-                <span className="rounded-md bg-[#eaf2ff] px-2 py-1 text-xs font-black text-[#075de8]">{item.schedule.department}</span>
+              <div className="grid gap-3">
+                <FieldLine label="醫師姓名" value={`${item.schedule.doctor_name} 醫師`} strong />
+                <div className="grid gap-2 md:grid-cols-2">
+                  <FieldLine label="科別" value={item.schedule.department} />
+                  <FieldLine label="醫院／分院" value={`${item.schedule.hospital_name} ${item.schedule.branchLabel}`} />
+                  <FieldLine label="門診時段" value={`${item.schedule.displayPeriod} ${item.schedule.start_time || "時間未標示"}-${item.schedule.end_time || "未標示"}`} />
+                  <FieldLine label="診間" value={item.schedule.displayRoom} />
+                </div>
               </div>
-              <p className="mt-1 text-sm font-bold text-[#60708d]">{item.schedule.hospital_name} {item.schedule.branchLabel}</p>
-              <p className="mt-2 text-sm font-bold text-[#0d2348]">
-                今日門診：{item.schedule.displayPeriod} {item.schedule.start_time || "時間未標示"}-{item.schedule.end_time || "未標示"} | {item.schedule.displayRoom}
-              </p>
             </div>
           </div>
         </div>
 
         <div className="grid gap-2 rounded-2xl border border-[#dbe5f4] bg-[#f8fbff] p-3 text-sm font-bold text-[#60708d]">
           <div>
+            <span className="mb-2 block text-xs font-black text-[#60708d]">行程狀態</span>
             <span className={statusBadgeClass(item.status)}>{item.status}</span>
           </div>
           <div>
-            <span className="block text-xs font-black text-[#60708d]">拜訪提醒</span>
+            <span className="block text-xs font-black text-[#60708d]">提醒內容</span>
             <span className="font-black text-[#0d2348]">{item.reminder}</span>
           </div>
         </div>
@@ -229,6 +231,15 @@ function ScheduleReminderSidePanel({ reminders, upcoming }: { reminders: Reminde
         </div>
       </SideCard>
     </aside>
+  );
+}
+
+function FieldLine({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-xs font-black text-[#60708d]">{label}</div>
+      <div className={`${strong ? "text-xl" : "text-sm"} truncate font-black text-[#061b3d]`}>{value}</div>
+    </div>
   );
 }
 
