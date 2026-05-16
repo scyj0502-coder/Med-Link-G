@@ -6,7 +6,7 @@ import { DoctorList } from "../components/dashboard/DoctorList";
 import { FilterBottomSheet } from "../components/dashboard/FilterBottomSheet";
 import { FilterPanel } from "../components/dashboard/FilterPanel";
 import { MobileBottomNav } from "../components/dashboard/MobileBottomNav";
-import { FavoriteDoctorsView, NotesView } from "../components/dashboard/SavedViews";
+import { FavoriteDoctorsView, NotesView, VisitHistoryView } from "../components/dashboard/SavedViews";
 import { SearchCenter } from "../components/dashboard/SearchCenter";
 import { Sidebar } from "../components/dashboard/Sidebar";
 import type { DashboardView } from "../components/dashboard/Sidebar";
@@ -102,7 +102,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
     search: { title: "快速搜尋", subtitle: "全站搜尋中心", count: doctorSchedules.length },
     favorites: { title: "我的收藏", subtitle: "重點醫師追蹤", count: favoriteDoctorCount },
     notes: { title: "我的備註", subtitle: "個人拜訪資訊", count: notes.length },
-    visits: { title: "拜訪紀錄", subtitle: "拜訪歷程整理", count: 0 },
+    visits: { title: "拜訪紀錄", subtitle: "歷史拜訪與追蹤時間軸", count: notes.length },
     sources: { title: "資料來源", subtitle: "門診來源管理", count: hospitals.length }
   }[activeView];
 
@@ -255,8 +255,20 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
                 }}
                 onToggleFavorite={toggleFavorite}
               />
+            ) : activeView === "visits" ? (
+              <VisitHistoryView
+                hospitals={hospitals}
+                items={doctorSchedules}
+                notes={notes}
+                query={filters.query}
+                onOpenSchedule={(item) => {
+                  setSelectedKey(item.schedule_key);
+                  setEditingNote(true);
+                  setActiveView("today");
+                }}
+              />
             ) : (
-              <ComingSoonView title={activeView === "visits" ? "拜訪紀錄" : "資料來源"} />
+              <ComingSoonView title="資料來源" />
             )}
           </section>
         </div>

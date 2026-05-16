@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { DoctorSchedule, PersonalNote } from "../../lib/dashboard";
 import { doctorKey } from "../../lib/dashboard";
+import type { Hospital } from "../../lib/types";
 
 type FavoriteDoctorsViewProps = {
   items: DoctorSchedule[];
@@ -22,6 +23,14 @@ type NotesViewProps = {
   onGoSearch: () => void;
 };
 
+type VisitHistoryViewProps = {
+  items: DoctorSchedule[];
+  notes: PersonalNote[];
+  hospitals: Hospital[];
+  query: string;
+  onOpenSchedule: (item: DoctorSchedule) => void;
+};
+
 type DoctorGroup = {
   key: string;
   primary: DoctorSchedule;
@@ -37,6 +46,13 @@ type NoteRow = {
   primary?: DoctorSchedule;
   schedules: DoctorSchedule[];
   favorite: boolean;
+};
+
+type VisitRecord = NoteRow & {
+  id: string;
+  date: string;
+  displayDate: string;
+  visitTime: string;
 };
 
 export function FavoriteDoctorsView({ items, notes, favorites, query, onOpenSchedule, onToggleFavorite, onGoSearch }: FavoriteDoctorsViewProps) {
@@ -234,6 +250,143 @@ export function NotesView({ items, notes, favorites, query, onOpenSchedule, onTo
         </div>
 
         <NotesSidePanel rows={allRows} reminderRows={reminderRows} followRows={followRows} tagCounts={tagCounts} />
+      </div>
+    </section>
+  );
+}
+
+export function VisitHistoryView({ items, notes, hospitals, query, onOpenSchedule }: VisitHistoryViewProps) {
+  const today = new Date().getDay();
+  const [dateFrom, setDateFrom] = useState("2026-04-15");
+  const [dateTo, setDateTo] = useState("2026-05-16");
+  const [region, setRegion] = useState("");
+  const [hospitalId, setHospitalId] = useState("");
+  const [department, setDepartment] = useState("");
+  const [status, setStatus] = useState("");
+  const [doctorQuery, setDoctorQuery] = useState("");
+  const allRecords = buildVisitRecords(items, notes).filter((record) => matchesVisitRecord(record, normalize(query)));
+  const regions = uniqueList(hospitals.map((hospital) => hospital.region));
+  const hospitalOptions = hospitals.filter((hospital) => !region || hospital.region === region);
+  const departments = uniqueList(allRecords.map((record) => record.primary?.department ?? ""));
+  const records = allRecords.filter((record) => {
+    const recordRegion = record.primary?.region ?? "";
+    const recordHospitalId = record.primary?.hospital_id ?? "";
+    const recordDepartment = record.primary?.department ?? "";
+    const doctorTarget = normalize([record.primary?.doctor_name ?? "", record.note.content, ...record.note.tags].join(" "));
+    const withinDate = !record.date || ((!dateFrom || record.date >= dateFrom) && (!dateTo || record.date <= dateTo));
+
+    return (
+      withinDate &&
+      (!region || recordRegion === region) &&
+      (!hospitalId || recordHospitalId === hospitalId) &&
+      (!department || recordDepartment === department) &&
+      (!status || record.note.visitStatus === status) &&
+      (!doctorQuery || doctorTarget.includes(normalize(doctorQuery)))
+    );
+  });
+  const followRecords = records.filter((record) => record.note.visitStatus === "需追蹤");
+  const reminderRecords = records.filter((record) => record.note.nextReminder);
+  const visitedCount = records.filter((record) => record.note.visitStatus === "已拜訪").length;
+  const stats = [
+    { label: "拜訪總次數", value: records.length, suffix: "次" },
+    { label: "已拜訪", value: visitedCount, suffix: "次" },
+    { label: "需追蹤", value: followRecords.length, suffix: "位醫師" },
+    { label: "新增備註", value: records.length, suffix: "筆" },
+    { label: "下次提醒", value: reminderRecords.length, suffix: "筆" }
+  ];
+  const grouped = groupVisitRecords(records);
+
+  return (
+    <section className="grid gap-5">
+      <div>
+        <h2 className="text-2xl font-black text-[#061b3d]">拜訪紀錄</h2>
+        <p className="mt-2 text-sm font-bold text-[#60708d]">歷史拜訪紀錄與追蹤時間軸，回顧之前拜訪過誰、當時記了什麼、下一步要做什麼。</p>
+      </div>
+
+      <div className="rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)]">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.25fr_0.9fr_0.9fr_0.9fr_0.9fr_1.15fr_130px]">
+          <label className="grid gap-2 text-sm font-black text-[#0d2348]">
+            拜訪日期
+            <div className="grid grid-cols-2 gap-2">
+              <input className="h-11 rounded-xl border border-[#dbe5f4] px-3 text-sm font-bold outline-none focus:border-[#075de8]" type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+              <input className="h-11 rounded-xl border border-[#dbe5f4] px-3 text-sm font-bold outline-none focus:border-[#075de8]" type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+            </div>
+          </label>
+          <FilterSelect label="地區" value={region} onChange={(next) => {
+            setRegion(next);
+            setHospitalId("");
+          }}>
+            <option value="">全部地區</option>
+            {regions.map((item) => <option key={item} value={item}>{item}</option>)}
+          </FilterSelect>
+          <FilterSelect label="醫院" value={hospitalId} onChange={setHospitalId}>
+            <option value="">全部醫院</option>
+            {hospitalOptions.map((hospital) => <option key={hospital.id} value={hospital.id}>{hospital.hospital_name}</option>)}
+          </FilterSelect>
+          <FilterSelect label="科別" value={department} onChange={setDepartment}>
+            <option value="">全部科別</option>
+            {departments.map((item) => <option key={item} value={item}>{item}</option>)}
+          </FilterSelect>
+          <FilterSelect label="拜訪狀態" value={status} onChange={setStatus}>
+            <option value="">全部狀態</option>
+            <option value="已拜訪">已拜訪</option>
+            <option value="需追蹤">需追蹤</option>
+            <option value="尚未拜訪">尚未拜訪</option>
+          </FilterSelect>
+          <label className="grid gap-2 text-sm font-black text-[#0d2348]">
+            搜尋醫師
+            <input
+              className="h-11 rounded-xl border border-[#dbe5f4] px-3 text-sm font-bold outline-none focus:border-[#075de8]"
+              placeholder="搜尋醫師姓名"
+              value={doctorQuery}
+              onChange={(event) => setDoctorQuery(event.target.value)}
+            />
+          </label>
+          <button className="self-end rounded-xl border border-[#075de8] bg-white px-4 py-3 text-sm font-black text-[#075de8]" onClick={() => exportVisitRecords(records)} type="button">
+            匯出紀錄
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-3 border-t border-[#eef3fb] pt-4 md:grid-cols-5">
+          {stats.map((stat) => (
+            <div className="rounded-2xl bg-[#f8fbff] p-4" key={stat.label}>
+              <div className="text-sm font-black text-[#60708d]">{stat.label}</div>
+              <div className="mt-3 flex items-end gap-1">
+                <span className="text-3xl font-black text-[#061b3d]">{stat.value}</span>
+                <span className="pb-1 text-sm font-black text-[#60708d]">{stat.suffix}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0">
+          {grouped.length ? (
+            <div className="relative grid gap-5 pl-5 before:absolute before:left-[7px] before:top-3 before:h-[calc(100%-24px)] before:w-px before:bg-[#cfe0f4]">
+              {grouped.map((group) => (
+                <section className="relative grid gap-3" key={group.label}>
+                  <div className="absolute -left-5 top-1 grid h-4 w-4 place-items-center rounded-full bg-[#075de8] ring-4 ring-[#eaf2ff]" />
+                  <h3 className="text-sm font-black text-[#061b3d]">{group.label}</h3>
+                  <div className="grid gap-3">
+                    {group.records.map((record) => (
+                      <VisitTimelineCard key={record.id} record={record} today={today} onOpenSchedule={() => record.primary && onOpenSchedule(record.primary)} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <EmptySavedState
+              title="目前條件沒有拜訪紀錄"
+              description="可以放寬日期或狀態條件，再查看歷史拜訪與追蹤狀態。"
+              actionLabel="清除醫師搜尋"
+              onAction={() => setDoctorQuery("")}
+            />
+          )}
+        </div>
+
+        <VisitHistorySidePanel records={records} followRecords={followRecords} reminderRecords={reminderRecords} />
       </div>
     </section>
   );
@@ -524,6 +677,160 @@ function NotesSidePanel({
   );
 }
 
+function VisitTimelineCard({
+  record,
+  today,
+  onOpenSchedule
+}: {
+  record: VisitRecord;
+  today: number;
+  onOpenSchedule: () => void;
+}) {
+  const schedule = record.primary ? bestScheduleForVisit({ key: doctorKey(record.primary), primary: record.primary, schedules: record.schedules }, today) : undefined;
+
+  return (
+    <article className="rounded-2xl border border-[#dbe5f4] bg-white p-4 shadow-[0_8px_18px_rgba(8,35,80,.055)]">
+      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_160px_minmax(220px,0.95fr)_170px] 2xl:items-center">
+        <div className="min-w-0">
+          <div className="flex items-start gap-3">
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-[#dbe5f4] bg-[#eef5ff] text-xl font-black text-[#075de8]">
+              {(record.primary?.doctor_name ?? "訪").slice(0, 1)}
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-xl font-black text-[#061b3d]">{record.primary?.doctor_name ?? "未對應醫師"}</h3>
+                <span className="text-sm font-black text-[#60708d]">醫師</span>
+                {record.primary ? <span className="rounded-md bg-[#eaf2ff] px-2 py-1 text-xs font-black text-[#075de8]">{record.primary.department}</span> : null}
+                <span className={visitBadgeClass(record.note.visitStatus)}>{record.note.visitStatus}</span>
+              </div>
+              <p className="mt-1 text-sm font-bold text-[#60708d]">
+                {record.primary ? `${record.primary.hospital_name} ${record.primary.branchLabel}` : record.note.doctorKey}
+              </p>
+              {schedule ? (
+                <p className="mt-2 text-sm font-bold text-[#0d2348]">
+                  當日門診：{schedule.weekday_label} {schedule.displayPeriod} {schedule.start_time || "時間未標示"} {schedule.displayRoom}
+                </p>
+              ) : (
+                <p className="mt-2 text-sm font-bold text-[#60708d]">當日門診：尚未對應門診資料</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#dbe5f4] bg-[#f8fbff] p-3">
+          <div className="text-xs font-black text-[#60708d]">拜訪時間</div>
+          <div className="mt-2 text-lg font-black text-[#061b3d]">{record.visitTime}</div>
+          <div className="mt-1 text-sm font-bold text-[#60708d]">{record.displayDate}</div>
+        </div>
+
+        <div className="min-w-0">
+          <div className="text-xs font-black text-[#60708d]">拜訪紀錄摘要</div>
+          <p className="mt-2 line-clamp-3 text-sm font-bold leading-6 text-[#0d2348]">{record.note.content || "尚未填寫拜訪紀錄摘要"}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {record.note.tags.map((tag) => <span className="rounded-lg bg-[#eaf2ff] px-3 py-1.5 text-xs font-black text-[#075de8]" key={tag}>{tag}</span>)}
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          <div className="rounded-2xl border border-[#dbe5f4] bg-[#f8fbff] p-3 text-sm font-bold leading-6 text-[#60708d]">
+            <span className="block text-xs font-black text-[#60708d]">下次提醒</span>
+            <span className="font-black text-[#0d2348]">{record.note.nextReminder || "未設定"}</span>
+          </div>
+          {record.primary ? <ActionButton label="查看備註" onClick={onOpenSchedule} secondary /> : null}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function VisitHistorySidePanel({
+  records,
+  followRecords,
+  reminderRecords
+}: {
+  records: VisitRecord[];
+  followRecords: VisitRecord[];
+  reminderRecords: VisitRecord[];
+}) {
+  const total = Math.max(1, records.length);
+  const visited = records.filter((record) => record.note.visitStatus === "已拜訪").length;
+  const unvisited = records.filter((record) => record.note.visitStatus === "尚未拜訪").length;
+  const trend = buildVisitTrend(records);
+
+  return (
+    <aside className="grid content-start gap-4">
+      <SideCard title="拜訪概況">
+        <div className="grid gap-4">
+          <div className="mx-auto grid h-32 w-32 place-items-center rounded-full border-[18px] border-[#075de8] bg-[#f8fbff] text-center shadow-inner">
+            <div>
+              <div className="text-3xl font-black text-[#061b3d]">{records.length}</div>
+              <div className="text-xs font-black text-[#60708d]">總拜訪次數</div>
+            </div>
+          </div>
+          <div className="grid gap-3 text-sm font-bold text-[#60708d]">
+            <SummaryLine label="已拜訪" value={`${visited} (${Math.round((visited / total) * 100)}%)`} />
+            <SummaryLine label="需追蹤" value={`${followRecords.length} (${Math.round((followRecords.length / total) * 100)}%)`} highlight={followRecords.length > 0} />
+            <SummaryLine label="尚未拜訪" value={`${unvisited} (${Math.round((unvisited / total) * 100)}%)`} />
+            <SummaryLine label="下次提醒" value={`${reminderRecords.length} 筆`} />
+          </div>
+        </div>
+      </SideCard>
+
+      <SideCard title="近期拜訪趨勢">
+        <div className="grid gap-3">
+          {trend.map((item) => (
+            <div className="grid gap-1" key={item.label}>
+              <div className="flex items-center justify-between text-xs font-black text-[#60708d]">
+                <span>{item.label}</span>
+                <span>{item.count} 筆</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-[#eaf2ff]">
+                <div className="h-full rounded-full bg-[#075de8]" style={{ width: `${Math.max(12, (item.count / Math.max(1, records.length)) * 100)}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </SideCard>
+
+      <SideCard title="需追蹤名單 Top 5">
+        {followRecords.length ? (
+          <div className="grid gap-3">
+            {followRecords.slice(0, 5).map((record, index) => (
+              <div className="flex items-start gap-3 rounded-xl bg-[#f8fbff] p-3" key={record.id}>
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-[#075de8] text-xs font-black text-white">{index + 1}</span>
+                <div className="min-w-0">
+                  <div className="font-black text-[#061b3d]">{record.primary?.doctor_name ?? "未對應醫師"}</div>
+                  <div className="mt-1 text-xs font-bold leading-5 text-[#60708d]">{record.note.nextReminder || record.note.content}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm font-bold leading-6 text-[#60708d]">目前沒有需追蹤名單。</p>
+        )}
+      </SideCard>
+
+      <SideCard title="小提醒">
+        <p className="text-sm font-bold leading-6 text-[#60708d]">善用拜訪紀錄追蹤醫師需求與下次行動，讓每次拜訪都有清楚的後續安排。</p>
+        <button className="mt-4 h-11 w-full rounded-xl bg-[#075de8] px-4 text-sm font-black text-white shadow-lg shadow-blue-600/20" type="button">
+          前往行程提醒
+        </button>
+      </SideCard>
+    </aside>
+  );
+}
+
+function FilterSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {
+  return (
+    <label className="grid gap-2 text-sm font-black text-[#0d2348]">
+      {label}
+      <select className="h-11 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-bold outline-none focus:border-[#075de8]" value={value} onChange={(event) => onChange(event.target.value)}>
+        {children}
+      </select>
+    </label>
+  );
+}
+
 function EmptySavedState({ title, description, actionLabel, onAction }: { title: string; description: string; actionLabel: string; onAction: () => void }) {
   return (
     <section className="rounded-[18px] border border-dashed border-[#b8c7dd] bg-white p-8 text-center shadow-[0_12px_30px_rgba(8,35,80,.08)]">
@@ -662,6 +969,105 @@ function countNoteTags(rows: NoteRow[]) {
   return Array.from(map.entries())
     .map(([tag, count]) => ({ tag, count }))
     .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-Hant"));
+}
+
+function buildVisitRecords(items: DoctorSchedule[], notes: PersonalNote[]) {
+  const scheduleMap = new Map<string, DoctorSchedule[]>();
+  for (const item of items) {
+    const key = doctorKey(item);
+    scheduleMap.set(key, [...(scheduleMap.get(key) ?? []), item]);
+  }
+
+  return notes
+    .map((note, index) => {
+      const schedules = scheduleMap.get(note.doctorKey) ?? [];
+      const primary = schedules[0];
+      const date = note.lastVisitDate;
+      return {
+        note,
+        primary,
+        schedules,
+        favorite: false,
+        id: `${note.doctorKey}-${date || "pending"}-${index}`,
+        date,
+        displayDate: date ? formatVisitDate(date) : "待安排",
+        visitTime: date ? (primary?.start_time ?? "未記錄") : "待安排"
+      };
+    })
+    .sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return b.date.localeCompare(a.date);
+    });
+}
+
+function groupVisitRecords(records: VisitRecord[]) {
+  const map = new Map<string, VisitRecord[]>();
+  for (const record of records) {
+    const label = record.date ? `${formatVisitDate(record.date)} (${record.primary?.weekday_label ?? "未標示星期"})` : "待安排";
+    map.set(label, [...(map.get(label) ?? []), record]);
+  }
+  return Array.from(map.entries()).map(([label, groupedRecords]) => ({ label, records: groupedRecords }));
+}
+
+function matchesVisitRecord(record: VisitRecord, query: string) {
+  if (!query) return true;
+  return normalize([
+    record.note.content,
+    record.note.visitStatus,
+    record.note.lastVisitDate,
+    record.note.nextReminder,
+    ...record.note.tags,
+    record.primary?.doctor_name ?? "",
+    record.primary?.department ?? "",
+    record.primary?.hospital_name ?? "",
+    record.primary?.branch_name ?? "",
+    record.primary?.displayRoom ?? ""
+  ].join(" ")).includes(query);
+}
+
+function buildVisitTrend(records: VisitRecord[]) {
+  const dated = records.filter((record) => record.date).slice(0, 6).reverse();
+  if (!dated.length) return [{ label: "本週", count: records.length }];
+  return dated.map((record) => ({ label: record.date.slice(5).replace("-", "/"), count: 1 }));
+}
+
+function uniqueList(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, "zh-Hant"));
+}
+
+function formatVisitDate(value: string) {
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) return value;
+  return `${year}/${month}/${day}`;
+}
+
+function exportVisitRecords(records: VisitRecord[]) {
+  const header = ["日期", "醫師", "科別", "醫院", "分院", "拜訪狀態", "拜訪時間", "紀錄摘要", "下次提醒"];
+  const rows = records.map((record) => [
+    record.date || "待安排",
+    record.primary?.doctor_name ?? "未對應醫師",
+    record.primary?.department ?? "",
+    record.primary?.hospital_name ?? "",
+    record.primary?.branchLabel ?? "",
+    record.note.visitStatus,
+    record.visitTime,
+    record.note.content,
+    record.note.nextReminder
+  ]);
+  const csv = [header, ...rows].map((row) => row.map(toCsvCell).join(",")).join("\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "med-link-visit-records.csv";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function toCsvCell(value: string) {
+  return `"${value.replaceAll("\"", "\"\"")}"`;
 }
 
 function visitBadgeClass(status: PersonalNote["visitStatus"]) {
