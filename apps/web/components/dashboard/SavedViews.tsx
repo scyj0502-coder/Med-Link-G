@@ -30,6 +30,14 @@ type DoctorGroup = {
 };
 
 type FavoriteFilter = "all" | "today" | "week" | "follow" | "reminder";
+type NoteFilter = "all" | "visited" | "unvisited" | "follow" | "important" | "reminder";
+
+type NoteRow = {
+  note: PersonalNote;
+  primary?: DoctorSchedule;
+  schedules: DoctorSchedule[];
+  favorite: boolean;
+};
 
 export function FavoriteDoctorsView({ items, notes, favorites, query, onOpenSchedule, onToggleFavorite, onGoSearch }: FavoriteDoctorsViewProps) {
   const [activeFilter, setActiveFilter] = useState<FavoriteFilter>("all");
@@ -127,13 +135,14 @@ export function FavoriteDoctorsView({ items, notes, favorites, query, onOpenSche
 }
 
 export function NotesView({ items, notes, favorites, query, onOpenSchedule, onToggleFavorite, onGoSearch }: NotesViewProps) {
+  const [activeFilter, setActiveFilter] = useState<NoteFilter>("all");
   const scheduleMap = new Map<string, DoctorSchedule[]>();
   for (const item of items) {
     const key = doctorKey(item);
     scheduleMap.set(key, [...(scheduleMap.get(key) ?? []), item]);
   }
   const normalizedQuery = normalize(query);
-  const rows = notes
+  const allRows = notes
     .map((note) => {
       const schedules = scheduleMap.get(note.doctorKey) ?? [];
       return {
@@ -144,57 +153,87 @@ export function NotesView({ items, notes, favorites, query, onOpenSchedule, onTo
       };
     })
     .filter((row) => matchesNoteRow(row, normalizedQuery));
-
-  if (!rows.length) {
-    return (
-      <EmptySavedState
-        title={notes.length ? "目前條件沒有備註" : "尚未建立個人備註"}
-        description={notes.length ? "可以清空搜尋字，或改用標籤、拜訪狀態、醫師姓名查找。" : "在醫師詳細資料中建立拜訪狀態、提醒與標籤後，會集中在這裡。"}
-        actionLabel="前往快速搜尋"
-        onAction={onGoSearch}
-      />
-    );
-  }
+  const rows = allRows.filter((row) => matchesNoteFilter(row, activeFilter));
+  const tagCounts = countNoteTags(allRows);
+  const reminderRows = allRows.filter((row) => row.note.nextReminder).slice(0, 5);
+  const followRows = allRows.filter((row) => row.note.visitStatus === "需追蹤").slice(0, 5);
+  const stats = [
+    { label: "全部備註", value: allRows.length, suffix: "筆" },
+    { label: "需追蹤", value: allRows.filter((row) => row.note.visitStatus === "需追蹤").length, suffix: "筆" },
+    { label: "已拜訪", value: allRows.filter((row) => row.note.visitStatus === "已拜訪").length, suffix: "筆" },
+    { label: "下次提醒", value: allRows.filter((row) => row.note.nextReminder).length, suffix: "筆" },
+    { label: "重點醫師", value: allRows.filter((row) => row.note.tags.some((tag) => tag.includes("重點"))).length, suffix: "位" }
+  ];
+  const filters: { value: NoteFilter; label: string; count: number }[] = [
+    { value: "all", label: "全部", count: allRows.length },
+    { value: "visited", label: "已拜訪", count: allRows.filter((row) => row.note.visitStatus === "已拜訪").length },
+    { value: "unvisited", label: "尚未拜訪", count: allRows.filter((row) => row.note.visitStatus === "尚未拜訪").length },
+    { value: "follow", label: "需追蹤", count: allRows.filter((row) => row.note.visitStatus === "需追蹤").length },
+    { value: "important", label: "重點醫師", count: allRows.filter((row) => row.note.tags.some((tag) => tag.includes("重點"))).length },
+    { value: "reminder", label: "有提醒", count: allRows.filter((row) => row.note.nextReminder).length }
+  ];
 
   return (
     <section className="grid gap-5">
       <div>
         <h2 className="text-2xl font-black text-[#061b3d]">我的備註</h2>
-        <p className="mt-2 text-sm font-bold text-[#60708d]">整理每位醫師的拜訪狀態、下次提醒與標籤，方便上班途中快速回看。</p>
+        <p className="mt-2 text-sm font-bold text-[#60708d]">醫療業務 CRM 筆記管理中心，快速掌握拜訪狀態、下次提醒與下一步行動。</p>
       </div>
-      <div className="grid gap-3">
-        {rows.map((row) => (
-          <article className="rounded-2xl border border-[#dbe5f4] bg-white p-4 shadow-[0_8px_18px_rgba(8,35,80,.055)]" key={row.note.doctorKey}>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-xl font-black text-[#061b3d]">{row.primary?.doctor_name ?? "未對應醫師"}</h3>
-                  {row.primary ? <span className="rounded-md bg-[#eaf2ff] px-2 py-1 text-xs font-black text-[#075de8]">{row.primary.department}</span> : null}
-                  <span className={visitBadgeClass(row.note.visitStatus)}>{row.note.visitStatus}</span>
-                </div>
-                <p className="mt-2 text-sm font-bold text-[#60708d]">
-                  {row.primary ? `${row.primary.hospital_name} ${row.primary.branchLabel}` : row.note.doctorKey}
-                </p>
-                <p className="mt-3 rounded-xl bg-[#f4f8ff] p-3 text-sm font-bold leading-6 text-[#0d2348]">{row.note.content || "尚未填寫備註內容"}</p>
-                <div className="mt-3 grid gap-2 text-sm font-bold text-[#60708d] sm:grid-cols-2">
-                  <span>上次拜訪：{row.note.lastVisitDate || "未標示"}</span>
-                  <span>下次提醒：{row.note.nextReminder || "未設定"}</span>
-                </div>
-                {row.note.tags.length ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {row.note.tags.map((tag) => (
-                      <span className="rounded-lg bg-[#eaf2ff] px-3 py-2 text-xs font-black text-[#075de8]" key={tag}>{tag}</span>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              <div className="grid grid-cols-2 gap-2 lg:w-28 lg:grid-cols-1">
-                {row.primary ? <ActionButton label="查看門診" onClick={() => onOpenSchedule(row.primary)} /> : null}
-                {row.primary ? <ActionButton label={row.favorite ? "取消收藏" : "加入收藏"} onClick={() => onToggleFavorite(row.primary)} secondary /> : null}
-              </div>
+
+      <div className="grid gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] md:grid-cols-5">
+        {stats.map((stat) => (
+          <div className="rounded-2xl bg-[#f8fbff] p-4" key={stat.label}>
+            <div className="text-sm font-black text-[#60708d]">{stat.label}</div>
+            <div className="mt-3 flex items-end gap-1">
+              <span className="text-3xl font-black text-[#061b3d]">{stat.value}</span>
+              <span className="pb-1 text-sm font-black text-[#60708d]">{stat.suffix}</span>
             </div>
-          </article>
+          </div>
         ))}
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {filters.map((filter) => (
+              <button
+                className={`h-11 shrink-0 rounded-xl border px-4 text-sm font-black transition ${
+                  activeFilter === filter.value
+                    ? "border-[#075de8] bg-[#075de8] text-white shadow-lg shadow-blue-600/20"
+                    : "border-[#dbe5f4] bg-white text-[#0d2348] hover:border-[#075de8]"
+                }`}
+                key={filter.value}
+                onClick={() => setActiveFilter(filter.value)}
+                type="button"
+              >
+                {filter.label} ({filter.count})
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-3">
+            {rows.length ? (
+              rows.map((row) => (
+                <NoteCrmCard
+                  key={row.note.doctorKey}
+                  row={row}
+                  onEditNote={() => row.primary && onOpenSchedule(row.primary)}
+                  onOpenDoctor={() => row.primary && onOpenSchedule(row.primary)}
+                  onToggleFavorite={() => row.primary && onToggleFavorite(row.primary)}
+                />
+              ))
+            ) : (
+              <EmptySavedState
+                title={notes.length ? "目前條件沒有備註" : "尚未建立個人備註"}
+                description={notes.length ? "可以切換上方分類，或清空搜尋字再查看 CRM 筆記。" : "在醫師詳細資料中建立拜訪狀態、提醒與標籤後，會集中在這裡。"}
+                actionLabel="前往快速搜尋"
+                onAction={onGoSearch}
+              />
+            )}
+          </div>
+        </div>
+
+        <NotesSidePanel rows={allRows} reminderRows={reminderRows} followRows={followRows} tagCounts={tagCounts} />
       </div>
     </section>
   );
@@ -337,6 +376,154 @@ function FavoriteSidePanel({
   );
 }
 
+function NoteCrmCard({
+  row,
+  onOpenDoctor,
+  onEditNote,
+  onToggleFavorite
+}: {
+  row: NoteRow;
+  onOpenDoctor: () => void;
+  onEditNote: () => void;
+  onToggleFavorite: () => void;
+}) {
+  return (
+    <article className="rounded-2xl border border-[#dbe5f4] bg-white p-4 shadow-[0_8px_18px_rgba(8,35,80,.055)]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(220px,1fr)_170px_160px] xl:items-center">
+        <div className="min-w-0">
+          <div className="flex items-start gap-3">
+            <button className={`text-2xl ${row.favorite ? "text-[#f7b928]" : "text-[#9bb0cb]"}`} onClick={onToggleFavorite} type="button" aria-label={row.favorite ? "取消收藏" : "加入收藏"}>
+              {row.favorite ? "★" : "☆"}
+            </button>
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-[#dbe5f4] bg-[#eef5ff] text-xl font-black text-[#075de8]">
+              {(row.primary?.doctor_name ?? "備").slice(0, 1)}
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-xl font-black text-[#061b3d]">{row.primary?.doctor_name ?? "未對應醫師"}</h3>
+                <span className="text-sm font-black text-[#60708d]">醫師</span>
+                {row.primary ? <span className="rounded-md bg-[#eaf2ff] px-2 py-1 text-xs font-black text-[#075de8]">{row.primary.department}</span> : null}
+              </div>
+              <p className="mt-1 text-sm font-bold text-[#60708d]">
+                {row.primary ? `${row.primary.hospital_name} ${row.primary.branchLabel}` : row.note.doctorKey}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <div className="text-xs font-black text-[#60708d]">備註摘要</div>
+          <p className="mt-2 line-clamp-2 text-sm font-bold leading-6 text-[#0d2348]">{row.note.content || "尚未填寫備註內容"}</p>
+          {row.note.tags.length ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {row.note.tags.map((tag) => <span className="rounded-lg bg-[#eaf2ff] px-3 py-1.5 text-xs font-black text-[#075de8]" key={tag}>{tag}</span>)}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="grid gap-2 rounded-2xl border border-[#dbe5f4] bg-[#f8fbff] p-3 text-sm font-bold text-[#60708d]">
+          <div>
+            <span className="block text-xs font-black text-[#60708d]">拜訪狀態</span>
+            <span className={visitBadgeClass(row.note.visitStatus)}>{row.note.visitStatus}</span>
+          </div>
+          <div>
+            <span className="block text-xs font-black text-[#60708d]">上次拜訪</span>
+            <span className="font-black text-[#0d2348]">{row.note.lastVisitDate || "未標示"}</span>
+          </div>
+          <div>
+            <span className="block text-xs font-black text-[#60708d]">下次提醒</span>
+            <span className="font-black text-[#0d2348]">{row.note.nextReminder || "未設定"}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 xl:grid-cols-1">
+          {row.primary ? <ActionButton label="查看醫師" onClick={onOpenDoctor} /> : null}
+          {row.primary ? <ActionButton label="編輯備註" onClick={onEditNote} secondary /> : null}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function NotesSidePanel({
+  rows,
+  reminderRows,
+  followRows,
+  tagCounts
+}: {
+  rows: NoteRow[];
+  reminderRows: NoteRow[];
+  followRows: NoteRow[];
+  tagCounts: { tag: string; count: number }[];
+}) {
+  return (
+    <aside className="grid content-start gap-4">
+      <SideCard title="備註概況">
+        <div className="grid gap-3 text-sm font-bold text-[#60708d]">
+          <SummaryLine label="總備註數" value={`${rows.length} 筆`} />
+          <SummaryLine label="已拜訪" value={`${rows.filter((row) => row.note.visitStatus === "已拜訪").length} 筆`} />
+          <SummaryLine label="需追蹤" value={`${followRows.length} 筆`} highlight={followRows.length > 0} />
+          <SummaryLine label="尚未拜訪" value={`${rows.filter((row) => row.note.visitStatus === "尚未拜訪").length} 筆`} />
+          <SummaryLine label="下次提醒" value={`${reminderRows.length} 筆`} />
+        </div>
+      </SideCard>
+
+      <SideCard title="今日提醒">
+        {reminderRows.length ? (
+          <div className="grid gap-3">
+            {reminderRows.map((row) => (
+              <div className="rounded-xl bg-[#f8fbff] p-3" key={row.note.doctorKey}>
+                <div className="font-black text-[#061b3d]">{row.primary?.doctor_name ?? "未對應醫師"}</div>
+                <div className="mt-1 text-sm font-bold leading-6 text-[#60708d]">{row.note.nextReminder}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm font-bold leading-6 text-[#60708d]">目前沒有設定提醒。建議替需追蹤醫師補上下次行動。</p>
+        )}
+      </SideCard>
+
+      <SideCard title="需追蹤名單">
+        {followRows.length ? (
+          <div className="grid gap-3">
+            {followRows.map((row) => (
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-[#f8fbff] p-3" key={row.note.doctorKey}>
+                <div>
+                  <div className="font-black text-[#061b3d]">{row.primary?.doctor_name ?? "未對應醫師"}</div>
+                  <div className="mt-1 text-xs font-bold text-[#60708d]">{row.primary?.department ?? row.note.doctorKey}</div>
+                </div>
+                <span className={visitBadgeClass(row.note.visitStatus)}>{row.note.visitStatus}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm font-bold leading-6 text-[#60708d]">目前沒有需追蹤名單。</p>
+        )}
+      </SideCard>
+
+      <SideCard title="標籤分類">
+        {tagCounts.length ? (
+          <div className="flex flex-wrap gap-2">
+            {tagCounts.slice(0, 10).map((item) => (
+              <span className="rounded-lg bg-[#eaf2ff] px-3 py-2 text-xs font-black text-[#075de8]" key={item.tag}>{item.tag} {item.count}</span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm font-bold leading-6 text-[#60708d]">尚未建立標籤，可用重點醫師、需追蹤、熟客分類。</p>
+        )}
+      </SideCard>
+
+      <SideCard title="備註小技巧">
+        <ul className="grid gap-3 text-sm font-bold leading-6 text-[#60708d]">
+          <li>備註第一句寫下拜訪結論，方便下次快速回想。</li>
+          <li>用「需追蹤」標記下一步尚未完成的醫師。</li>
+          <li>下次提醒請寫明時間點與行動，例如：下週二上午帶資料。</li>
+        </ul>
+      </SideCard>
+    </aside>
+  );
+}
+
 function EmptySavedState({ title, description, actionLabel, onAction }: { title: string; description: string; actionLabel: string; onAction: () => void }) {
   return (
     <section className="rounded-[18px] border border-dashed border-[#b8c7dd] bg-white p-8 text-center shadow-[0_12px_30px_rgba(8,35,80,.08)]">
@@ -441,7 +628,7 @@ function countTags(groups: DoctorGroup[]) {
     .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-Hant"));
 }
 
-function matchesNoteRow(row: { note: PersonalNote; primary?: DoctorSchedule; schedules: DoctorSchedule[] }, query: string) {
+function matchesNoteRow(row: NoteRow, query: string) {
   if (!query) return true;
   return normalize([
     row.note.content,
@@ -454,6 +641,27 @@ function matchesNoteRow(row: { note: PersonalNote; primary?: DoctorSchedule; sch
     row.primary?.hospital_name ?? "",
     row.primary?.displayRoom ?? ""
   ].join(" ")).includes(query);
+}
+
+function matchesNoteFilter(row: NoteRow, filter: NoteFilter) {
+  if (filter === "visited") return row.note.visitStatus === "已拜訪";
+  if (filter === "unvisited") return row.note.visitStatus === "尚未拜訪";
+  if (filter === "follow") return row.note.visitStatus === "需追蹤";
+  if (filter === "important") return row.note.tags.some((tag) => tag.includes("重點"));
+  if (filter === "reminder") return Boolean(row.note.nextReminder);
+  return true;
+}
+
+function countNoteTags(rows: NoteRow[]) {
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    for (const tag of row.note.tags) {
+      map.set(tag, (map.get(tag) ?? 0) + 1);
+    }
+  }
+  return Array.from(map.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-Hant"));
 }
 
 function visitBadgeClass(status: PersonalNote["visitStatus"]) {
