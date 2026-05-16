@@ -191,7 +191,7 @@ function ScheduleReminderCard({
 function ScheduleReminderSidePanel({ reminders, upcoming }: { reminders: ReminderItem[]; upcoming: ReminderItem[] }) {
   return (
     <aside className="grid content-start gap-4">
-      <SideCard title="即將到來">
+      <SideCard title="即將到來的行程">
         <div className="grid gap-3">
           {upcoming.length ? upcoming.map((item) => (
             <div className="grid grid-cols-[72px_1fr] gap-3 rounded-xl bg-[#f8fbff] p-3" key={item.id}>
@@ -205,7 +205,7 @@ function ScheduleReminderSidePanel({ reminders, upcoming }: { reminders: Reminde
         </div>
       </SideCard>
 
-      <SideCard title="行事曆">
+      <SideCard title="月曆視圖">
         <div className="mb-3 flex items-center justify-between">
           <strong className="text-[#061b3d]">2026 年 5 月</strong>
           <span className="text-sm font-black text-[#075de8]">本月</span>
@@ -223,9 +223,12 @@ function ScheduleReminderSidePanel({ reminders, upcoming }: { reminders: Reminde
       <SideCard title="行程狀態說明">
         <div className="grid gap-3 text-sm font-bold text-[#60708d]">
           {(["已完成", "待拜訪", "即將開始", "已取消"] as ReminderStatus[]).map((status) => (
-            <div className="flex items-center gap-2" key={status}>
-              <span className={`h-3 w-3 rounded-full ${statusStyles[status].split(" ")[0]}`} />
-              <span>{status}</span>
+            <div className="flex items-center justify-between gap-3" key={status}>
+              <span className="flex items-center gap-2">
+                <span className={`h-3 w-3 rounded-full ${statusDotClass(status)}`} />
+                <span>{status}</span>
+              </span>
+              <span className="font-black text-[#061b3d]">{reminders.filter((item) => item.status === status).length} 件</span>
             </div>
           ))}
         </div>
@@ -269,7 +272,7 @@ function buildReminderItems(items: DoctorSchedule[], notes: PersonalNote[]) {
 
   return sourceItems.slice(0, 8).map((schedule, index) => {
     const note = noteMap.get(doctorKey(schedule));
-    const status: ReminderStatus = index === 0 ? "已完成" : index === 4 ? "即將開始" : "待拜訪";
+    const status: ReminderStatus = index === 0 ? "已完成" : index === 4 ? "即將開始" : index === 7 ? "已取消" : "待拜訪";
     const startTime = schedule.start_time || fallbackStartTime(index);
     return {
       id: `${schedule.schedule_key}-${index}`,
@@ -307,6 +310,13 @@ function matchesReminder(item: ReminderItem, query: string) {
 
 function statusBadgeClass(status: ReminderStatus) {
   return `rounded-md px-2 py-1 text-xs font-black ${statusStyles[status]}`;
+}
+
+function statusDotClass(status: ReminderStatus) {
+  if (status === "已完成") return "bg-[#18a66a]";
+  if (status === "即將開始") return "bg-[#ef4444]";
+  if (status === "已取消") return "bg-[#94a3b8]";
+  return "bg-[#f59e0b]";
 }
 
 function scopeTitle(scope: ReminderScope) {
