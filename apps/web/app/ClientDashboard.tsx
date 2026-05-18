@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DataSourcesView } from "../components/dashboard/DataSourcesView";
 import { DoctorDetailPanel } from "../components/dashboard/DoctorDetailPanel";
 import { DoctorList } from "../components/dashboard/DoctorList";
 import { FilterBottomSheet } from "../components/dashboard/FilterBottomSheet";
@@ -285,6 +286,8 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
                   setActiveView("today");
                 }}
               />
+            ) : activeView === "sources" ? (
+              <DataSourcesView hospitals={hospitals} query={filters.query} schedules={schedules} />
             ) : (
               <ComingSoonView title="資料來源" />
             )}
