@@ -91,8 +91,8 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_130px] lg:items-stretch">
-            <div className="flex gap-2 overflow-x-auto pb-1 lg:pb-0">
+          <div className="grid gap-3">
+            <div className="flex flex-wrap gap-2">
               {groups.map((group) => (
                 <button
                   className={`h-10 shrink-0 rounded-xl border px-4 text-sm font-black transition ${
@@ -106,18 +106,20 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
                 </button>
               ))}
             </div>
-            <section className="rounded-2xl border border-[#dbe5f4] bg-white px-4 py-3 text-sm shadow-[0_8px_18px_rgba(8,35,80,.055)]">
-              <div className="font-black text-[#60708d]">資料更新時間</div>
-              <div className="mt-1 font-black text-[#061b3d]">{latestUpdated}</div>
-              <button className="mt-2 text-xs font-black text-[#075de8]" onClick={() => window.location.reload()} type="button">手動重新整理</button>
-            </section>
-            <button
-              className="h-full min-h-12 rounded-2xl border border-[#075de8] bg-white px-4 text-sm font-black text-[#075de8] shadow-[0_8px_18px_rgba(8,35,80,.055)]"
-              onClick={() => exportSourceRows(filteredRows)}
-              type="button"
-            >
-              匯出清單
-            </button>
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_150px]">
+              <section className="rounded-2xl border border-[#dbe5f4] bg-white px-4 py-3 text-sm shadow-[0_8px_18px_rgba(8,35,80,.055)]">
+                <div className="font-black text-[#60708d]">資料更新時間</div>
+                <div className="mt-1 font-black text-[#061b3d]">{latestUpdated}</div>
+                <button className="mt-2 text-xs font-black text-[#075de8]" onClick={() => window.location.reload()} type="button">手動重新整理</button>
+              </section>
+              <button
+                className="min-h-12 rounded-2xl border border-[#075de8] bg-white px-4 text-sm font-black text-[#075de8] shadow-[0_8px_18px_rgba(8,35,80,.055)]"
+                onClick={() => exportSourceRows(filteredRows)}
+                type="button"
+              >
+                匯出清單
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] md:grid-cols-4">
