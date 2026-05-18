@@ -13,7 +13,7 @@ export function SourceInfoCard({ item }: { item: DoctorSchedule }) {
         <Row label="資料來源" value={item.source_ref || item.hospital_name} />
       </div>
       {item.originalUrl ? (
-        <a className="mt-4 inline-flex rounded-xl border border-[#075de8] px-4 py-2 text-sm font-black text-[#075de8]" href={item.originalUrl} rel="noreferrer" target="_blank">
+        <a className="mt-4 inline-flex rounded-xl border border-[#075de8] px-4 py-2 text-sm font-black text-[#075de8] hover:bg-[#eaf2ff]" href={item.originalUrl} rel="noreferrer" target="_blank">
           查看原始門診表
         </a>
       ) : null}

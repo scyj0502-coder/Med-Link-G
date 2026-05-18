@@ -182,7 +182,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
             </div> : null}
 
             {activeView === "today" ? (
-              <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,430px)]">
+              <div className="grid min-w-0 items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_minmax(360px,430px)]">
                 <DoctorList
                   favorites={favorites}
                   items={filteredSchedules}

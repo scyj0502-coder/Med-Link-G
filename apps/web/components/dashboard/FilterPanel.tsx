@@ -27,7 +27,7 @@ export function FilterPanel({
 
   return (
     <section className="hidden rounded-[18px] border border-[#dbe5f4] bg-white p-5 shadow-[0_12px_30px_rgba(8,35,80,.08)] lg:block">
-      <div className="grid grid-cols-[repeat(4,minmax(120px,1fr))_auto] gap-4 xl:grid-cols-[repeat(8,minmax(110px,1fr))]">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(136px,1fr))] gap-4">
         <SelectField label="地區" value={filters.region} onChange={(value) => onChange({ region: value, hospitalId: "", branchName: "" })} options={regions} emptyLabel="全部地區" />
         <SelectField label="醫院" value={filters.hospitalId} onChange={(value) => onChange({ hospitalId: value, branchName: "" })} options={hospitals.map((item) => ({ value: item.id, label: item.hospital_name }))} emptyLabel="全部醫院" />
         <SelectField label="分院" value={filters.branchName} onChange={(value) => onChange({ branchName: value })} options={branches} emptyLabel="全部分院" />
@@ -35,8 +35,8 @@ export function FilterPanel({
         <SelectField label="醫師姓名" value={filters.doctorName} onChange={(value) => onChange({ doctorName: value })} options={doctors} emptyLabel="全部醫師" />
         <SelectField label="星期" value={filters.weekday} onChange={(value) => onChange({ weekday: value })} options={weekdayOptions} emptyLabel="全部星期" />
         <SelectField label="時段" value={filters.period} onChange={(value) => onChange({ period: value })} options={periodOptions} emptyLabel="全部時段" />
-        <label className="flex h-[70px] items-end">
-          <span className="flex h-11 items-center gap-2 rounded-xl border border-[#dbe5f4] px-3 text-sm font-black text-[#0d2348]">
+        <label className="flex h-[70px] min-w-[136px] items-end">
+          <span className="flex h-11 w-full items-center gap-2 rounded-xl border border-[#dbe5f4] px-3 text-sm font-black text-[#0d2348]">
             <input checked={filters.favoritesOnly} onChange={(event) => onChange({ favoritesOnly: event.target.checked })} type="checkbox" />
             只看收藏
           </span>
