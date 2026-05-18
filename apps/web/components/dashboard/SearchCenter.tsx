@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Hospital } from "../../lib/types";
 import type { DoctorSchedule, FilterState, PersonalNote } from "../../lib/dashboard";
 import { doctorKey, filterChips, periodOptions, uniqueSorted, weekdayOptions } from "../../lib/dashboard";
+import { UiIcon } from "./UiIcon";
 
 type SearchTab = "all" | "doctor" | "hospital" | "department" | "room" | "note" | "favorite";
 
@@ -270,7 +271,7 @@ export function SearchCenter({
           <div className="rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)]">
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_148px]">
               <label className="flex h-12 items-center rounded-xl border border-[#dbe5f4] bg-white px-4 shadow-sm focus-within:border-[#075de8]">
-                <span className="mr-3 text-xl font-black text-[#8aa0bf]">⌕</span>
+                <UiIcon className="mr-3 h-5 w-5 text-[#8aa0bf]" name="search" />
                 <input
                   className="w-full bg-transparent text-[15px] font-bold text-[#0d2348] outline-none placeholder:text-[#8aa0bf]"
                   onChange={(event) => onQueryChange(event.target.value)}
@@ -304,7 +305,7 @@ export function SearchCenter({
             ) : null}
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
               <button
                 className={`h-11 shrink-0 rounded-xl border px-5 text-sm font-black transition ${
@@ -331,6 +332,12 @@ export function SearchCenter({
               </button>
             ) : null}
             <span className="ml-auto">共 {results.length} 筆結果</span>
+            <select className="h-10 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-black text-[#061b3d]">
+              <option>排序：相關性</option>
+              <option>排序：醫師姓名</option>
+              <option>排序：科別</option>
+              <option>排序：時段</option>
+            </select>
           </div>
 
           <div className="grid gap-3">
@@ -426,7 +433,9 @@ function SearchResultCard({
   if (result.type === "hospital") {
     return (
       <article className="grid gap-3 rounded-2xl border border-[#dbe5f4] bg-white p-4 shadow-[0_8px_18px_rgba(8,35,80,.055)] md:grid-cols-[64px_minmax(0,1fr)_auto] md:items-center">
-        <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[#eaf2ff] text-2xl">▣</div>
+        <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[#eaf2ff] text-[#075de8]">
+          <UiIcon className="h-7 w-7" name="database" />
+        </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-black text-[#061b3d]">{result.hospital.hospital_name}</h3>
@@ -526,25 +535,14 @@ function SearchSidePanel({
 }) {
   return (
     <aside className="grid content-start gap-4">
-      <SideCard title="篩選條件" action={activeFilterChips.length ? "可重設" : undefined}>
-        <SearchFilterControls
-          activeFilterChips={activeFilterChips}
-          branches={branches}
-          departments={departments}
-          doctors={doctors}
-          filters={filters}
-          hospitals={hospitals}
-          regions={regions}
-          compact
-          onClearFilters={onClearFilters}
-          onFilterChange={onFilterChange}
-        />
-      </SideCard>
       <SideCard title="最近搜尋" action="全部清除">
         <div className="grid gap-3">
           {recent.map((item) => (
             <button className="flex items-center justify-between gap-3 text-left text-sm font-bold text-[#0d2348]" key={item} onClick={() => onSearch(item)} type="button">
-              <span>◷ {item}</span>
+              <span className="inline-flex min-w-0 items-center gap-2">
+                <UiIcon className="h-4 w-4 shrink-0 text-[#075de8]" name="history" />
+                <span className="truncate">{item}</span>
+              </span>
               <span className="text-xs text-[#60708d]">最近</span>
             </button>
           ))}
@@ -566,6 +564,20 @@ function SearchSidePanel({
           <li>可搜尋備註關鍵字，例如：重點醫師、下午診。</li>
           <li>使用上方分類 Tab 可以縮小搜尋範圍。</li>
         </ul>
+      </SideCard>
+      <SideCard title="進階篩選" action={activeFilterChips.length ? "可重設" : undefined}>
+        <SearchFilterControls
+          activeFilterChips={activeFilterChips}
+          branches={branches}
+          departments={departments}
+          doctors={doctors}
+          filters={filters}
+          hospitals={hospitals}
+          regions={regions}
+          compact
+          onClearFilters={onClearFilters}
+          onFilterChange={onFilterChange}
+        />
       </SideCard>
     </aside>
   );
