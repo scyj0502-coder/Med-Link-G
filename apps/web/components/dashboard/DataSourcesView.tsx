@@ -74,6 +74,7 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
     { value: "local", label: "地區醫院", count: rows.filter((row) => rowGroup(row) === "local").length }
   ];
   const regions = uniqueList(rows.map((row) => row.region));
+  const latestUpdated = latestUpdatedTime(rows);
 
   return (
     <section className="grid gap-5">
@@ -90,19 +91,33 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4">
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {groups.map((group) => (
-              <button
-                className={`h-10 shrink-0 rounded-xl border px-4 text-sm font-black transition ${
-                  activeGroup === group.value ? "border-[#075de8] bg-[#075de8] text-white shadow-lg shadow-blue-600/20" : "border-[#dbe5f4] bg-white text-[#0d2348] hover:border-[#075de8]"
-                }`}
-                key={group.value}
-                onClick={() => setActiveGroup(group.value)}
-                type="button"
-              >
-                {group.label} ({group.count})
-              </button>
-            ))}
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_130px] lg:items-stretch">
+            <div className="flex gap-2 overflow-x-auto pb-1 lg:pb-0">
+              {groups.map((group) => (
+                <button
+                  className={`h-10 shrink-0 rounded-xl border px-4 text-sm font-black transition ${
+                    activeGroup === group.value ? "border-[#075de8] bg-[#075de8] text-white shadow-lg shadow-blue-600/20" : "border-[#dbe5f4] bg-white text-[#0d2348] hover:border-[#075de8]"
+                  }`}
+                  key={group.value}
+                  onClick={() => setActiveGroup(group.value)}
+                  type="button"
+                >
+                  {group.label} ({group.count})
+                </button>
+              ))}
+            </div>
+            <section className="rounded-2xl border border-[#dbe5f4] bg-white px-4 py-3 text-sm shadow-[0_8px_18px_rgba(8,35,80,.055)]">
+              <div className="font-black text-[#60708d]">資料更新時間</div>
+              <div className="mt-1 font-black text-[#061b3d]">{latestUpdated}</div>
+              <button className="mt-2 text-xs font-black text-[#075de8]" onClick={() => window.location.reload()} type="button">手動重新整理</button>
+            </section>
+            <button
+              className="h-full min-h-12 rounded-2xl border border-[#075de8] bg-white px-4 text-sm font-black text-[#075de8] shadow-[0_8px_18px_rgba(8,35,80,.055)]"
+              onClick={() => exportSourceRows(filteredRows)}
+              type="button"
+            >
+              匯出清單
+            </button>
           </div>
 
           <div className="grid gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] md:grid-cols-4">
@@ -130,6 +145,13 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
           </div>
 
           <section className="overflow-hidden rounded-[18px] border border-[#dbe5f4] bg-white shadow-[0_12px_30px_rgba(8,35,80,.08)]">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef3fb] bg-white px-4 py-3">
+              <div>
+                <h3 className="font-black text-[#061b3d]">資料來源清單</h3>
+                <p className="mt-1 text-xs font-bold text-[#60708d]">目前顯示 {filteredRows.length} 個來源，共 {rows.length} 個來源。</p>
+              </div>
+              <span className="rounded-full bg-[#eaf2ff] px-3 py-1 text-xs font-black text-[#075de8]">業務檢視模式</span>
+            </div>
             <div className="hidden grid-cols-[minmax(220px,1.4fr)_90px_120px_100px_140px_120px_160px] gap-3 border-b border-[#eef3fb] bg-[#f8fbff] px-4 py-3 text-xs font-black text-[#60708d] lg:grid">
               <span>醫院名稱</span>
               <span>地區</span>
@@ -369,6 +391,37 @@ function countKinds(rows: SourceRow[]) {
     map.set(row.kind, (map.get(row.kind) ?? 0) + 1);
   }
   return Array.from(map.entries()).map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count);
+}
+
+function latestUpdatedTime(rows: SourceRow[]) {
+  const sorted = [...rows].filter((row) => row.lastUpdated !== "尚未更新").sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated));
+  return sorted[0]?.lastUpdated ?? "尚未更新";
+}
+
+function exportSourceRows(rows: SourceRow[]) {
+  const header = ["醫院名稱", "分院", "地區", "資料類型", "更新頻率", "最後更新時間", "更新狀態", "原始門診表連結"];
+  const body = rows.map((row) => [
+    row.hospitalName,
+    row.branchName,
+    row.region,
+    row.kind,
+    row.frequency,
+    row.lastUpdated,
+    row.status,
+    row.sourceUrl
+  ]);
+  const csv = [header, ...body].map((row) => row.map(toCsvCell).join(",")).join("\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "med-link-data-sources.csv";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function toCsvCell(value: string) {
+  return `"${value.replaceAll("\"", "\"\"")}"`;
 }
 
 function averageUpdateHours(rows: SourceRow[]) {
