@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import type { DoctorSchedule, PersonalNote } from "../../lib/dashboard";
 import { doctorKey } from "../../lib/dashboard";
 import type { Hospital } from "../../lib/types";
+import { UiIcon, type UiIconName } from "./UiIcon";
 
 type FavoriteDoctorsViewProps = {
   items: DoctorSchedule[];
@@ -55,6 +56,14 @@ type VisitRecord = NoteRow & {
   visitTime: string;
 };
 
+type FavoriteStatCardProps = {
+  label: string;
+  value: number;
+  suffix: string;
+  icon: UiIconName;
+  tone: "blue" | "green" | "orange" | "purple";
+};
+
 export function FavoriteDoctorsView({ items, notes, favorites, query, onOpenSchedule, onToggleFavorite, onGoSearch }: FavoriteDoctorsViewProps) {
   const [activeFilter, setActiveFilter] = useState<FavoriteFilter>("all");
   const noteMap = new Map(notes.map((note) => [note.doctorKey, note]));
@@ -67,12 +76,12 @@ export function FavoriteDoctorsView({ items, notes, favorites, query, onOpenSche
   const groups = allGroups.filter((group) => matchesFavoriteFilter(group, activeFilter, today));
   const tagCounts = countTags(allGroups);
   const reminderGroups = allGroups.filter((group) => group.note?.nextReminder).slice(0, 5);
-  const stats = [
-    { label: "收藏醫師", value: allGroups.length, suffix: "位" },
-    { label: "今日有門診", value: allGroups.filter((group) => hasTodaySchedule(group, today)).length, suffix: "位" },
-    { label: "本週有門診", value: allGroups.filter((group) => group.schedules.length > 0).length, suffix: "位" },
-    { label: "下次提醒", value: allGroups.filter((group) => group.note?.nextReminder).length, suffix: "位" },
-    { label: "標籤總數", value: tagCounts.length, suffix: "個" }
+  const stats: FavoriteStatCardProps[] = [
+    { label: "收藏醫師", value: allGroups.length, suffix: "位", icon: "star", tone: "blue" },
+    { label: "今日有門診", value: allGroups.filter((group) => hasTodaySchedule(group, today)).length, suffix: "位", icon: "calendar", tone: "green" },
+    { label: "本週有門診", value: allGroups.filter((group) => group.schedules.length > 0).length, suffix: "位", icon: "calendar", tone: "purple" },
+    { label: "下次提醒", value: allGroups.filter((group) => group.note?.nextReminder).length, suffix: "位", icon: "alarm", tone: "orange" },
+    { label: "標籤總數", value: tagCounts.length, suffix: "個", icon: "note", tone: "blue" }
   ];
   const filters: { value: FavoriteFilter; label: string; count: number }[] = [
     { value: "all", label: "全部", count: allGroups.length },
@@ -91,13 +100,7 @@ export function FavoriteDoctorsView({ items, notes, favorites, query, onOpenSche
 
       <div className="grid gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] md:grid-cols-5">
         {stats.map((stat) => (
-          <div className="rounded-2xl bg-[#f8fbff] p-4" key={stat.label}>
-            <div className="text-sm font-black text-[#60708d]">{stat.label}</div>
-            <div className="mt-3 flex items-end gap-1">
-              <span className="text-3xl font-black text-[#061b3d]">{stat.value}</span>
-              <span className="pb-1 text-sm font-black text-[#60708d]">{stat.suffix}</span>
-            </div>
-          </div>
+          <FavoriteStatCard key={stat.label} {...stat} />
         ))}
       </div>
 
@@ -483,11 +486,19 @@ function FavoriteSidePanel({
   return (
     <aside className="grid content-start gap-4">
       <SideCard title="收藏概況">
-        <div className="grid gap-3 text-sm font-bold text-[#60708d]">
-          <SummaryLine label="收藏醫師" value={`${groups.length} 位`} />
-          <SummaryLine label="今日有門診" value={`${todayCount} 位`} />
-          <SummaryLine label="需追蹤" value={`${followCount} 位`} highlight={followCount > 0} />
-          <SummaryLine label="已設定提醒" value={`${reminderGroups.length} 位`} />
+        <div className="grid gap-4">
+          <div className="mx-auto grid h-32 w-32 place-items-center rounded-full border-[18px] border-[#075de8] bg-[#f8fbff] text-center shadow-inner">
+            <div>
+              <div className="text-3xl font-black text-[#061b3d]">{groups.length}</div>
+              <div className="text-xs font-black text-[#60708d]">總收藏數</div>
+            </div>
+          </div>
+          <div className="grid gap-3 text-sm font-bold text-[#60708d]">
+            <SummaryLine label="今日有門診" value={`${todayCount} 位`} />
+            <SummaryLine label="需追蹤" value={`${followCount} 位`} highlight={followCount > 0} />
+            <SummaryLine label="已設定提醒" value={`${reminderGroups.length} 位`} />
+            <SummaryLine label="可安排拜訪" value={`${groups.filter((group) => group.schedules.length > 0).length} 位`} />
+          </div>
         </div>
       </SideCard>
 
@@ -834,12 +845,47 @@ function FilterSelect({ label, value, onChange, children }: { label: string; val
 function EmptySavedState({ title, description, actionLabel, onAction }: { title: string; description: string; actionLabel: string; onAction: () => void }) {
   return (
     <section className="rounded-[18px] border border-dashed border-[#b8c7dd] bg-white p-8 text-center shadow-[0_12px_30px_rgba(8,35,80,.08)]">
+      <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-[#eaf2ff] text-[#075de8]">
+        <UiIcon className="h-8 w-8" name="star" />
+      </div>
       <h2 className="text-2xl font-black text-[#061b3d]">{title}</h2>
       <p className="mx-auto mt-3 max-w-xl text-sm font-bold leading-6 text-[#60708d]">{description}</p>
       <button className="mt-5 h-11 rounded-xl bg-[#075de8] px-5 text-sm font-black text-white shadow-lg shadow-blue-600/20" onClick={onAction} type="button">
         {actionLabel}
       </button>
     </section>
+  );
+}
+
+function FavoriteStatCard({
+  label,
+  value,
+  suffix,
+  icon,
+  tone
+}: FavoriteStatCardProps) {
+  const toneClass = {
+    blue: "bg-[#eaf2ff] text-[#075de8]",
+    green: "bg-[#dff7ec] text-[#168a5d]",
+    orange: "bg-[#fff1e8] text-[#f97316]",
+    purple: "bg-[#f0eaff] text-[#7c3aed]"
+  }[tone];
+
+  return (
+    <div className="rounded-2xl bg-[#f8fbff] p-4">
+      <div className="flex items-center gap-3">
+        <span className={`grid h-11 w-11 place-items-center rounded-2xl ${toneClass}`}>
+          <UiIcon className="h-5 w-5" name={icon} />
+        </span>
+        <div className="min-w-0">
+          <div className="text-sm font-black text-[#60708d]">{label}</div>
+          <div className="mt-1 flex items-end gap-1">
+            <span className="text-3xl font-black text-[#061b3d]">{value}</span>
+            <span className="pb-1 text-sm font-black text-[#60708d]">{suffix}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
