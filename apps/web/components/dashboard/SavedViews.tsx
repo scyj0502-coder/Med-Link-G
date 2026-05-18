@@ -284,12 +284,12 @@ export function VisitHistoryView({ items, notes, hospitals, query, onOpenSchedul
   const followRecords = records.filter((record) => record.note.visitStatus === "需追蹤");
   const reminderRecords = records.filter((record) => record.note.nextReminder);
   const visitedCount = records.filter((record) => record.note.visitStatus === "已拜訪").length;
-  const stats = [
-    { label: "拜訪總次數", value: records.length, suffix: "次" },
-    { label: "已拜訪", value: visitedCount, suffix: "次" },
-    { label: "需追蹤", value: followRecords.length, suffix: "位醫師" },
-    { label: "新增備註", value: records.length, suffix: "筆" },
-    { label: "下次提醒", value: reminderRecords.length, suffix: "筆" }
+  const stats: FavoriteStatCardProps[] = [
+    { label: "拜訪總次數", value: records.length, suffix: "次", icon: "history", tone: "blue" },
+    { label: "已拜訪", value: visitedCount, suffix: "次", icon: "calendar", tone: "green" },
+    { label: "需追蹤", value: followRecords.length, suffix: "位", icon: "refresh", tone: "orange" },
+    { label: "新增備註", value: records.length, suffix: "筆", icon: "note", tone: "blue" },
+    { label: "下次提醒", value: reminderRecords.length, suffix: "筆", icon: "alarm", tone: "purple" }
   ];
   const grouped = groupVisitRecords(records);
 
@@ -301,7 +301,7 @@ export function VisitHistoryView({ items, notes, hospitals, query, onOpenSchedul
       </div>
 
       <div className="rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)]">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.25fr_0.9fr_0.9fr_0.9fr_0.9fr_1.15fr_130px]">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
           <label className="grid gap-2 text-sm font-black text-[#0d2348]">
             拜訪日期
             <div className="grid grid-cols-2 gap-2">
@@ -339,20 +339,14 @@ export function VisitHistoryView({ items, notes, hospitals, query, onOpenSchedul
               onChange={(event) => setDoctorQuery(event.target.value)}
             />
           </label>
-          <button className="self-end rounded-xl border border-[#075de8] bg-white px-4 py-3 text-sm font-black text-[#075de8]" onClick={() => exportVisitRecords(records)} type="button">
+          <button className="self-end rounded-xl border border-[#075de8] bg-white px-4 py-3 text-sm font-black text-[#075de8] hover:bg-[#eaf2ff]" onClick={() => exportVisitRecords(records)} type="button">
             匯出紀錄
           </button>
         </div>
 
         <div className="mt-4 grid gap-3 border-t border-[#eef3fb] pt-4 md:grid-cols-5">
           {stats.map((stat) => (
-            <div className="rounded-2xl bg-[#f8fbff] p-4" key={stat.label}>
-              <div className="text-sm font-black text-[#60708d]">{stat.label}</div>
-              <div className="mt-3 flex items-end gap-1">
-                <span className="text-3xl font-black text-[#061b3d]">{stat.value}</span>
-                <span className="pb-1 text-sm font-black text-[#60708d]">{stat.suffix}</span>
-              </div>
-            </div>
+            <FavoriteStatCard key={stat.label} {...stat} />
           ))}
         </div>
       </div>
