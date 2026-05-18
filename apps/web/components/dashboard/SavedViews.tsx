@@ -176,12 +176,12 @@ export function NotesView({ items, notes, favorites, query, onOpenSchedule, onTo
   const tagCounts = countNoteTags(allRows);
   const reminderRows = allRows.filter((row) => row.note.nextReminder).slice(0, 5);
   const followRows = allRows.filter((row) => row.note.visitStatus === "需追蹤").slice(0, 5);
-  const stats = [
-    { label: "全部備註", value: allRows.length, suffix: "筆" },
-    { label: "需追蹤", value: allRows.filter((row) => row.note.visitStatus === "需追蹤").length, suffix: "筆" },
-    { label: "已拜訪", value: allRows.filter((row) => row.note.visitStatus === "已拜訪").length, suffix: "筆" },
-    { label: "下次提醒", value: allRows.filter((row) => row.note.nextReminder).length, suffix: "筆" },
-    { label: "重點醫師", value: allRows.filter((row) => row.note.tags.some((tag) => tag.includes("重點"))).length, suffix: "位" }
+  const stats: FavoriteStatCardProps[] = [
+    { label: "全部備註", value: allRows.length, suffix: "筆", icon: "note", tone: "blue" },
+    { label: "需追蹤", value: allRows.filter((row) => row.note.visitStatus === "需追蹤").length, suffix: "筆", icon: "refresh", tone: "orange" },
+    { label: "已拜訪", value: allRows.filter((row) => row.note.visitStatus === "已拜訪").length, suffix: "筆", icon: "history", tone: "green" },
+    { label: "下次提醒", value: allRows.filter((row) => row.note.nextReminder).length, suffix: "筆", icon: "alarm", tone: "purple" },
+    { label: "重點醫師", value: allRows.filter((row) => row.note.tags.some((tag) => tag.includes("重點"))).length, suffix: "位", icon: "star", tone: "blue" }
   ];
   const filters: { value: NoteFilter; label: string; count: number }[] = [
     { value: "all", label: "全部", count: allRows.length },
@@ -201,19 +201,13 @@ export function NotesView({ items, notes, favorites, query, onOpenSchedule, onTo
 
       <div className="grid gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] md:grid-cols-5">
         {stats.map((stat) => (
-          <div className="rounded-2xl bg-[#f8fbff] p-4" key={stat.label}>
-            <div className="text-sm font-black text-[#60708d]">{stat.label}</div>
-            <div className="mt-3 flex items-end gap-1">
-              <span className="text-3xl font-black text-[#061b3d]">{stat.value}</span>
-              <span className="pb-1 text-sm font-black text-[#60708d]">{stat.suffix}</span>
-            </div>
-          </div>
+          <FavoriteStatCard key={stat.label} {...stat} />
         ))}
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex flex-wrap gap-2">
             {filters.map((filter) => (
               <button
                 className={`h-11 shrink-0 rounded-xl border px-4 text-sm font-black transition ${
@@ -553,7 +547,7 @@ function NoteCrmCard({
 }) {
   return (
     <article className="rounded-2xl border border-[#dbe5f4] bg-white p-4 shadow-[0_8px_18px_rgba(8,35,80,.055)]">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(220px,1fr)_170px_160px] xl:items-center">
+      <div className="grid gap-4 2xl:grid-cols-[minmax(0,0.9fr)_minmax(220px,1fr)_170px_160px] 2xl:items-center">
         <div className="min-w-0">
           <div className="flex items-start gap-3">
             <button className={`text-2xl ${row.favorite ? "text-[#f7b928]" : "text-[#9bb0cb]"}`} onClick={onToggleFavorite} type="button" aria-label={row.favorite ? "取消收藏" : "加入收藏"}>
@@ -600,7 +594,7 @@ function NoteCrmCard({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-1">
+        <div className="grid grid-cols-2 gap-2 2xl:grid-cols-1">
           {row.primary ? <ActionButton label="查看醫師" onClick={onOpenDoctor} /> : null}
           {row.primary ? <ActionButton label="編輯備註" onClick={onEditNote} secondary /> : null}
         </div>
