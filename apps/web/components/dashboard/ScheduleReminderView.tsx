@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import type { DoctorSchedule, PersonalNote } from "../../lib/dashboard";
 import { doctorKey } from "../../lib/dashboard";
+import { UiIcon, type UiIconName } from "./UiIcon";
 
 type ReminderScope = "today" | "week" | "month" | "all";
 type ReminderStatus = "已完成" | "待拜訪" | "即將開始" | "已取消";
@@ -25,6 +26,15 @@ type ReminderItem = {
   note?: PersonalNote;
 };
 
+type ReminderStat = {
+  label: string;
+  value: number;
+  suffix: string;
+  hint: string;
+  icon: UiIconName;
+  tone: "blue" | "green" | "orange" | "purple";
+};
+
 const scopeTabs: { value: ReminderScope; label: string }[] = [
   { value: "today", label: "今日" },
   { value: "week", label: "本週" },
@@ -41,16 +51,18 @@ const statusStyles: Record<ReminderStatus, string> = {
 
 export function ScheduleReminderView({ items, notes, query, onOpenSchedule, onOpenNote }: ScheduleReminderViewProps) {
   const [scope, setScope] = useState<ReminderScope>("today");
-  const allReminders = buildReminderItems(items, notes).filter((item) => matchesReminder(item, query));
-  const reminders = filterByScope(allReminders, scope);
-  const todayItems = filterByScope(allReminders, "today");
-  const weekItems = filterByScope(allReminders, "week");
-  const upcoming = allReminders.filter((item) => item.status !== "已完成").slice(0, 5);
-  const stats = [
-    { label: "今日行程", value: todayItems.length, suffix: "件", hint: `已完成 ${todayItems.filter((item) => item.status === "已完成").length} 件` },
-    { label: "待拜訪", value: reminders.filter((item) => item.status === "待拜訪").length, suffix: "件", hint: `即將到來 ${upcoming.length} 件` },
-    { label: "本週行程", value: weekItems.length, suffix: "件", hint: `已完成 ${weekItems.filter((item) => item.status === "已完成").length} 件` },
-    { label: "下次提醒", value: allReminders.filter((item) => item.note?.nextReminder).length, suffix: "件", hint: upcoming[0]?.date ? `最早 ${formatShortDate(upcoming[0].date)}` : "尚未設定" }
+  const today = new Date();
+  const todayKey = formatDateKey(today);
+  const allReminders = buildReminderItems(items, notes, today).filter((item) => matchesReminder(item, query));
+  const reminders = filterByScope(allReminders, scope, today);
+  const todayItems = filterByScope(allReminders, "today", today);
+  const weekItems = filterByScope(allReminders, "week", today);
+  const upcoming = allReminders.filter((item) => item.date >= todayKey && item.status !== "已完成" && item.status !== "已取消").slice(0, 5);
+  const stats: ReminderStat[] = [
+    { label: "今日行程", value: todayItems.length, suffix: "件", hint: `已完成 ${todayItems.filter((item) => item.status === "已完成").length} 件`, icon: "calendar", tone: "blue" },
+    { label: "待拜訪", value: reminders.filter((item) => item.status === "待拜訪").length, suffix: "件", hint: `即將到來 ${upcoming.length} 件`, icon: "history", tone: "orange" },
+    { label: "本週行程", value: weekItems.length, suffix: "件", hint: `已完成 ${weekItems.filter((item) => item.status === "已完成").length} 件`, icon: "calendar", tone: "green" },
+    { label: "下次提醒", value: allReminders.filter((item) => item.note?.nextReminder).length, suffix: "件", hint: upcoming[0]?.date ? `最早 ${formatShortDate(upcoming[0].date)}` : "尚未設定", icon: "alarm", tone: "purple" }
   ];
 
   return (
@@ -66,7 +78,7 @@ export function ScheduleReminderView({ items, notes, query, onOpenSchedule, onOp
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex flex-wrap gap-2">
         {scopeTabs.map((tab) => (
           <button
             className={`h-10 shrink-0 rounded-xl border px-5 text-sm font-black transition ${
@@ -83,14 +95,7 @@ export function ScheduleReminderView({ items, notes, query, onOpenSchedule, onOp
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
-          <section className="rounded-[18px] border border-[#dbe5f4] bg-white p-5 shadow-[0_12px_30px_rgba(8,35,80,.08)]" key={stat.label}>
-            <div className="text-sm font-black text-[#60708d]">{stat.label}</div>
-            <div className="mt-3 flex items-end gap-2">
-              <span className="text-3xl font-black text-[#061b3d]">{stat.value}</span>
-              <span className="pb-1 text-sm font-black text-[#60708d]">{stat.suffix}</span>
-            </div>
-            <div className="mt-2 text-xs font-black text-[#168a5d]">{stat.hint}</div>
-          </section>
+          <ReminderStatCard key={stat.label} {...stat} />
         ))}
       </div>
 
@@ -119,7 +124,7 @@ export function ScheduleReminderView({ items, notes, query, onOpenSchedule, onOp
           )}
         </div>
 
-        <ScheduleReminderSidePanel reminders={allReminders} upcoming={upcoming} />
+        <ScheduleReminderSidePanel reminders={allReminders} today={today} upcoming={upcoming} />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
@@ -188,8 +193,9 @@ function ScheduleReminderCard({
   );
 }
 
-function ScheduleReminderSidePanel({ reminders, upcoming }: { reminders: ReminderItem[]; upcoming: ReminderItem[] }) {
+function ScheduleReminderSidePanel({ reminders, today, upcoming }: { reminders: ReminderItem[]; today: Date; upcoming: ReminderItem[] }) {
   const priorityItems = [...upcoming].sort((a, b) => priorityScore(b) - priorityScore(a)).slice(0, 5);
+  const todayDay = today.getDate();
 
   return (
     <aside className="grid content-start gap-4">
@@ -227,13 +233,13 @@ function ScheduleReminderSidePanel({ reminders, upcoming }: { reminders: Reminde
 
       <SideCard title="輔助月曆視圖">
         <div className="mb-3 flex items-center justify-between">
-          <strong className="text-[#061b3d]">2026 年 5 月</strong>
+          <strong className="text-[#061b3d]">{formatMonthLabel(today)}</strong>
           <span className="text-sm font-black text-[#075de8]">本月</span>
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-xs font-black text-[#60708d]">
           {["日", "一", "二", "三", "四", "五", "六"].map((day) => <span key={day}>{day}</span>)}
-          {buildCalendarDays().map((day) => (
-            <span className={`grid h-8 place-items-center rounded-lg ${day === 16 ? "bg-[#075de8] text-white" : reminders.some((item) => Number(item.date.slice(-2)) === day) ? "bg-[#eaf2ff] text-[#075de8]" : "text-[#0d2348]"}`} key={day}>
+          {buildCalendarDays(today).map((day) => (
+            <span className={`grid h-8 place-items-center rounded-lg ${day === todayDay ? "bg-[#075de8] text-white" : reminders.some((item) => item.date.slice(0, 7) === formatMonthKey(today) && Number(item.date.slice(-2)) === day) ? "bg-[#eaf2ff] text-[#075de8]" : "text-[#0d2348]"}`} key={day}>
               {day}
             </span>
           ))}
@@ -255,6 +261,33 @@ function ScheduleReminderSidePanel({ reminders, upcoming }: { reminders: Reminde
         </div>
       </SideCard>
     </aside>
+  );
+}
+
+function ReminderStatCard({ label, value, suffix, hint, icon, tone }: ReminderStat) {
+  const toneClass = {
+    blue: "bg-[#eaf2ff] text-[#075de8]",
+    green: "bg-[#dff7ec] text-[#168a5d]",
+    orange: "bg-[#fff1e8] text-[#f97316]",
+    purple: "bg-[#f0eaff] text-[#7c3aed]"
+  }[tone];
+
+  return (
+    <section className="rounded-[18px] border border-[#dbe5f4] bg-white p-5 shadow-[0_12px_30px_rgba(8,35,80,.08)]">
+      <div className="flex items-center gap-3">
+        <span className={`grid h-12 w-12 place-items-center rounded-2xl ${toneClass}`}>
+          <UiIcon className="h-5 w-5" name={icon} />
+        </span>
+        <div>
+          <div className="text-sm font-black text-[#60708d]">{label}</div>
+          <div className="mt-1 flex items-end gap-2">
+            <span className="text-3xl font-black text-[#061b3d]">{value}</span>
+            <span className="pb-1 text-sm font-black text-[#60708d]">{suffix}</span>
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 text-xs font-black text-[#168a5d]">{hint}</div>
+    </section>
   );
 }
 
@@ -285,9 +318,9 @@ function ShortcutCard({ title, description }: { title: string; description: stri
   );
 }
 
-function buildReminderItems(items: DoctorSchedule[], notes: PersonalNote[]) {
+function buildReminderItems(items: DoctorSchedule[], notes: PersonalNote[], referenceDate: Date) {
   const noteMap = new Map(notes.map((note) => [note.doctorKey, note]));
-  const today = new Date().getDay();
+  const today = referenceDate.getDay();
   const todayItems = items.filter((item) => item.weekday === today);
   const sourceItems = todayItems.length ? todayItems : items;
 
@@ -297,7 +330,7 @@ function buildReminderItems(items: DoctorSchedule[], notes: PersonalNote[]) {
     const startTime = schedule.start_time || fallbackStartTime(index);
     return {
       id: `${schedule.schedule_key}-${index}`,
-      date: index < 5 ? "2026-05-16" : `2026-05-${String(20 + index).padStart(2, "0")}`,
+      date: formatDateKey(addDays(referenceDate, index < 5 ? 0 : index + 1)),
       startTime,
       endTime: schedule.end_time || fallbackEndTime(startTime),
       status,
@@ -308,11 +341,12 @@ function buildReminderItems(items: DoctorSchedule[], notes: PersonalNote[]) {
   });
 }
 
-function filterByScope(items: ReminderItem[], scope: ReminderScope) {
+function filterByScope(items: ReminderItem[], scope: ReminderScope, referenceDate: Date) {
+  const today = formatDateKey(referenceDate);
   if (scope === "all") return items;
-  if (scope === "today") return items.filter((item) => item.date === "2026-05-16");
-  if (scope === "week") return items.filter((item) => item.date >= "2026-05-16" && item.date <= "2026-05-23");
-  return items.filter((item) => item.date.startsWith("2026-05"));
+  if (scope === "today") return items.filter((item) => item.date === today);
+  if (scope === "week") return items.filter((item) => item.date >= today && item.date <= formatDateKey(addDays(referenceDate, 7)));
+  return items.filter((item) => item.date.startsWith(formatMonthKey(referenceDate)));
 }
 
 function matchesReminder(item: ReminderItem, query: string) {
@@ -376,6 +410,25 @@ function formatShortDate(value: string) {
   return value.slice(5).replace("-", "/");
 }
 
-function buildCalendarDays() {
-  return Array.from({ length: 35 }, (_, index) => index + 1).filter((day) => day <= 31);
+function buildCalendarDays(date: Date) {
+  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  return Array.from({ length: daysInMonth }, (_, index) => index + 1);
+}
+
+function formatMonthLabel(date: Date) {
+  return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月`;
+}
+
+function formatMonthKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function formatDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
