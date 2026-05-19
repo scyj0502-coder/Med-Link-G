@@ -27,6 +27,11 @@ SHIFT_BOX = (225, 0, 269, 0)
 TABLE_X_RANGE = (89, 1035)
 DOCTOR_PATTERN = re.compile(r"[#＃◎▲△※]?\s*(?:[A-Z]?\d{4,5}|J\d{4}|[A-Z]\d{4})\s*([\u4e00-\u9fff]{2,4})")
 NOTE_PATTERN = re.compile(r"[（(]([^（）()]{2,30})[）)]")
+ROOM_PATTERN = re.compile(
+    r"(地下[一二三四五六七八九十123456789]?樓|地下樓|[一二三四五六七八九十123456789]樓)"
+    r"([A-Z]?\d{2,3}(?:/[A-Z]?\d{2,3})?)診間",
+    re.IGNORECASE,
+)
 VALID_SHIFTS = {"上午", "下午", "夜間", "夜診", "晚上"}
 DOCTOR_CORRECTIONS = {
     "蔡褲晏": "蔡青晏",
@@ -782,6 +787,13 @@ class RowContext:
     shift: str
 
 
+@dataclass(frozen=True)
+class DoctorEntry:
+    doctor_name: str
+    note: str
+    room: str
+
+
 class CgmhImageAdapter(ScheduleAdapter):
     def fetch(self) -> list[RawSchedule]:
         fetched_at = datetime.now(UTC).isoformat()
@@ -868,23 +880,23 @@ def parse_page_rows(
             context = RowContext(top=top, bottom=bottom, department=current_department, shift=current_shift)
             for weekday, weekday_label, left, right in WEEKDAY_COLUMNS:
                 raw_text = ocr_cached(image, (left, top, right, bottom), psm="6")
-                doctors = extract_doctors(raw_text, allow_fallback=page_number >= 3)
-                for doctor_name, note in doctors:
+                doctors = extract_doctor_entries(raw_text, allow_fallback=page_number >= 3)
+                for doctor in doctors:
                     items.append(
                         RawSchedule(
                             hospital_id=source.id,
                             hospital_name=source.hospital_name,
                             branch_name=source.branch_name,
                             department=context.department,
-                            doctor_name=doctor_name,
+                            doctor_name=doctor.doctor_name,
                             weekday=weekday,
                             weekday_label=weekday_label,
                             period=context.shift,
-                            room=department_room(context.department),
+                            room=doctor.room or department_room(context.department),
                             source_url=source.schedule_url,
                             source_ref=f"pdf_page:{page_number};row:{top}-{bottom};weekday:{weekday_label}",
                             confidence=0.86,
-                            note=note,
+                            note=doctor.note,
                             raw_text=raw_text,
                             source_page=page_number,
                             parsed_at=parsed_at,
@@ -1105,29 +1117,78 @@ def department_room(department: str) -> str:
     return "依現場診區"
 
 
-def extract_doctors(text: str, allow_fallback: bool = True) -> list[tuple[str, str]]:
+def extract_doctor_entries(text: str, allow_fallback: bool = True) -> list[DoctorEntry]:
     raw = text.replace("\n", " ")
     compact = re.sub(r"\s+", "", raw)
-    note = "；".join(dict.fromkeys(match.strip() for match in NOTE_PATTERN.findall(raw) if match.strip()))
-    doctors: list[tuple[str, str]] = []
+    doctors: list[DoctorEntry] = []
     seen: set[str] = set()
-    for match in DOCTOR_PATTERN.finditer(compact):
+    matches = list(DOCTOR_PATTERN.finditer(compact))
+    for index, match in enumerate(matches):
         name = normalize_doctor_name(match.group(1))
         if not name or name in seen:
             continue
         seen.add(name)
-        doctors.append((name, note))
+        next_start = matches[index + 1].start() if index + 1 < len(matches) else len(compact)
+        segment = compact[match.start():next_start]
+        doctors.append(DoctorEntry(doctor_name=name, note=extract_note(segment), room=extract_room(segment)))
     if doctors or not allow_fallback:
         return doctors
 
     fallback_text = re.sub(r"[A-Za-z0-9#＃◎▲△※|_=\-—﹍ˍˉ﹁﹂、，。﹚﹛﹜（）()；:：]+", " ", raw)
+    fallback_room = extract_room(raw)
+    fallback_note = extract_note(raw)
     for match in re.finditer(r"([\u4e00-\u9fff](?:\s+[\u4e00-\u9fff]){1,3})", fallback_text):
         name = normalize_doctor_name(match.group(1))
         if not name or name in seen:
             continue
         seen.add(name)
-        doctors.append((name, note))
+        doctors.append(DoctorEntry(doctor_name=name, note=fallback_note, room=fallback_room))
     return doctors
+
+
+def extract_doctors(text: str, allow_fallback: bool = True) -> list[tuple[str, str]]:
+    return [(entry.doctor_name, entry.note) for entry in extract_doctor_entries(text, allow_fallback=allow_fallback)]
+
+
+def extract_note(text: str) -> str:
+    notes = []
+    room = extract_room(text)
+    for match in NOTE_PATTERN.findall(text):
+        note = match.strip()
+        if note and not extract_room(note) and not (room and note in room):
+            notes.append(note)
+    return "；".join(dict.fromkeys(notes))
+
+
+def extract_room(text: str) -> str:
+    compact = normalize_room_text(text)
+    match = ROOM_PATTERN.search(compact)
+    if not match:
+        return ""
+    return f"{match.group(1)}{match.group(2).upper()}診間"
+
+
+def normalize_room_text(text: str) -> str:
+    return (
+        text.upper()
+        .replace("（", "")
+        .replace("）", "")
+        .replace("(", "")
+        .replace(")", "")
+        .replace("０", "0")
+        .replace("１", "1")
+        .replace("２", "2")
+        .replace("３", "3")
+        .replace("４", "4")
+        .replace("５", "5")
+        .replace("６", "6")
+        .replace("７", "7")
+        .replace("８", "8")
+        .replace("９", "9")
+        .replace("Ｂ", "B")
+        .replace("／", "/")
+        .replace(" ", "")
+    )
 
 
 def normalize_doctor_name(name: str) -> str:

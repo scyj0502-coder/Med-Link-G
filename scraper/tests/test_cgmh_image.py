@@ -7,7 +7,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from adapters.base import RawSchedule
-from adapters.cgmh_image import dedupe, extract_doctors, normalize_department, normalize_shift, shift_for_row
+from adapters.cgmh_image import (
+    dedupe,
+    extract_doctor_entries,
+    extract_doctors,
+    extract_room,
+    normalize_department,
+    normalize_shift,
+    shift_for_row,
+)
 
 
 class CgmhImageParserTest(unittest.TestCase):
@@ -17,7 +25,18 @@ class CgmhImageParserTest(unittest.TestCase):
         self.assertEqual(extract_doctors("13 李 建 和 | 18K"), [("李建和", "")])
 
     def test_extract_doctors_keeps_note(self) -> None:
-        self.assertEqual(extract_doctors("19043 吳柏融（地下樓B12診間）"), [("吳柏融", "地下樓B12診間")])
+        self.assertEqual(extract_doctors("7152 謝易倫（肝膽胰腸胃內科）"), [("謝易倫", "肝膽胰腸胃內科")])
+
+    def test_extract_room_from_datong_doctor_subline(self) -> None:
+        self.assertEqual(extract_room("16560 黃文琦 (地下1樓)B07診間"), "地下1樓B07診間")
+        self.assertEqual(extract_room("14717 曾嘉成（三樓305診間）"), "三樓305診間")
+
+    def test_extract_doctor_entries_keep_doctor_specific_room(self) -> None:
+        entries = extract_doctor_entries("16560 黃文琦 (地下1樓)B07診間 14620 鄭本忠 (地下1樓)B12診間")
+        self.assertEqual(
+            [(entry.doctor_name, entry.room, entry.note) for entry in entries],
+            [("黃文琦", "地下1樓B07診間", ""), ("鄭本忠", "地下1樓B12診間", "")],
+        )
 
     def test_extract_doctors_corrects_datong_ocr_variants(self) -> None:
         self.assertEqual(extract_doctors("29408 戴 十 翔"), [("戴千翔", "")])
