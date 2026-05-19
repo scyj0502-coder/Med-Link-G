@@ -55,11 +55,11 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
           <div className="grid h-12 w-12 place-items-center rounded-full bg-[#0f73ff] text-xl font-black">業</div>
           <div>
             <strong className="block">業務代表</strong>
-            <small className="text-white/70">已登入資料檢視</small>
+            <small className="text-white/70">個人資料同步</small>
           </div>
         </div>
-        <button className="mt-4 h-10 w-full rounded-xl border border-white/20 text-sm font-bold text-white/85" type="button">
-          登出
+        <button className="mt-4 h-10 w-full rounded-xl border border-white/20 text-sm font-bold text-white/85" onClick={() => onNavigate("account")} type="button">
+          帳號設定
         </button>
       </div>
     </aside>
