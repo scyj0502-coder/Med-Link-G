@@ -36,6 +36,8 @@ jobs:
             ocr-cache-${{ runner.os }}-
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Run parser tests
+        run: python -m unittest discover tests
       - name: Run scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
