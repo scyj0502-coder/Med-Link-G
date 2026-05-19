@@ -34,8 +34,14 @@ type ClientDashboardProps = {
   schedules: PublishedSchedule[];
   initialFilters: {
     q: string;
+    region?: string;
+    hospital?: string;
+    branch?: string;
     department: string;
     doctor: string;
+    weekday?: string;
+    period?: string;
+    favoritesOnly?: string;
   };
   initialView?: DashboardView;
 };
@@ -44,8 +50,14 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
   const [filters, setFilters] = useState<FilterState>({
     ...emptyFilters,
     query: initialFilters.q,
+    region: initialFilters.region ?? "",
+    hospitalId: initialFilters.hospital ?? "",
+    branchName: initialFilters.branch ?? "",
     department: initialFilters.department,
-    doctorName: initialFilters.doctor
+    doctorName: initialFilters.doctor,
+    weekday: initialFilters.weekday ?? "",
+    period: initialFilters.period ?? "",
+    favoritesOnly: initialFilters.favoritesOnly === "1"
   });
   const [favorites, setFavorites] = useState<string[]>([]);
   const [notes, setNotes] = useState<PersonalNote[]>(mockPersonalNotes);
@@ -61,6 +73,46 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
       setFavorites([]);
     }
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const setParam = (key: string, value: string) => {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    };
+
+    setParam("view", activeView === "today" ? "" : activeView);
+    setParam("q", filters.query);
+    setParam("region", filters.region);
+    setParam("hospital", filters.hospitalId);
+    setParam("branch", filters.branchName);
+    setParam("department", filters.department);
+    setParam("doctor", filters.doctorName);
+    setParam("weekday", filters.weekday);
+    setParam("period", filters.period);
+    setParam("favoritesOnly", filters.favoritesOnly ? "1" : "");
+
+    const nextSearch = params.toString();
+    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [
+    activeView,
+    filters.branchName,
+    filters.department,
+    filters.doctorName,
+    filters.favoritesOnly,
+    filters.hospitalId,
+    filters.period,
+    filters.query,
+    filters.region,
+    filters.weekday
+  ]);
 
   const doctorSchedules = useMemo(() => buildDoctorSchedules(schedules, hospitals), [hospitals, schedules]);
 

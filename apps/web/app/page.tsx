@@ -5,8 +5,14 @@ import type { Hospital, PublishedSchedule } from "../lib/types";
 type HomePageProps = {
   searchParams?: Promise<{
     q?: string;
+    region?: string;
+    hospital?: string;
+    branch?: string;
     department?: string;
     doctor?: string;
+    weekday?: string;
+    period?: string;
+    favoritesOnly?: string;
     view?: string;
   }>;
 };
@@ -79,8 +85,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       schedules={data.schedules}
       initialFilters={{
         q: params.q ?? "",
+        region: params.region ?? "",
+        hospital: params.hospital ?? "",
+        branch: params.branch ?? "",
         department: params.department ?? "",
-        doctor: params.doctor ?? ""
+        doctor: params.doctor ?? "",
+        weekday: params.weekday ?? "",
+        period: params.period ?? "",
+        favoritesOnly: params.favoritesOnly ?? ""
       }}
       initialView={["search", "favorites", "notes", "visits", "reminders", "sources"].includes(params.view ?? "") ? (params.view as "search" | "favorites" | "notes" | "visits" | "reminders" | "sources") : "today"}
     />
