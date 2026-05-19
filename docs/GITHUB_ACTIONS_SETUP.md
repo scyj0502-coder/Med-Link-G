@@ -14,6 +14,8 @@
 
 也可以在 GitHub 頁面手動執行單一醫院，例如 `kmugh`。
 
+同步流程會先跑 parser 單元測試，測試通過後才會寫入 Supabase。
+
 ## 1. 設定 Repository Secrets
 
 打開 GitHub 專案：
@@ -75,18 +77,27 @@ kmugh
 執行完成後，log 應該會看到類似：
 
 ```text
-kmugh: scraped=33 published=33 rejected=0 changes=0
+kmugh: scraped=33 published=33 rejected=0 changes=0 preserve_stale=False
 ```
 
 若 `changes` 大於 0，代表系統偵測到新增、刪除或異動。
 
-## 4. 義大三院後續
+`preserve_stale=True` 代表這次解析結果比上一版少太多，系統先保留上一版未出現在本次結果中的資料，避免一次 OCR 或來源異常造成前台資料突然消失。
 
-義大來源頁有三間醫院：
+## 4. 已啟用來源狀態
 
+目前已啟用的主要來源包含：
+
+- 高醫岡山
 - 義大醫院
 - 義大癌治療醫院
 - 義大大昌醫院
+- 新高醫院
+- 衛生福利部屏東醫院
+- 高雄市立大同醫院
+- 屏東榮民總醫院
 
-目前先把它們視為三個不同 hospital source。  
-因為下載檔是圖片型 PDF，後續需要 OCR / 影像表格解析完成後才會啟用排程。
+目前暫停的來源：
+
+- 高雄長庚紀念醫院：資料來源待確認。
+- 安泰醫院：已能探索最新門診圖片，但尚未發布 OCR 結果到正式資料。
