@@ -342,9 +342,9 @@ function buildSourceRows(hospitals: Hospital[], schedules: PublishedSchedule[]):
   return hospitals.map((hospital, index) => {
     const hospitalSchedules = scheduleMap.get(hospital.id) ?? [];
     const latest = latestSchedule(hospitalSchedules);
-    const status = sourceStatus(hospitalSchedules, latest, index);
-    const kind = sourceKind(latest, hospital.schedule_url, index);
     const updatedValue = latest?.fetched_at ?? latest?.published_at ?? latest?.parsed_at ?? "";
+    const status = sourceStatus(hospitalSchedules, latest, updatedValue);
+    const kind = sourceKind(latest, hospital.schedule_url);
     return {
       id: hospital.id,
       hospitalName: hospital.hospital_name,
@@ -365,20 +365,21 @@ function latestSchedule(schedules: PublishedSchedule[]) {
   return [...schedules].sort((a, b) => getTime(b.fetched_at ?? b.published_at ?? b.parsed_at) - getTime(a.fetched_at ?? a.published_at ?? a.parsed_at))[0];
 }
 
-function sourceStatus(schedules: PublishedSchedule[], latest: PublishedSchedule | undefined, index: number): SourceStatus {
+function sourceStatus(schedules: PublishedSchedule[], latest: PublishedSchedule | undefined, updatedValue: string): SourceStatus {
   if (!latest || !schedules.length) return "尚未更新";
-  if (schedules.some((item) => item.parse_status && item.parse_status !== "ok" && item.parse_status !== "success")) return "部分異常";
-  if (index % 17 === 0 && index > 0) return "更新異常";
-  if (index % 5 === 2) return "部分異常";
+  const parseStatuses = schedules.map((item) => item.parse_status).filter(Boolean);
+  if (parseStatuses.length && parseStatuses.every((item) => item !== "ok" && item !== "success")) return "更新異常";
+  if (parseStatuses.some((item) => item !== "ok" && item !== "success")) return "部分異常";
+  if (updatedValue && Date.now() - getTime(updatedValue) > 14 * 24 * 60 * 60 * 1000) return "部分異常";
   return "正常";
 }
 
-function sourceKind(schedule: PublishedSchedule | undefined, scheduleUrl: string | null, index: number): SourceKind {
+function sourceKind(schedule: PublishedSchedule | undefined, scheduleUrl: string | null): SourceKind {
   const value = [schedule?.source_type ?? "", schedule?.source_file_url ?? "", schedule?.source_url ?? "", scheduleUrl ?? ""].join(" ").toLowerCase();
   if (value.includes("image") || value.includes(".jpg") || value.includes(".png")) return "圖片";
   if (value.includes("pdf") || value.includes(".pdf")) return "PDF 檔案";
   if (value.includes("manual")) return "手動輸入";
-  return index % 11 === 0 ? "手動輸入" : "網頁擷取";
+  return "網頁擷取";
 }
 
 function rowGroup(row: SourceRow) {
