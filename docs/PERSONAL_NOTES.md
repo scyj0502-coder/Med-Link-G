@@ -1,7 +1,9 @@
 # 個人備註資料表規劃
 
-目前前端的醫師備註先使用瀏覽器 localStorage 暫存，方便開發與測試。
-正式登入功能完成後，備註應改存到 Supabase 的 `personal_notes` 資料表。
+目前前端已採用「本機快取 + Supabase 遠端同步」的資料層。
+
+- 未登入或沒有 Supabase session 時：使用瀏覽器 localStorage，方便開發與測試。
+- 已登入時：讀寫 Supabase `personal_notes` 資料表，並保留 localStorage 作為快速載入與離線備援。
 
 ## 資料表
 
@@ -38,22 +40,29 @@ db/migrations/0005_personal_notes.sql
 - 登入使用者只能刪除自己的備註。
 - `service_role` 保留完整權限，僅供後端或維護腳本使用。
 
-## 前端串接方向
+## 前端串接狀態
 
-目前：
+目前主要串接位置：
 
 ```text
 apps/web/app/ClientDashboard.tsx
+apps/web/lib/personalNotesStorage.ts
 ```
 
-備註仍存在：
+目前流程：
+
+1. 頁面先載入 localStorage，避免畫面空白。
+2. 若 Supabase Auth 有登入 session，再讀取 `personal_notes`。
+3. 遠端資料會覆蓋同一位醫師的本機草稿。
+4. 儲存備註時，先寫入 localStorage，再嘗試 `upsert` 到 Supabase。
+5. 若遠端寫入失敗，本機資料仍保留，下次儲存可再同步。
+
+本機備援 key：
 
 ```text
 localStorage key: medlink:personal-notes:v1
 ```
 
-未來登入完成後，建議改成：
+## 後續待補
 
-1. 進入頁面時，用目前登入者的 `auth.uid()` 讀取 `personal_notes`。
-2. 儲存備註時，用 `upsert` 寫入 `user_id + doctor_key`。
-3. localStorage 僅保留成離線草稿或備援，不再當正式資料來源。
+目前尚未建立登入 UI，因此一般使用者仍會走 localStorage。下一步需要補 Supabase Auth 登入/登出流程，備註就會自動切到個人遠端資料。

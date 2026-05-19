@@ -25,7 +25,7 @@ import {
   type PersonalNote
 } from "../lib/dashboard";
 import { defaultPersonalNote, mockPersonalNotes } from "../lib/mockPersonalNotes";
-import { loadPersonalNotes, savePersonalNotes } from "../lib/personalNotesStorage";
+import { loadLocalPersonalNotes, loadPersonalNotes, savePersonalNote } from "../lib/personalNotesStorage";
 import type { Hospital, PublishedSchedule } from "../lib/types";
 
 const favoriteStorageKey = "medlink:favorites:v3";
@@ -74,7 +74,8 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
       setFavorites([]);
     }
 
-    setNotes(loadPersonalNotes());
+    setNotes(loadLocalPersonalNotes());
+    void loadPersonalNotes().then(setNotes);
   }, []);
 
   useEffect(() => {
@@ -190,7 +191,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
     setNotes((current) => {
       const exists = current.some((item) => item.doctorKey === nextNote.doctorKey);
       const next = exists ? current.map((item) => (item.doctorKey === nextNote.doctorKey ? nextNote : item)) : [...current, nextNote];
-      savePersonalNotes(next);
+      void savePersonalNote(nextNote);
       return next;
     });
     setEditingNote(false);
