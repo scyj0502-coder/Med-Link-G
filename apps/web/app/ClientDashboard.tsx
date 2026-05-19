@@ -28,6 +28,7 @@ import { defaultPersonalNote, mockPersonalNotes } from "../lib/mockPersonalNotes
 import type { Hospital, PublishedSchedule } from "../lib/types";
 
 const favoriteStorageKey = "medlink:favorites:v3";
+const noteStorageKey = "medlink:personal-notes:v1";
 
 type ClientDashboardProps = {
   hospitals: Hospital[];
@@ -71,6 +72,13 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
       setFavorites(JSON.parse(localStorage.getItem(favoriteStorageKey) || "[]"));
     } catch {
       setFavorites([]);
+    }
+
+    try {
+      const storedNotes = parseStoredNotes(localStorage.getItem(noteStorageKey));
+      setNotes(mergeNotes(mockPersonalNotes, storedNotes));
+    } catch {
+      setNotes(mockPersonalNotes);
     }
   }, []);
 
@@ -186,7 +194,13 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
   function saveNote(nextNote: PersonalNote) {
     setNotes((current) => {
       const exists = current.some((item) => item.doctorKey === nextNote.doctorKey);
-      return exists ? current.map((item) => (item.doctorKey === nextNote.doctorKey ? nextNote : item)) : [...current, nextNote];
+      const next = exists ? current.map((item) => (item.doctorKey === nextNote.doctorKey ? nextNote : item)) : [...current, nextNote];
+      try {
+        localStorage.setItem(noteStorageKey, JSON.stringify(next));
+      } catch {
+        // Keep the in-memory edit even if the browser blocks local storage.
+      }
+      return next;
     });
     setEditingNote(false);
   }
@@ -371,4 +385,33 @@ function ComingSoonView({ title }: { title: string }) {
       <p className="mt-3 text-sm font-bold leading-6 text-[#60708d]">這個區塊會接著整理成正式工作頁，目前可先透過今日門診與快速搜尋查看資料。</p>
     </section>
   );
+}
+
+function parseStoredNotes(value: string | null): PersonalNote[] {
+  if (!value) return [];
+  const parsed = JSON.parse(value) as unknown;
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter(isPersonalNote);
+}
+
+function isPersonalNote(value: unknown): value is PersonalNote {
+  if (!value || typeof value !== "object") return false;
+  const note = value as Partial<PersonalNote>;
+  return (
+    typeof note.doctorKey === "string" &&
+    typeof note.content === "string" &&
+    typeof note.visitStatus === "string" &&
+    typeof note.lastVisitDate === "string" &&
+    typeof note.nextReminder === "string" &&
+    Array.isArray(note.tags) &&
+    note.tags.every((tag) => typeof tag === "string")
+  );
+}
+
+function mergeNotes(defaultNotes: PersonalNote[], storedNotes: PersonalNote[]) {
+  const map = new Map(defaultNotes.map((note) => [note.doctorKey, note]));
+  for (const note of storedNotes) {
+    map.set(note.doctorKey, note);
+  }
+  return Array.from(map.values());
 }
