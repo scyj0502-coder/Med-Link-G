@@ -59,8 +59,11 @@ def run(target: str | None = None) -> None:
             continue
         publishable, rejected = partition_publishable(scraped)
         previous = writer.load_published(source.id)
+        preserve_stale = should_preserve_stale(previous, publishable)
         changes = detect_changes(previous, publishable)
-        writer.write_run(source, publishable, rejected, changes)
+        if preserve_stale:
+            changes = [change for change in changes if change.change_type != "removed"]
+        writer.write_run(source, publishable, rejected, changes, preserve_stale=preserve_stale)
 
         if changes:
             notifier.send_changes(source, changes)
@@ -69,8 +72,15 @@ def run(target: str | None = None) -> None:
 
         print(
             f"{source.id}: scraped={len(scraped)} "
-            f"published={len(publishable)} rejected={len(rejected)} changes={len(changes)}"
+            f"published={len(publishable)} rejected={len(rejected)} changes={len(changes)} "
+            f"preserve_stale={preserve_stale}"
         )
+
+
+def should_preserve_stale(previous: list[dict], publishable: list) -> bool:
+    if len(previous) < 20:
+        return False
+    return len(publishable) < len(previous) * 0.5
 
 
 def main() -> None:

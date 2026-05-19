@@ -107,6 +107,7 @@ class SupabaseScheduleWriter:
         publishable: list[RawSchedule],
         rejected: list[RejectedSchedule],
         changes: list[ScheduleChange],
+        preserve_stale: bool = False,
     ) -> None:
         self.client.upsert("hospitals", [{
             "id": source.id,
@@ -142,7 +143,8 @@ class SupabaseScheduleWriter:
             return
 
         written_payloads = self.upsert_published(payloads)
-        self.delete_stale_published(source.id, {item["schedule_key"] for item in written_payloads})
+        if not preserve_stale:
+            self.delete_stale_published(source.id, {item["schedule_key"] for item in written_payloads})
 
         change_payloads = [
             {
