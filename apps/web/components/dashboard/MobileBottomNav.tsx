@@ -17,7 +17,8 @@ const primaryItems: { icon: UiIconName; label: string; view: DashboardView }[] =
 const moreItems: { icon: UiIconName; label: string; view: DashboardView; description: string }[] = [
   { icon: "history", label: "拜訪紀錄", view: "visits", description: "查看歷史拜訪與追蹤狀態" },
   { icon: "alarm", label: "行程提醒", view: "reminders", description: "安排今日、本週與本月拜訪" },
-  { icon: "database", label: "資料來源", view: "sources", description: "確認各醫院門診資料更新狀態" }
+  { icon: "database", label: "資料來源", view: "sources", description: "確認各醫院門診資料更新狀態" },
+  { icon: "user", label: "帳號設定", view: "account", description: "登入後同步個人備註與收藏設定" }
 ];
 
 export function MobileBottomNav({ activeView, onNavigate }: MobileBottomNavProps) {

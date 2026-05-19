@@ -1,4 +1,4 @@
-export type UiIconName = "alarm" | "bell" | "calendar" | "database" | "help" | "history" | "menu" | "note" | "refresh" | "search" | "star";
+export type UiIconName = "alarm" | "bell" | "calendar" | "database" | "help" | "history" | "menu" | "note" | "refresh" | "search" | "star" | "user";
 
 type UiIconProps = {
   name: UiIconName;
@@ -82,6 +82,12 @@ export function UiIcon({ name, className = "h-5 w-5" }: UiIconProps) {
       {name === "star" ? (
         <>
           <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z" />
+        </>
+      ) : null}
+      {name === "user" ? (
+        <>
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21a8 8 0 0 1 16 0" />
         </>
       ) : null}
     </svg>

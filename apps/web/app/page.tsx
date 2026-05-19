@@ -94,7 +94,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         period: params.period ?? "",
         favoritesOnly: params.favoritesOnly ?? ""
       }}
-      initialView={["search", "favorites", "notes", "visits", "reminders", "sources"].includes(params.view ?? "") ? (params.view as "search" | "favorites" | "notes" | "visits" | "reminders" | "sources") : "today"}
+      initialView={["search", "favorites", "notes", "visits", "reminders", "sources", "account"].includes(params.view ?? "") ? (params.view as "search" | "favorites" | "notes" | "visits" | "reminders" | "sources" | "account") : "today"}
     />
   );
 }

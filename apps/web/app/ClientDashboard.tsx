@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AccountSettingsView } from "../components/dashboard/AccountSettingsView";
 import { DataSourcesView } from "../components/dashboard/DataSourcesView";
 import { DoctorDetailPanel } from "../components/dashboard/DoctorDetailPanel";
 import { DoctorList } from "../components/dashboard/DoctorList";
@@ -162,7 +163,8 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
     notes: { title: "我的備註", subtitle: "個人拜訪資訊", count: notes.length },
     visits: { title: "拜訪紀錄", subtitle: "歷史拜訪與追蹤時間軸", count: notes.length },
     reminders: { title: "行程提醒", subtitle: "業務拜訪行程管理中心", count: doctorSchedules.length },
-    sources: { title: "資料來源", subtitle: "門診來源管理", count: hospitals.length }
+    sources: { title: "資料來源", subtitle: "門診來源管理", count: hospitals.length },
+    account: { title: "帳號設定", subtitle: "個人資料同步", count: notes.length }
   }[activeView];
 
   useEffect(() => {
@@ -346,6 +348,8 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
               />
             ) : activeView === "sources" ? (
               <DataSourcesView hospitals={hospitals} query={filters.query} schedules={schedules} />
+            ) : activeView === "account" ? (
+              <AccountSettingsView favoriteCount={favoriteDoctorCount} noteCount={notes.length} />
             ) : (
               <ComingSoonView title="資料來源" />
             )}

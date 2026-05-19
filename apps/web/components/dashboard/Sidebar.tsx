@@ -1,6 +1,6 @@
 import { UiIcon, type UiIconName } from "./UiIcon";
 
-export type DashboardView = "today" | "search" | "favorites" | "notes" | "visits" | "reminders" | "sources";
+export type DashboardView = "today" | "search" | "favorites" | "notes" | "visits" | "reminders" | "sources" | "account";
 
 type SidebarProps = {
   activeView: DashboardView;
@@ -14,7 +14,8 @@ const items: { icon: UiIconName; label: string; view: DashboardView }[] = [
   { icon: "note", label: "我的備註", view: "notes" },
   { icon: "history", label: "拜訪紀錄", view: "visits" },
   { icon: "alarm", label: "行程提醒", view: "reminders" },
-  { icon: "database", label: "資料來源", view: "sources" }
+  { icon: "database", label: "資料來源", view: "sources" },
+  { icon: "user", label: "帳號設定", view: "account" }
 ];
 
 export function Sidebar({ activeView, onNavigate }: SidebarProps) {
