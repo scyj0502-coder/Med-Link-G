@@ -25,11 +25,10 @@ import {
   type FilterState,
   type PersonalNote
 } from "../lib/dashboard";
+import { loadFavorites, loadLocalFavorites, saveFavorite } from "../lib/favoritesStorage";
 import { defaultPersonalNote, mockPersonalNotes } from "../lib/mockPersonalNotes";
 import { loadLocalPersonalNotes, loadPersonalNotes, savePersonalNote } from "../lib/personalNotesStorage";
 import type { Hospital, PublishedSchedule } from "../lib/types";
-
-const favoriteStorageKey = "medlink:favorites:v3";
 
 type ClientDashboardProps = {
   hospitals: Hospital[];
@@ -69,12 +68,8 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
   const [activeView, setActiveView] = useState<DashboardView>(initialView);
 
   useEffect(() => {
-    try {
-      setFavorites(JSON.parse(localStorage.getItem(favoriteStorageKey) || "[]"));
-    } catch {
-      setFavorites([]);
-    }
-
+    setFavorites(loadLocalFavorites());
+    void loadFavorites().then(setFavorites);
     setNotes(loadLocalPersonalNotes());
     void loadPersonalNotes().then(setNotes);
   }, []);
@@ -184,9 +179,10 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
 
   function toggleFavorite(item: DoctorSchedule) {
     const key = doctorKey(item);
-    const next = favorites.includes(key) ? favorites.filter((value) => value !== key) : [...favorites, key];
+    const enabled = !favorites.includes(key);
+    const next = enabled ? [...favorites, key] : favorites.filter((value) => value !== key);
     setFavorites(next);
-    localStorage.setItem(favoriteStorageKey, JSON.stringify(next));
+    void saveFavorite(key, enabled, next);
   }
 
   function saveNote(nextNote: PersonalNote) {
