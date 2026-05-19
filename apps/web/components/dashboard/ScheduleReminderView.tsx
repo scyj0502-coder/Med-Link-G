@@ -93,7 +93,7 @@ export function ScheduleReminderView({ items, notes, query, onOpenSchedule, onOp
         ))}
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <ReminderStatCard key={stat.label} {...stat} />
         ))}
@@ -273,20 +273,20 @@ function ReminderStatCard({ label, value, suffix, hint, icon, tone }: ReminderSt
   }[tone];
 
   return (
-    <section className="rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] sm:p-5">
-      <div className="flex items-center gap-3">
-        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl sm:h-12 sm:w-12 ${toneClass}`}>
+    <section className="rounded-[18px] border border-[#dbe5f4] bg-white p-3 shadow-[0_12px_30px_rgba(8,35,80,.08)] sm:p-5">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-2xl sm:h-12 sm:w-12 ${toneClass}`}>
           <UiIcon className="h-5 w-5" name={icon} />
         </span>
-        <div>
-          <div className="text-sm font-black text-[#60708d]">{label}</div>
-          <div className="mt-1 flex items-end gap-2">
-            <span className="text-2xl font-black text-[#061b3d] sm:text-3xl">{value}</span>
-            <span className="pb-1 text-sm font-black text-[#60708d]">{suffix}</span>
+        <div className="min-w-0">
+          <div className="truncate text-xs font-black text-[#60708d] sm:text-sm">{label}</div>
+          <div className="mt-1 flex items-end gap-1 sm:gap-2">
+            <span className="text-xl font-black text-[#061b3d] sm:text-3xl">{value}</span>
+            <span className="pb-0.5 text-xs font-black text-[#60708d] sm:pb-1 sm:text-sm">{suffix}</span>
           </div>
         </div>
       </div>
-      <div className="mt-3 text-xs font-black text-[#168a5d]">{hint}</div>
+      <div className="mt-2 text-xs font-black leading-5 text-[#168a5d] sm:mt-3">{hint}</div>
     </section>
   );
 }

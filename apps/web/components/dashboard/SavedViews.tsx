@@ -98,7 +98,7 @@ export function FavoriteDoctorsView({ items, notes, favorites, query, onOpenSche
         <p className="mt-2 text-sm font-bold text-[#60708d]">常拜訪醫師管理中心，快速掌握今日門診、追蹤提醒與拜訪優先順序。</p>
       </div>
 
-      <div className="grid gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-3 shadow-[0_12px_30px_rgba(8,35,80,.08)] sm:p-4 md:grid-cols-5">
         {stats.map((stat) => (
           <FavoriteStatCard key={stat.label} {...stat} />
         ))}
@@ -199,7 +199,7 @@ export function NotesView({ items, notes, favorites, query, onOpenSchedule, onTo
         <p className="mt-2 text-sm font-bold text-[#60708d]">醫療業務 CRM 筆記管理中心，快速掌握拜訪狀態、下次提醒與下一步行動。</p>
       </div>
 
-      <div className="grid gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-3 shadow-[0_12px_30px_rgba(8,35,80,.08)] sm:p-4 md:grid-cols-5">
         {stats.map((stat) => (
           <FavoriteStatCard key={stat.label} {...stat} />
         ))}
@@ -344,7 +344,7 @@ export function VisitHistoryView({ items, notes, hospitals, query, onOpenSchedul
           </button>
         </div>
 
-        <div className="mt-4 grid gap-3 border-t border-[#eef3fb] pt-4 md:grid-cols-5">
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#eef3fb] pt-4 md:grid-cols-5">
           {stats.map((stat) => (
             <FavoriteStatCard key={stat.label} {...stat} />
           ))}
@@ -860,16 +860,16 @@ function FavoriteStatCard({
   }[tone];
 
   return (
-    <div className="rounded-2xl bg-[#f8fbff] p-3 sm:p-4">
-      <div className="flex items-center gap-3">
-        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl sm:h-11 sm:w-11 ${toneClass}`}>
+    <div className="rounded-2xl bg-[#f8fbff] p-2.5 sm:p-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-2xl sm:h-11 sm:w-11 ${toneClass}`}>
           <UiIcon className="h-5 w-5" name={icon} />
         </span>
         <div className="min-w-0">
-          <div className="text-sm font-black text-[#60708d]">{label}</div>
+          <div className="truncate text-xs font-black text-[#60708d] sm:text-sm">{label}</div>
           <div className="mt-1 flex items-end gap-1">
-            <span className="text-2xl font-black text-[#061b3d] sm:text-3xl">{value}</span>
-            <span className="pb-1 text-sm font-black text-[#60708d]">{suffix}</span>
+            <span className="text-xl font-black text-[#061b3d] sm:text-3xl">{value}</span>
+            <span className="pb-0.5 text-xs font-black text-[#60708d] sm:pb-1 sm:text-sm">{suffix}</span>
           </div>
         </div>
       </div>
