@@ -9,7 +9,7 @@
 這個 repo 目前同時保留兩條線：
 
 - `index.html` / `app.js`：GitHub Pages 靜態原型，用來快速驗證查詢、看板與 UX。
-- `apps/web` / `scraper` / `db`：正式化架構，準備接 Supabase、Next.js、Python 爬蟲與 GitHub Actions。
+- `apps/web` / `scraper` / `db`：正式化架構，使用 Supabase、Next.js、Python 爬蟲與 GitHub Actions。
 
 業務端不需要處理資料維護、OCR 待確認或人工驗證。這些問題應該留在系統內部，
 由爬蟲、品質門檻與維護者通知處理；業務只看到已發布且可信的門診資料。
@@ -74,6 +74,8 @@ Maintainer chat id  :
 - [Supabase 設定流程](docs/SUPABASE_SETUP.md)
 - [Vercel 部署流程](docs/VERCEL_DEPLOY.md)
 - [GitHub Actions 自動同步](docs/GITHUB_ACTIONS_SETUP.md)
+- [Supabase 資料庫更新](docs/DATABASE_MIGRATIONS.md)
+- [個人備註與收藏](docs/PERSONAL_NOTES.md)
 - [義大三院資料來源研究](docs/EDAH_RESEARCH.md)
 
 ## 前端開發
@@ -97,6 +99,24 @@ python main.py kmugh
 ```
 
 `.env` 由 `scripts/setup-local-env.ps1` 產生。
+
+## 測試
+
+爬蟲 parser 與品質規則：
+
+```powershell
+cd scraper
+python -m unittest discover tests
+```
+
+前端正式 build：
+
+```powershell
+cd apps/web
+npm run build
+```
+
+GitHub Actions 同步前也會先跑 parser 測試，通過後才寫入 Supabase。
 
 ## 部署方向
 
