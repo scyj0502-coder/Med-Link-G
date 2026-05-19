@@ -65,7 +65,45 @@ apps/web/.env.local
 
 如果部署後畫面沒有資料，通常是環境變數沒有填、填錯，或沒有重新 Deploy。
 
-## 5. 之後才設定 GitHub Actions
+## 5. Supabase Auth Redirect
+
+若要使用「帳號設定」裡的 Email 登入信，請到 Supabase 設定允許 Vercel 網址：
+
+```text
+Authentication -> URL Configuration
+```
+
+建議設定：
+
+```text
+Site URL:
+https://med-link-g.vercel.app
+
+Redirect URLs:
+https://med-link-g.vercel.app/**
+http://localhost:3000/**
+```
+
+這樣使用者點 Email 登入信後，才會回到正式網站或本機開發網站。
+
+## 6. 資料表 migration
+
+個人備註與收藏需要額外資料表：
+
+```text
+db/migrations/0005_personal_notes.sql
+db/migrations/0006_personal_favorites.sql
+```
+
+若 Supabase 尚未有這兩張表，請依照：
+
+```text
+docs/DATABASE_MIGRATIONS.md
+```
+
+到 Supabase SQL Editor 手動執行。
+
+## 7. 之後才設定 GitHub Actions
 
 Vercel 只負責前端。  
 每週一 08:00 的自動爬蟲同步，之後會由 GitHub Actions 負責。
