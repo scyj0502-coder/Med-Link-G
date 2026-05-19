@@ -273,15 +273,15 @@ function ReminderStatCard({ label, value, suffix, hint, icon, tone }: ReminderSt
   }[tone];
 
   return (
-    <section className="rounded-[18px] border border-[#dbe5f4] bg-white p-5 shadow-[0_12px_30px_rgba(8,35,80,.08)]">
+    <section className="rounded-[18px] border border-[#dbe5f4] bg-white p-4 shadow-[0_12px_30px_rgba(8,35,80,.08)] sm:p-5">
       <div className="flex items-center gap-3">
-        <span className={`grid h-12 w-12 place-items-center rounded-2xl ${toneClass}`}>
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl sm:h-12 sm:w-12 ${toneClass}`}>
           <UiIcon className="h-5 w-5" name={icon} />
         </span>
         <div>
           <div className="text-sm font-black text-[#60708d]">{label}</div>
           <div className="mt-1 flex items-end gap-2">
-            <span className="text-3xl font-black text-[#061b3d]">{value}</span>
+            <span className="text-2xl font-black text-[#061b3d] sm:text-3xl">{value}</span>
             <span className="pb-1 text-sm font-black text-[#60708d]">{suffix}</span>
           </div>
         </div>

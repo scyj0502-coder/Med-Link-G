@@ -140,7 +140,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f8ff] text-[#0d2348]">
+    <main className="min-h-screen overflow-x-hidden bg-[#f4f8ff] text-[#0d2348]">
       <div className="grid min-h-screen lg:grid-cols-[268px_1fr]">
         <Sidebar activeView={activeView} onNavigate={setActiveView} />
         <div className="min-w-0 pb-24 lg:pb-0">
@@ -154,7 +154,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
             onQueryChange={(query) => updateFilters({ query })}
           />
 
-          <section className="grid gap-5 px-4 py-4 lg:px-7 lg:py-6">
+          <section className="grid min-w-0 gap-5 px-3 py-4 sm:px-4 lg:px-7 lg:py-6">
             {activeView === "today" ? (
               <FilterPanel
                 branches={filterOptions.branches}

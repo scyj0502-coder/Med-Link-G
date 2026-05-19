@@ -190,12 +190,12 @@ function SummaryStat({ label, value, suffix, tone }: { label: string; value: num
   }[tone] ?? "bg-[#eaf2ff] text-[#075de8]";
 
   return (
-    <section className="flex items-center gap-4 rounded-2xl bg-[#f8fbff] p-4">
-      <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-full text-xl font-black ${toneClass}`}>{String(label).slice(0, 1)}</div>
+    <section className="flex items-center gap-3 rounded-2xl bg-[#f8fbff] p-3 sm:gap-4 sm:p-4">
+      <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg font-black sm:h-12 sm:w-12 sm:text-xl ${toneClass}`}>{String(label).slice(0, 1)}</div>
       <div>
         <div className="text-sm font-black text-[#60708d]">{label}</div>
-        <div className="mt-2 flex items-end gap-1">
-          <span className="text-3xl font-black text-[#061b3d]">{value}</span>
+        <div className="mt-1 flex items-end gap-1 sm:mt-2">
+          <span className="text-2xl font-black text-[#061b3d] sm:text-3xl">{value}</span>
           <span className="pb-1 text-sm font-black text-[#60708d]">{suffix}</span>
         </div>
       </div>

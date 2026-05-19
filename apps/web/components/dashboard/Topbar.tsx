@@ -58,9 +58,9 @@ export function Topbar({ query, onQueryChange, onOpenFilters, resultCount, title
 
       <div className="px-4 pb-5 lg:px-7">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
-          <h2 className="text-3xl font-black tracking-tight text-[#061b3d]">{title}</h2>
+          <h2 className="text-[28px] font-black leading-tight tracking-tight text-[#061b3d] md:text-3xl">{title}</h2>
           {subtitle ? <span className="text-sm font-bold text-[#60708d]">{subtitle}</span> : <span className="text-base font-black text-[#061b3d]">{dateText}</span>}
-          <span className="inline-flex items-center gap-1 text-sm font-bold text-[#60708d]">
+          <span className="inline-flex flex-wrap items-center gap-1 text-sm font-bold text-[#60708d]">
             資料更新：2026/05/15 18:30
             <UiIcon className="h-4 w-4 text-[#075de8]" name="refresh" />
           </span>

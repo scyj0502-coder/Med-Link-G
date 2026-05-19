@@ -16,16 +16,16 @@ const items: { icon: UiIconName; label: string; view: DashboardView }[] = [
 
 export function MobileBottomNav({ activeView, onNavigate }: MobileBottomNavProps) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 grid h-[76px] grid-cols-5 border-t border-[#dbe5f4] bg-white px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_24px_rgba(8,35,80,.08)] lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid h-[76px] w-screen max-w-full grid-cols-5 border-t border-[#dbe5f4] bg-white px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_24px_rgba(8,35,80,.08)] lg:hidden">
       {items.map((item) => (
         <button
-          className={`grid place-items-center gap-1 text-xs font-black ${activeView === item.view ? "text-[#075de8]" : "text-[#60708d]"}`}
+          className={`grid min-w-0 place-items-center gap-1 text-xs font-black ${activeView === item.view ? "text-[#075de8]" : "text-[#60708d]"}`}
           key={item.view}
           onClick={() => onNavigate(item.view)}
           type="button"
         >
           <UiIcon className="h-5 w-5" name={item.icon} />
-          <span className="text-[11px]">{item.label}</span>
+          <span className="max-w-full truncate text-[11px]">{item.label}</span>
         </button>
       ))}
     </nav>
