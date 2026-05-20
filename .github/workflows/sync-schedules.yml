@@ -4,9 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: "Optional hospital id or adapter, e.g. kmugh"
+        description: "Hospital id or adapter to sync"
         required: false
-        default: ""
+        type: choice
+        default: all
+        options:
+          - all
+          - kmugh
+          - edah_pdf
+          - edah-main
+          - edah-cancer
+          - edah-dachang
+          - shinkao
+          - pingtung-mohw
+          - cgmh-datong
+          - ptvgh
   schedule:
     # Taiwan time: Monday 08:00.
     - cron: "0 0 * * 1"
@@ -46,7 +58,11 @@ jobs:
           TELEGRAM_MAINTAINER_CHAT_ID: ${{ secrets.TELEGRAM_MAINTAINER_CHAT_ID }}
         run: |
           set -o pipefail
-          python main.py "${{ github.event.inputs.target }}" 2>&1 | tee sync-output.log
+          target="${{ github.event.inputs.target }}"
+          if [ "$target" = "all" ]; then
+            target=""
+          fi
+          python main.py "$target" 2>&1 | tee sync-output.log
       - name: Add sync summary
         if: always()
         env:
