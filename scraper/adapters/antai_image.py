@@ -5,6 +5,7 @@ import io
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Callable
 from urllib.parse import urljoin
 
 import httpx
@@ -16,7 +17,7 @@ from adapters.edah_pdf import ocr_image
 
 
 IMAGE_PATTERN = re.compile(r"/images-1003/(\d{6})-(\d+)\.jpg$", re.IGNORECASE)
-CELL_DOCTOR_PATTERN = re.compile(r"([\u4e00-\u9fff]{2,4})([A-Z]\d{1,2})(?:診|誌|認|詰)?")
+CELL_DOCTOR_PATTERN = re.compile(r"([\u4e00-\u9fff]{2,4})([A-Z]\d{1,2})(?:\d)?(?:診|誌|認|詰)?")
 NOTE_PATTERN = re.compile(r"[（(]([^（）()]{2,30})[）)]")
 
 
@@ -36,6 +37,14 @@ class TableGrid:
 
 
 @dataclass(frozen=True)
+class Box:
+    left: int
+    top: int
+    right: int
+    bottom: int
+
+
+@dataclass(frozen=True)
 class ScheduleColumn:
     weekday: int
     weekday_label: str
@@ -50,6 +59,21 @@ class CellDoctor:
     room: str
     note: str
     raw_text: str
+
+
+@dataclass(frozen=True)
+class RowContext:
+    department: str
+    location: str
+    top: int
+    bottom: int
+
+
+@dataclass(frozen=True)
+class ScheduleCell:
+    column: ScheduleColumn
+    row_context: RowContext
+    box: Box
 
 
 class AntaiImageAdapter(ScheduleAdapter):
@@ -69,16 +93,15 @@ class AntaiImageAdapter(ScheduleAdapter):
             image_bytes = download(image_ref.url)
             file_hash = hashlib.sha256(image_bytes).hexdigest()
             image = Image.open(io.BytesIO(image_bytes))
-            raw_text = ocr_image(preview_crop(image), psm="6")
             schedules.extend(
-                parse_ocr_text(
+                parse_image_table(
                     source=self.source,
+                    image=image,
                     image_ref=SourceImage(
                         url=image_ref.url,
                         source_month=image_ref.source_month,
                         page_number=image_ref.page_number,
                         file_hash=file_hash,
-                        raw_text=raw_text,
                     ),
                     fetched_at=fetched_at,
                 )
@@ -172,7 +195,7 @@ def merge_positions(values: list[int], gap: int = 3) -> list[int]:
 
 
 def schedule_columns(grid: TableGrid) -> list[ScheduleColumn]:
-    data_edges = grid.x_lines[3:]
+    data_edges = schedule_column_edges(grid)
     if len(data_edges) < 17:
         return []
 
@@ -207,15 +230,141 @@ def schedule_columns(grid: TableGrid) -> list[ScheduleColumn]:
     ]
 
 
-def data_row_ranges(grid: TableGrid) -> list[tuple[int, int]]:
-    if len(grid.y_lines) <= 4:
+def schedule_column_edges(grid: TableGrid) -> list[int]:
+    """Find the 17 vertical edges that bound the 16 weekday/session columns.
+
+    OCR source images contain vertical strokes inside left-side labels, so the
+    detected x-lines cannot be used by index alone. The schedule area is the
+    first run of 17 mostly even-spaced vertical table lines.
+    """
+    line_count = 17
+    if len(grid.x_lines) < line_count:
         return []
-    data_edges = grid.y_lines[4:]
+
+    for start in range(0, len(grid.x_lines) - line_count + 1):
+        edges = grid.x_lines[start : start + line_count]
+        if edges[0] < 250:
+            continue
+        widths = [right - left for left, right in zip(edges, edges[1:])]
+        if not widths:
+            continue
+        median_width = sorted(widths)[len(widths) // 2]
+        if median_width < 40:
+            continue
+        if min(widths) < median_width * 0.65:
+            continue
+        if max(widths) > median_width * 1.45:
+            continue
+        return edges
+    return []
+
+
+def data_row_ranges(grid: TableGrid) -> list[tuple[int, int]]:
+    if len(grid.y_lines) <= 3:
+        return []
+    data_edges = grid.y_lines[3:]
     return [
         (top, bottom)
         for top, bottom in zip(data_edges, data_edges[1:])
         if bottom - top >= 18
     ]
+
+
+def left_context_boxes(grid: TableGrid, row_range: tuple[int, int]) -> tuple[Box, Box]:
+    """Return the department and location boxes for an Antai table row."""
+    schedule_edges = schedule_column_edges(grid)
+    if len(grid.x_lines) < 3 or not schedule_edges:
+        empty = Box(0, row_range[0], 0, row_range[1])
+        return empty, empty
+
+    top, bottom = row_range
+    department_left = grid.x_lines[1]
+    department_right = next((x for x in grid.x_lines if x > department_left + 60), grid.x_lines[2])
+    schedule_left = schedule_edges[0]
+    department_box = Box(department_left, top, department_right, bottom)
+    location_box = Box(department_right, top, schedule_left, bottom)
+    return department_box, location_box
+
+
+def normalize_context_text(raw_text: str) -> str:
+    return re.sub(r"\s+", "", raw_text.replace("\u3000", ""))
+
+
+def row_context_from_text(
+    department_text: str,
+    location_text: str,
+    row_range: tuple[int, int],
+    previous: RowContext | None = None,
+) -> RowContext:
+    department = normalize_context_text(department_text)
+    location = normalize_context_text(location_text)
+    if previous:
+        department = department or previous.department
+        location = location or previous.location
+    return RowContext(department=department, location=location, top=row_range[0], bottom=row_range[1])
+
+
+def schedule_cell_boxes(grid: TableGrid, row_contexts: list[RowContext]) -> list[ScheduleCell]:
+    columns = schedule_columns(grid)
+    cells: list[ScheduleCell] = []
+    for row_context in row_contexts:
+        for column in columns:
+            cells.append(
+                ScheduleCell(
+                    column=column,
+                    row_context=row_context,
+                    box=Box(
+                        left=column.left,
+                        top=row_context.top,
+                        right=column.right,
+                        bottom=row_context.bottom,
+                    ),
+                )
+            )
+    return cells
+
+
+def ocr_box(image: Image.Image, box: Box, ocr: Callable[[Image.Image], str] | None = None) -> str:
+    if box.right <= box.left or box.bottom <= box.top:
+        return ""
+    crop = image.crop((box.left, box.top, box.right, box.bottom))
+    crop = crop.resize((max(1, crop.width * 3), max(1, crop.height * 3)))
+    if ocr is None:
+        return ocr_image(crop, psm="6")
+    return ocr(crop)
+
+
+def read_row_contexts(
+    image: Image.Image,
+    grid: TableGrid,
+    ocr: Callable[[Image.Image], str] | None = None,
+) -> list[RowContext]:
+    contexts: list[RowContext] = []
+    previous: RowContext | None = None
+    for row_range in data_row_ranges(grid):
+        department_box, location_box = left_context_boxes(grid, row_range)
+        context = row_context_from_text(
+            department_text=ocr_box(image, department_box, ocr),
+            location_text=ocr_box(image, location_box, ocr),
+            row_range=row_range,
+            previous=previous,
+        )
+        contexts.append(context)
+        previous = context
+    return contexts
+
+
+def parse_image_table(
+    source,
+    image: Image.Image,
+    image_ref: SourceImage,
+    fetched_at: str,
+    ocr: Callable[[Image.Image], str] | None = None,
+) -> list[RawSchedule]:
+    grid = detect_table_grid(image)
+    row_contexts = read_row_contexts(image, grid, ocr)
+    cell_texts = [(cell, ocr_box(image, cell.box, ocr)) for cell in schedule_cell_boxes(grid, row_contexts)]
+    return build_schedules_from_cells(source, image_ref, fetched_at, cell_texts)
 
 
 def extract_cell_doctors(raw_text: str) -> list[CellDoctor]:
@@ -258,8 +407,49 @@ def normalize_cell_text(raw_text: str) -> str:
     )
 
 
+def build_schedules_from_cells(
+    source,
+    image_ref: SourceImage,
+    fetched_at: str,
+    cell_texts: list[tuple[ScheduleCell, str]],
+) -> list[RawSchedule]:
+    schedules: list[RawSchedule] = []
+    for cell, raw_text in cell_texts:
+        if not cell.row_context.department:
+            continue
+        for doctor in extract_cell_doctors(raw_text):
+            notes = [doctor.note]
+            if cell.row_context.location:
+                notes.append(f"地點：{cell.row_context.location}")
+            schedules.append(
+                RawSchedule(
+                    hospital_id=source.id,
+                    hospital_name=source.hospital_name,
+                    branch_name=source.branch_name,
+                    department=cell.row_context.department,
+                    doctor_name=doctor.doctor_name,
+                    weekday=cell.column.weekday,
+                    weekday_label=cell.column.weekday_label,
+                    period=cell.column.period,
+                    room=doctor.room,
+                    source_url=source.schedule_url,
+                    source_ref=f"{image_ref.source_month}-p{image_ref.page_number}",
+                    source_file_url=image_ref.url,
+                    file_hash=image_ref.file_hash,
+                    confidence=0.72,
+                    note="；".join(note for note in notes if note),
+                    raw_text=doctor.raw_text,
+                    source_page=image_ref.page_number,
+                    source_type="image",
+                    source_month=image_ref.source_month,
+                    fetched_at=fetched_at,
+                )
+            )
+    return schedules
+
+
 def parse_ocr_text(source, image_ref: SourceImage, fetched_at: str) -> list[RawSchedule]:
-    # The current Antai image is a dense raster table. Until column detection is
-    # added, do not publish guessed schedules from OCR text order.
+    # Kept for backward compatibility with earlier validation scripts. Antai is
+    # parsed through parse_image_table so OCR text order is never trusted alone.
     _ = (source, image_ref, fetched_at)
     return []
