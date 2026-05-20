@@ -27,6 +27,12 @@ class SourceImage:
     raw_text: str = ""
 
 
+@dataclass(frozen=True)
+class TableGrid:
+    x_lines: list[int]
+    y_lines: list[int]
+
+
 class AntaiImageAdapter(ScheduleAdapter):
     """Antai publishes schedule pages as images embedded in an HTML page.
 
@@ -105,9 +111,49 @@ def preview_crop(image: Image.Image) -> Image.Image:
     return image.crop((0, 0, image.width, 1800))
 
 
+def detect_table_grid(image: Image.Image) -> TableGrid:
+    grayscale = image.convert("L")
+    width, height = grayscale.size
+    pixels = grayscale.load()
+
+    x_scan_top = max(0, round(height * 0.07))
+    x_scan_bottom = max(x_scan_top + 1, height - round(height * 0.04))
+    y_scan_left = max(0, round(width * 0.015))
+    y_scan_right = max(y_scan_left + 1, width - round(width * 0.015))
+
+    x_threshold = max(80, round((x_scan_bottom - x_scan_top) * 0.18))
+    y_threshold = max(80, round((y_scan_right - y_scan_left) * 0.48))
+
+    x_candidates = []
+    for x in range(width):
+        dark_count = sum(1 for y in range(x_scan_top, x_scan_bottom) if pixels[x, y] < 80)
+        if dark_count >= x_threshold:
+            x_candidates.append(x)
+
+    y_candidates = []
+    for y in range(height):
+        dark_count = sum(1 for x in range(y_scan_left, y_scan_right) if pixels[x, y] < 80)
+        if dark_count >= y_threshold:
+            y_candidates.append(y)
+
+    return TableGrid(
+        x_lines=merge_positions(x_candidates),
+        y_lines=merge_positions(y_candidates),
+    )
+
+
+def merge_positions(values: list[int], gap: int = 3) -> list[int]:
+    groups: list[list[int]] = []
+    for value in values:
+        if not groups or value - groups[-1][-1] > gap:
+            groups.append([value])
+        else:
+            groups[-1].append(value)
+    return [round((group[0] + group[-1]) / 2) for group in groups]
+
+
 def parse_ocr_text(source, image_ref: SourceImage, fetched_at: str) -> list[RawSchedule]:
     # The current Antai image is a dense raster table. Until column detection is
     # added, do not publish guessed schedules from OCR text order.
     _ = (source, image_ref, fetched_at)
     return []
-
