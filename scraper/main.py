@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from adapters.cgmh_text import CgmhTextAdapter
 from adapters.cgmh_image import CgmhImageAdapter
+from adapters.base import HospitalSource
 from adapters.edah_pdf import EdahPdfAdapter
 from adapters.antai_image import AntaiImageAdapter
 from adapters.kmugh import KmughAdapter
@@ -39,16 +40,9 @@ def run(target: str | None = None) -> None:
     config = load_config(Path("config.yaml"))
     writer = SupabaseScheduleWriter.from_env()
     notifier = TelegramNotifier.from_env()
+    sources = selected_sources(config.hospitals, target)
 
-    for source in config.hospitals:
-        if not source.enabled:
-            continue
-        if source.region not in SERVICE_REGIONS:
-            print(f"{source.id}: skipped unsupported region={source.region}")
-            continue
-        if target and source.id != target and source.adapter != target:
-            continue
-
+    for source in sources:
         adapter_cls = ADAPTERS[source.adapter]
         adapter = adapter_cls(source)
         try:
@@ -75,6 +69,29 @@ def run(target: str | None = None) -> None:
             f"published={len(publishable)} rejected={len(rejected)} changes={len(changes)} "
             f"preserve_stale={preserve_stale}"
         )
+
+
+def selected_sources(sources: list[HospitalSource], target: str | None = None) -> list[HospitalSource]:
+    target = (target or "").strip()
+    selected: list[HospitalSource] = []
+    skipped_regions: list[str] = []
+
+    for source in sources:
+        if not source.enabled:
+            continue
+        if source.region not in SERVICE_REGIONS:
+            skipped_regions.append(f"{source.id}:{source.region}")
+            continue
+        if target and source.id != target and source.adapter != target:
+            continue
+        selected.append(source)
+
+    if skipped_regions:
+        print(f"skipped unsupported regions: {', '.join(skipped_regions)}")
+    if target and not selected:
+        available = ", ".join(source.id for source in sources if source.enabled)
+        raise SystemExit(f"Unknown enabled sync target '{target}'. Available enabled hospital ids: {available}")
+    return selected
 
 
 def should_preserve_stale(previous: list[dict], publishable: list) -> bool:

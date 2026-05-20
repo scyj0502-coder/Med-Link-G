@@ -7,7 +7,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from adapters.base import RawSchedule
-from main import should_preserve_stale
+from adapters.base import HospitalSource
+from main import selected_sources, should_preserve_stale
 
 
 class SyncSafetyTest(unittest.TestCase):
@@ -29,6 +30,29 @@ class SyncSafetyTest(unittest.TestCase):
 
         self.assertFalse(should_preserve_stale(previous, publishable))
 
+    def test_selected_sources_filters_disabled_and_unsupported_regions(self) -> None:
+        sources = [
+            hospital_source("kmugh", "kmugh", True, "高雄"),
+            hospital_source("disabled", "kmugh", False, "高雄"),
+            hospital_source("taipei", "kmugh", True, "台北"),
+        ]
+
+        self.assertEqual([source.id for source in selected_sources(sources)], ["kmugh"])
+
+    def test_selected_sources_accepts_hospital_id_or_adapter_target(self) -> None:
+        sources = [
+            hospital_source("kmugh", "kmugh", True, "高雄"),
+            hospital_source("edah-main", "edah_pdf", True, "高雄"),
+            hospital_source("edah-dachang", "edah_pdf", True, "高雄"),
+        ]
+
+        self.assertEqual([source.id for source in selected_sources(sources, "kmugh")], ["kmugh"])
+        self.assertEqual([source.id for source in selected_sources(sources, "edah_pdf")], ["edah-main", "edah-dachang"])
+
+    def test_selected_sources_fails_unknown_target(self) -> None:
+        with self.assertRaises(SystemExit):
+            selected_sources([hospital_source("kmugh", "kmugh", True, "高雄")], "missing")
+
 
 def schedule(index: int) -> RawSchedule:
     return RawSchedule(
@@ -45,6 +69,19 @@ def schedule(index: int) -> RawSchedule:
         source_ref=f"row:{index}",
         confidence=0.9,
         raw_text=f"王測{index}",
+    )
+
+
+def hospital_source(source_id: str, adapter: str, enabled: bool, region: str) -> HospitalSource:
+    return HospitalSource(
+        id=source_id,
+        enabled=enabled,
+        adapter=adapter,
+        region=region,
+        hospital_name="測試醫院",
+        branch_name="總院",
+        departments=[],
+        schedule_url="https://example.test",
     )
 
 
