@@ -64,13 +64,30 @@ TELEGRAM_MAINTAINER_CHAT_ID
 Actions -> Sync schedules -> Run workflow
 ```
 
-`target` 可以留空，代表跑全部已啟用醫院。
+`target` 會以下拉選單呈現。選 `all` 代表跑全部已啟用醫院。
 
 如果只想跑高醫岡山，填：
 
 ```text
 kmugh
 ```
+
+常用選項：
+
+```text
+all              全部已啟用來源
+kmugh            高醫岡山
+edah_pdf         義大三院
+edah-main        義大醫院
+edah-cancer      義大癌治療醫院
+edah-dachang     義大大昌醫院
+shinkao          新高醫院
+pingtung-mohw    衛生福利部屏東醫院
+cgmh-datong      高雄市立大同醫院
+ptvgh            屏東榮民總醫院
+```
+
+如果選到不存在或未啟用的來源，排程會直接失敗並在同步摘要中顯示錯誤，避免「看起來成功但其實沒有同步」。
 
 ## 3. 檢查結果
 
