@@ -35,6 +35,7 @@ type ClientDashboardProps = {
   sourceHospitals: Hospital[];
   schedules: PublishedSchedule[];
   syncRuns: SyncRun[];
+  syncRunStatusAvailable: boolean;
   initialFilters: {
     q: string;
     region?: string;
@@ -49,7 +50,7 @@ type ClientDashboardProps = {
   initialView?: DashboardView;
 };
 
-export default function ClientDashboard({ hospitals, sourceHospitals, schedules, syncRuns, initialFilters, initialView = "today" }: ClientDashboardProps) {
+export default function ClientDashboard({ hospitals, sourceHospitals, schedules, syncRuns, syncRunStatusAvailable, initialFilters, initialView = "today" }: ClientDashboardProps) {
   const [filters, setFilters] = useState<FilterState>({
     ...emptyFilters,
     query: initialFilters.q,
@@ -345,7 +346,13 @@ export default function ClientDashboard({ hospitals, sourceHospitals, schedules,
                 }}
               />
             ) : activeView === "sources" ? (
-              <DataSourcesView hospitals={sourceHospitals} query={filters.query} schedules={schedules} syncRuns={syncRuns} />
+              <DataSourcesView
+                hospitals={sourceHospitals}
+                query={filters.query}
+                schedules={schedules}
+                syncRuns={syncRuns}
+                syncRunStatusAvailable={syncRunStatusAvailable}
+              />
             ) : activeView === "account" ? (
               <AccountSettingsView favoriteCount={favoriteDoctorCount} noteCount={notes.length} />
             ) : (

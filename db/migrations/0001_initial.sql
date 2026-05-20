@@ -17,7 +17,8 @@ create table if not exists sync_runs (
   published_count integer not null default 0,
   rejected_count integer not null default 0,
   started_at timestamptz not null default now(),
-  finished_at timestamptz
+  finished_at timestamptz,
+  error_message text not null default ''
 );
 
 create table if not exists published_schedules (
@@ -75,9 +76,14 @@ create policy "Public can read active hospitals"
 on hospitals for select
 using (enabled = true);
 
+create policy "Public can read sync run status"
+on sync_runs for select
+using (true);
+
 grant usage on schema public to anon, service_role;
 
 grant select on table hospitals to anon;
+grant select on table sync_runs to anon;
 grant select on table published_schedules to anon;
 
 grant all privileges on table hospitals to service_role;

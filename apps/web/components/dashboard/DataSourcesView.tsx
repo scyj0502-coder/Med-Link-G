@@ -10,6 +10,7 @@ type DataSourcesViewProps = {
   hospitals: Hospital[];
   schedules: PublishedSchedule[];
   syncRuns: SyncRun[];
+  syncRunStatusAvailable: boolean;
   query: string;
 };
 
@@ -46,7 +47,7 @@ const kindStyles: Record<SourceKind, string> = {
   手動輸入: "bg-[#eef2f8] text-[#60708d]"
 };
 
-export function DataSourcesView({ hospitals, schedules, syncRuns, query }: DataSourcesViewProps) {
+export function DataSourcesView({ hospitals, schedules, syncRuns, syncRunStatusAvailable, query }: DataSourcesViewProps) {
   const [activeGroup, setActiveGroup] = useState("all");
   const [region, setRegion] = useState("");
   const [kind, setKind] = useState("");
@@ -91,6 +92,15 @@ export function DataSourcesView({ hospitals, schedules, syncRuns, query }: DataS
         <h2 className="text-2xl font-black text-[#061b3d]">資料來源</h2>
         <p className="mt-2 text-sm font-bold text-[#60708d]">各醫院門診資料來源與更新狀態總覽，讓業務安心知道資料從哪裡來、最後什麼時候更新、目前是否正常。</p>
       </div>
+
+      {!syncRunStatusAvailable ? (
+        <section className="rounded-[18px] border border-[#fed7aa] bg-[#fff7ed] p-4 text-sm font-bold leading-6 text-[#9a3412] shadow-[0_12px_30px_rgba(8,35,80,.06)]">
+          <span className="font-black">同步狀態尚未開放讀取：</span>
+          目前仍可查看已發布門診資料，但若要顯示最近同步成功或失敗原因，請在 Supabase SQL Editor 執行
+          <code className="mx-1 rounded bg-white px-1.5 py-0.5 text-xs">db/migrations/0007_public_sync_run_status.sql</code>
+          。
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 rounded-[18px] border border-[#dbe5f4] bg-white p-3 shadow-[0_12px_30px_rgba(8,35,80,.08)] sm:p-4 md:grid-cols-5">
         {stats.map((stat) => (

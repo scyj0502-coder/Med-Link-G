@@ -23,6 +23,7 @@ type PageData = {
   sourceHospitals: Hospital[];
   schedules: PublishedSchedule[];
   syncRuns: SyncRun[];
+  syncRunStatusAvailable: boolean;
 };
 
 const schedulePageSize = 1000;
@@ -72,19 +73,19 @@ async function loadSyncRuns(supabase: ReturnType<typeof createSupabaseBrowserCli
 
     if (fallbackResult.error) {
       console.error(fallbackResult.error);
-      return [];
+      return { rows: [], available: false };
     }
 
-    return (fallbackResult.data ?? []) as SyncRun[];
+    return { rows: (fallbackResult.data ?? []) as SyncRun[], available: true };
   }
 
-  return (result.data ?? []) as SyncRun[];
+  return { rows: (result.data ?? []) as SyncRun[], available: true };
 }
 
 async function loadPageData(): Promise<PageData> {
   const supabase = createSupabaseBrowserClient();
 
-  const [hospitalResult, schedules, syncRuns] = await Promise.all([
+  const [hospitalResult, schedules, syncRunResult] = await Promise.all([
     supabase
       .from("hospitals")
       .select("id,region,hospital_name,branch_name,schedule_url,enabled")
@@ -102,7 +103,8 @@ async function loadPageData(): Promise<PageData> {
     hospitals: hospitalResult.data ?? [],
     sourceHospitals: mergeSourceCatalog(hospitalResult.data ?? []),
     schedules,
-    syncRuns
+    syncRuns: syncRunResult.rows,
+    syncRunStatusAvailable: syncRunResult.available
   };
 }
 
@@ -116,6 +118,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       sourceHospitals={data.sourceHospitals}
       schedules={data.schedules}
       syncRuns={data.syncRuns}
+      syncRunStatusAvailable={data.syncRunStatusAvailable}
       initialFilters={{
         q: params.q ?? "",
         region: params.region ?? "",

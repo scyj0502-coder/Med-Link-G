@@ -1,6 +1,7 @@
 grant usage on schema public to anon, service_role;
 
 grant select on table hospitals to anon;
+grant select on table sync_runs to anon;
 grant select on table published_schedules to anon;
 
 grant all privileges on table hospitals to service_role;
