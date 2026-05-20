@@ -52,6 +52,7 @@ def run(target: str | None = None) -> list[dict[str, Any]]:
             scraped = adapter.fetch()
         except Exception as exc:
             writer.write_failed_run(source, str(exc))
+            notifier.send_sync_failure(source, str(exc))
             results.append({
                 "source_id": source.id,
                 "hospital_name": source.hospital_name,
@@ -80,6 +81,8 @@ def run(target: str | None = None) -> list[dict[str, Any]]:
             notifier.send_quality_warning(source, rejected)
 
         status = "ok" if publishable and not rejected else "needs_attention" if publishable else "parse_failed"
+        if status == "parse_failed":
+            notifier.send_sync_failure(source, "No publishable schedules were parsed.")
         results.append({
             "source_id": source.id,
             "hospital_name": source.hospital_name,
@@ -179,11 +182,17 @@ def escape_markdown_table(value: str) -> str:
     return value.replace("|", "\\|").replace("\n", " ")
 
 
+def has_parse_failures(results: list[dict[str, Any]]) -> bool:
+    return any(item.get("status") == "parse_failed" for item in results)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run Med-Link schedule sync.")
     parser.add_argument("target", nargs="?", help="Hospital id or adapter name, e.g. kmugh.")
     args = parser.parse_args()
-    run(args.target)
+    results = run(args.target)
+    if has_parse_failures(results):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

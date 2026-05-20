@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from adapters.base import RawSchedule
 from adapters.base import HospitalSource
-from main import selected_sources, should_preserve_stale, write_sync_summary
+from main import has_parse_failures, selected_sources, should_preserve_stale, write_sync_summary
 
 
 class SyncSafetyTest(unittest.TestCase):
@@ -87,6 +87,16 @@ class SyncSafetyTest(unittest.TestCase):
                 markdown_path.unlink()
             if temp_dir.exists():
                 temp_dir.rmdir()
+
+    def test_has_parse_failures_detects_failed_sources(self) -> None:
+        self.assertTrue(has_parse_failures([
+            {"source_id": "ok", "status": "ok"},
+            {"source_id": "failed", "status": "parse_failed"},
+        ]))
+        self.assertFalse(has_parse_failures([
+            {"source_id": "ok", "status": "ok"},
+            {"source_id": "partial", "status": "needs_attention"},
+        ]))
 
 
 def schedule(index: int) -> RawSchedule:
