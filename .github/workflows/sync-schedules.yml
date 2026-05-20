@@ -44,4 +44,25 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_MAINTAINER_CHAT_ID: ${{ secrets.TELEGRAM_MAINTAINER_CHAT_ID }}
-        run: python main.py ${{ github.event.inputs.target }}
+        run: |
+          set -o pipefail
+          python main.py "${{ github.event.inputs.target }}" 2>&1 | tee sync-output.log
+      - name: Add sync summary
+        if: always()
+        env:
+          SYNC_TARGET: ${{ github.event.inputs.target }}
+        run: |
+          {
+            echo "## Med-Link schedule sync"
+            echo
+            echo "- Run time (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')"
+            echo "- Target: ${SYNC_TARGET:-all enabled sources}"
+            echo
+            echo '```text'
+            if [ -f sync-output.log ]; then
+              tail -n 80 sync-output.log
+            else
+              echo "No sync output file generated."
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
