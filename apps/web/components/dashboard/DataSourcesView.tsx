@@ -48,6 +48,7 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
   const [kind, setKind] = useState("");
   const [status, setStatus] = useState("");
   const [sourceQuery, setSourceQuery] = useState("");
+  const [selectedRow, setSelectedRow] = useState<SourceRow | null>(null);
   const rows = useMemo(() => buildSourceRows(hospitals, schedules), [hospitals, schedules]);
   const filteredRows = rows.filter((row) => {
     const target = [row.hospitalName, row.branchName, row.region, row.kind, row.status, row.devNote].join(" ").toLowerCase();
@@ -168,7 +169,7 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
               <span>資料來源</span>
             </div>
             <div className="divide-y divide-[#eef3fb]">
-              {filteredRows.length ? filteredRows.map((row) => <SourceListRow key={row.id} row={row} />) : (
+              {filteredRows.length ? filteredRows.map((row) => <SourceListRow key={row.id} row={row} onView={() => setSelectedRow(row)} />) : (
                 <div className="p-8 text-center">
                   <h3 className="text-xl font-black text-[#061b3d]">目前沒有符合條件的資料來源</h3>
                   <p className="mt-2 text-sm font-bold text-[#60708d]">可以放寬地區、類型或狀態條件再查看。</p>
@@ -180,6 +181,8 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
 
         <DataSourcesSidePanel rows={rows} />
       </div>
+
+      {selectedRow ? <SourceDetailDialog row={selectedRow} onClose={() => setSelectedRow(null)} /> : null}
     </section>
   );
 }
@@ -207,7 +210,7 @@ function SummaryStat({ label, value, suffix, tone }: { label: string; value: num
   );
 }
 
-function SourceListRow({ row }: { row: SourceRow }) {
+function SourceListRow({ row, onView }: { row: SourceRow; onView: () => void }) {
   return (
     <article className="grid gap-3 px-4 py-4 lg:grid-cols-[minmax(220px,1.4fr)_90px_120px_100px_140px_120px_160px] lg:items-center">
       <div className="min-w-0">
@@ -235,9 +238,63 @@ function SourceListRow({ row }: { row: SourceRow }) {
         ) : (
           <span className="h-9 rounded-xl border border-[#dbe5f4] px-3 py-2 text-xs font-black text-[#60708d]">未提供連結</span>
         )}
-        <button className="h-9 rounded-xl border border-[#b8c7dd] px-3 text-xs font-black text-[#075de8]" type="button">查看詳情</button>
+        <button className="h-9 rounded-xl border border-[#b8c7dd] px-3 text-xs font-black text-[#075de8]" onClick={onView} type="button">查看詳情</button>
       </div>
     </article>
+  );
+}
+
+function SourceDetailDialog({ row, onClose }: { row: SourceRow; onClose: () => void }) {
+  const fields = [
+    ["醫院", row.hospitalName],
+    ["分院", row.branchName],
+    ["地區", row.region],
+    ["資料類型", row.kind],
+    ["更新頻率", row.frequency],
+    ["最後更新", `${row.lastUpdated} ${row.relativeUpdated}`.trim()],
+    ["目前診次", `${row.scheduleCount} 筆`],
+    ["狀態", row.status]
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-end bg-[#061b3d]/45 p-0 sm:place-items-center sm:p-6">
+      <section className="max-h-[92vh] w-full overflow-y-auto rounded-t-[24px] bg-white p-5 shadow-[0_24px_80px_rgba(6,27,61,.25)] sm:max-w-2xl sm:rounded-[24px] sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[.18em] text-[#60708d]">Source Detail</p>
+            <h3 className="mt-2 text-2xl font-black text-[#061b3d]">{row.hospitalName}</h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className={`rounded-md px-2 py-1 text-xs font-black ${statusStyles[row.status]}`}>{row.status}</span>
+              <span className={`rounded-md px-2 py-1 text-xs font-black ${kindStyles[row.kind]}`}>{row.kind}</span>
+            </div>
+          </div>
+          <button className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#dbe5f4] text-xl font-black text-[#0d2348]" onClick={onClose} type="button">×</button>
+        </div>
+
+        {row.devNote ? (
+          <div className="mt-5 rounded-2xl bg-[#f8fbff] p-4 text-sm font-bold leading-6 text-[#60708d]">
+            <span className="font-black text-[#061b3d]">開發狀態：</span>
+            {row.devNote}
+          </div>
+        ) : null}
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {fields.map(([label, value]) => (
+            <div className="rounded-2xl border border-[#dbe5f4] bg-white p-4" key={label}>
+              <div className="text-xs font-black text-[#60708d]">{label}</div>
+              <div className="mt-2 text-sm font-black text-[#061b3d]">{value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 flex flex-wrap justify-end gap-3">
+          {row.sourceUrl ? (
+            <a className="rounded-xl bg-[#075de8] px-4 py-3 text-sm font-black text-white" href={row.sourceUrl} rel="noreferrer" target="_blank">查看原始門診表</a>
+          ) : null}
+          <button className="rounded-xl border border-[#b8c7dd] px-4 py-3 text-sm font-black text-[#075de8]" onClick={onClose} type="button">關閉</button>
+        </div>
+      </section>
+    </div>
   );
 }
 
