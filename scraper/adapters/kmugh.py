@@ -22,14 +22,15 @@ class KmughAdapter(ScheduleAdapter):
         payload = json.loads(self.fixture_path.read_text(encoding="utf-8"))
         schedules: list[RawSchedule] = []
         for item in payload.get("sessions", []):
-            if item.get("category") not in self.source.departments:
+            department = item.get("category") or item.get("department", "")
+            if department not in self.source.departments:
                 continue
             schedules.append(
                 RawSchedule(
                     hospital_id=self.source.id,
                     hospital_name=self.source.hospital_name,
                     branch_name=self.source.branch_name,
-                    department=item.get("category", item.get("department", "")),
+                    department=department,
                     doctor_name=item.get("doctorName", ""),
                     weekday=int(item.get("weekdays", [0])[0]),
                     weekday_label=item.get("sourceWeekdayLabel", ""),
@@ -41,4 +42,3 @@ class KmughAdapter(ScheduleAdapter):
                 )
             )
         return schedules
-
