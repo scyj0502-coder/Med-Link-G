@@ -86,3 +86,13 @@ jobs:
             fi
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload sync report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: med-link-sync-report
+          path: |
+            scraper/sync-summary.json
+            scraper/sync-summary.md
+            scraper/sync-output.log
+          if-no-files-found: ignore

@@ -99,6 +99,14 @@ kmugh: scraped=33 published=33 rejected=0 changes=0 preserve_stale=False
 
 GitHub Actions 的 Summary 會另外顯示「來源同步總表」，用表格列出每個來源的狀態、抓取筆數、發布筆數、異常筆數、異動筆數，以及是否保留上一版資料。這一段比完整 log 更適合快速檢查同步結果。
 
+同一次執行也會上傳 `med-link-sync-report` artifact，裡面包含：
+
+- `sync-summary.json`
+- `sync-summary.md`
+- `sync-output.log`
+
+如果需要回頭追查某次同步細節，可以從該次 Actions run 的 Artifacts 下載。
+
 若 `changes` 大於 0，代表系統偵測到新增、刪除或異動。
 
 `preserve_stale=True` 代表這次解析結果比上一版少太多，系統先保留上一版未出現在本次結果中的資料，避免一次 OCR 或來源異常造成前台資料突然消失。
