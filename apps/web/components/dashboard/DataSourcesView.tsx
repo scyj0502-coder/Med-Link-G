@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { plannedKindForSource, plannedNoteForSource } from "../../lib/sourceCatalog";
-import type { Hospital, PublishedSchedule } from "../../lib/types";
+import type { Hospital, PublishedSchedule, SyncRun } from "../../lib/types";
 
 type SourceStatus = "正常" | "部分異常" | "更新異常" | "尚未更新" | "開發中";
 type SourceKind = "網頁擷取" | "PDF 檔案" | "圖片" | "手動輸入";
@@ -9,6 +9,7 @@ type SourceKind = "網頁擷取" | "PDF 檔案" | "圖片" | "手動輸入";
 type DataSourcesViewProps = {
   hospitals: Hospital[];
   schedules: PublishedSchedule[];
+  syncRuns: SyncRun[];
   query: string;
 };
 
@@ -25,6 +26,9 @@ type SourceRow = {
   sourceUrl: string;
   scheduleCount: number;
   devNote: string;
+  latestRun: SyncRun | null;
+  runSummary: string;
+  errorMessage: string;
 };
 
 const statusStyles: Record<SourceStatus, string> = {
@@ -42,14 +46,14 @@ const kindStyles: Record<SourceKind, string> = {
   手動輸入: "bg-[#eef2f8] text-[#60708d]"
 };
 
-export function DataSourcesView({ hospitals, schedules, query }: DataSourcesViewProps) {
+export function DataSourcesView({ hospitals, schedules, syncRuns, query }: DataSourcesViewProps) {
   const [activeGroup, setActiveGroup] = useState("all");
   const [region, setRegion] = useState("");
   const [kind, setKind] = useState("");
   const [status, setStatus] = useState("");
   const [sourceQuery, setSourceQuery] = useState("");
   const [selectedRow, setSelectedRow] = useState<SourceRow | null>(null);
-  const rows = useMemo(() => buildSourceRows(hospitals, schedules), [hospitals, schedules]);
+  const rows = useMemo(() => buildSourceRows(hospitals, schedules, syncRuns), [hospitals, schedules, syncRuns]);
   const filteredRows = rows.filter((row) => {
     const target = [row.hospitalName, row.branchName, row.region, row.kind, row.status, row.devNote].join(" ").toLowerCase();
     const normalizedQuery = [query, sourceQuery].filter(Boolean).join(" ").trim().toLowerCase();
@@ -220,6 +224,7 @@ function SourceListRow({ row, onView }: { row: SourceRow; onView: () => void }) 
             <h3 className="truncate font-black text-[#061b3d]">{row.hospitalName}</h3>
             <div className="mt-1 inline-flex rounded-md bg-[#eaf2ff] px-2 py-1 text-xs font-black text-[#075de8]">{row.branchName || "總院"}</div>
             {row.devNote ? <p className="mt-2 line-clamp-2 text-xs font-bold leading-5 text-[#60708d]">{row.devNote}</p> : null}
+            {row.errorMessage ? <p className="mt-2 line-clamp-2 text-xs font-black leading-5 text-[#dc2626]">最近同步失敗：{row.errorMessage}</p> : null}
           </div>
         </div>
       </div>
@@ -252,6 +257,7 @@ function SourceDetailDialog({ row, onClose }: { row: SourceRow; onClose: () => v
     ["資料類型", row.kind],
     ["更新頻率", row.frequency],
     ["最後更新", `${row.lastUpdated} ${row.relativeUpdated}`.trim()],
+    ["最近同步", row.runSummary],
     ["目前診次", `${row.scheduleCount} 筆`],
     ["狀態", row.status]
   ];
@@ -278,6 +284,13 @@ function SourceDetailDialog({ row, onClose }: { row: SourceRow; onClose: () => v
           </div>
         ) : null}
 
+        {row.errorMessage ? (
+          <div className="mt-5 rounded-2xl bg-[#fff5f5] p-4 text-sm font-bold leading-6 text-[#dc2626]">
+            <span className="font-black">最近同步失敗：</span>
+            {row.errorMessage}
+          </div>
+        ) : null}
+
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {fields.map(([label, value]) => (
             <div className="rounded-2xl border border-[#dbe5f4] bg-white p-4" key={label}>
@@ -301,8 +314,8 @@ function SourceDetailDialog({ row, onClose }: { row: SourceRow; onClose: () => v
 function DataSourcesSidePanel({ rows }: { rows: SourceRow[] }) {
   const statusItems: { label: SourceStatus; description: string }[] = [
     { label: "正常", description: "資料已成功更新，內容完整可用" },
-    { label: "部分異常", description: "部分科別或時段暫時無法取得" },
-    { label: "更新異常", description: "資料取得失敗，請稍後再試" },
+    { label: "部分異常", description: "最近一次同步有部分資料無法取得，前台仍保留可用資料" },
+    { label: "更新異常", description: "最近一次同步失敗，正式查詢會保留上一版可用資料" },
     { label: "尚未更新", description: "尚未取得任何門診資料" },
     { label: "開發中", description: "已列入來源規劃，尚未發布正式門診資料" }
   ];
@@ -348,7 +361,8 @@ function DataSourcesSidePanel({ rows }: { rows: SourceRow[] }) {
         <ul className="grid gap-2 text-sm font-bold leading-6 text-[#60708d]">
           <li>門診資料來自各醫院官方網站或公開門診表。</li>
           <li>正常更新代表最近一次同步已完成。</li>
-          <li>若顯示部分異常，前台仍保留可用資料供查詢。</li>
+          <li>若顯示部分異常或更新異常，前台會保留上一版可用資料供查詢。</li>
+          <li>這裡是業務檢視用狀態，不需要業務手動修爬蟲。</li>
         </ul>
         <button className="mt-4 h-10 w-full rounded-xl border border-[#075de8] bg-white text-sm font-black text-[#075de8]" type="button">聯絡管理員</button>
       </SideCard>
@@ -396,18 +410,26 @@ function SideCard({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function buildSourceRows(hospitals: Hospital[], schedules: PublishedSchedule[]): SourceRow[] {
+function buildSourceRows(hospitals: Hospital[], schedules: PublishedSchedule[], syncRuns: SyncRun[]): SourceRow[] {
   const scheduleMap = new Map<string, PublishedSchedule[]>();
   for (const schedule of schedules) {
     scheduleMap.set(schedule.hospital_id, [...(scheduleMap.get(schedule.hospital_id) ?? []), schedule]);
   }
+  const runMap = new Map<string, SyncRun[]>();
+  for (const run of syncRuns) {
+    runMap.set(run.hospital_id, [...(runMap.get(run.hospital_id) ?? []), run]);
+  }
 
-  return hospitals.map((hospital, index) => {
+  return hospitals.map((hospital) => {
     const hospitalSchedules = scheduleMap.get(hospital.id) ?? [];
+    const latestRun = latestSyncRun(runMap.get(hospital.id) ?? []);
     const latest = latestSchedule(hospitalSchedules);
-    const updatedValue = latest?.fetched_at ?? latest?.published_at ?? latest?.parsed_at ?? "";
-    const status = sourceStatus(hospital, hospitalSchedules, latest, updatedValue);
+    const latestScheduleValue = latest?.fetched_at ?? latest?.published_at ?? latest?.parsed_at ?? "";
+    const latestRunValue = latestRun?.finished_at ?? latestRun?.started_at ?? "";
+    const updatedValue = getTime(latestRunValue) >= getTime(latestScheduleValue) ? latestRunValue : latestScheduleValue;
+    const status = sourceStatus(hospital, hospitalSchedules, latest, latestRun, latestScheduleValue);
     const kind = sourceKind(hospital, latest, hospital.schedule_url);
+    const errorMessage = runErrorMessage(latestRun);
     return {
       id: hospital.id,
       hospitalName: hospital.hospital_name,
@@ -420,7 +442,10 @@ function buildSourceRows(hospitals: Hospital[], schedules: PublishedSchedule[]):
       status,
       sourceUrl: latest?.source_file_url || latest?.source_url || hospital.schedule_url || "",
       scheduleCount: hospitalSchedules.length,
-      devNote: plannedNoteForSource(hospital.id) ?? ""
+      devNote: plannedNoteForSource(hospital.id) ?? "",
+      latestRun,
+      runSummary: runSummary(latestRun),
+      errorMessage
     };
   });
 }
@@ -429,14 +454,39 @@ function latestSchedule(schedules: PublishedSchedule[]) {
   return [...schedules].sort((a, b) => getTime(b.fetched_at ?? b.published_at ?? b.parsed_at) - getTime(a.fetched_at ?? a.published_at ?? a.parsed_at))[0];
 }
 
-function sourceStatus(hospital: Hospital, schedules: PublishedSchedule[], latest: PublishedSchedule | undefined, updatedValue: string): SourceStatus {
+function latestSyncRun(runs: SyncRun[]) {
+  return [...runs].sort((a, b) => getTime(b.finished_at ?? b.started_at) - getTime(a.finished_at ?? a.started_at))[0] ?? null;
+}
+
+function sourceStatus(hospital: Hospital, schedules: PublishedSchedule[], latest: PublishedSchedule | undefined, latestRun: SyncRun | null, updatedValue: string): SourceStatus {
   if (!hospital.enabled) return "開發中";
+  if (latestRun?.status === "parse_failed" || latestRun?.status === "failed") return "更新異常";
+  if (latestRun?.status === "needs_attention") return "部分異常";
   if (!latest || !schedules.length) return "尚未更新";
   const parseStatuses = schedules.map((item) => item.parse_status).filter(Boolean);
   if (parseStatuses.length && parseStatuses.every((item) => item !== "ok" && item !== "success")) return "更新異常";
   if (parseStatuses.some((item) => item !== "ok" && item !== "success")) return "部分異常";
   if (updatedValue && Date.now() - getTime(updatedValue) > 14 * 24 * 60 * 60 * 1000) return "部分異常";
   return "正常";
+}
+
+function runSummary(run: SyncRun | null) {
+  if (!run) return "尚未同步";
+  const time = formatDateTimeShort(run.finished_at ?? run.started_at);
+  const status = syncRunStatusLabel(run.status);
+  return `${status}，發布 ${run.published_count} 筆 / 異常 ${run.rejected_count} 筆（${time}）`;
+}
+
+function runErrorMessage(run: SyncRun | null) {
+  if (!run || !["parse_failed", "failed"].includes(run.status)) return "";
+  return (run.error_message ?? "").trim() || "資料取得或解析失敗，系統已保留上一版可用資料。";
+}
+
+function syncRunStatusLabel(status: string) {
+  if (status === "ok" || status === "success") return "同步成功";
+  if (status === "needs_attention") return "部分異常";
+  if (status === "parse_failed" || status === "failed") return "同步失敗";
+  return status || "未知狀態";
 }
 
 function sourceKind(hospital: Hospital, schedule: PublishedSchedule | undefined, scheduleUrl: string | null): SourceKind {
@@ -469,7 +519,7 @@ function latestUpdatedTime(rows: SourceRow[]) {
 }
 
 function exportSourceRows(rows: SourceRow[]) {
-  const header = ["醫院名稱", "分院", "地區", "資料類型", "更新頻率", "最後更新時間", "更新狀態", "開發狀態", "原始門診表連結"];
+  const header = ["醫院名稱", "分院", "地區", "資料類型", "更新頻率", "最後更新時間", "更新狀態", "最近同步", "錯誤摘要", "開發狀態", "原始門診表連結"];
   const body = rows.map((row) => [
     row.hospitalName,
     row.branchName,
@@ -478,6 +528,8 @@ function exportSourceRows(rows: SourceRow[]) {
     row.frequency,
     row.lastUpdated,
     row.status,
+    row.runSummary,
+    row.errorMessage,
     row.devNote,
     row.sourceUrl
   ]);

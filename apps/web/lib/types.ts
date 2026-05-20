@@ -38,3 +38,15 @@ export type Hospital = {
   schedule_url: string | null;
   enabled: boolean;
 };
+
+export type SyncRun = {
+  id: number;
+  hospital_id: string;
+  status: string;
+  scraped_count: number;
+  published_count: number;
+  rejected_count: number;
+  started_at: string;
+  finished_at: string | null;
+  error_message?: string | null;
+};

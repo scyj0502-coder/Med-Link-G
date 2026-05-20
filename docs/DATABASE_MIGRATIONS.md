@@ -27,21 +27,21 @@ db/migrations/
 | `0004_source_tracking_metadata.sql` | 來源追蹤欄位 |
 | `0005_personal_notes.sql` | 個人醫師備註 |
 | `0006_personal_favorites.sql` | 個人收藏醫師 |
+| `0007_public_sync_run_status.sql` | 資料來源頁讀取最新同步狀態 |
 
 ## 這次需要補跑
 
-如果 Supabase 尚未有 `personal_favorites` 資料表，請執行：
+如果 Supabase 尚未讓前端讀取最新同步狀態，請執行：
 
 ```text
-db/migrations/0006_personal_favorites.sql
+db/migrations/0007_public_sync_run_status.sql
 ```
 
 執行後應看到：
 
-- `personal_favorites` 資料表
-- RLS 已啟用
-- authenticated 使用者只能讀寫自己的收藏
-- `user_id + doctor_key` 為主鍵
+- `sync_runs.error_message` 欄位
+- `sync_runs` 可用 publishable key 讀取同步狀態
+- 資料來源頁可顯示「最近同步」、「更新異常」與錯誤摘要
 
 ## 注意
 
@@ -59,3 +59,10 @@ db/migrations/0006_personal_favorites.sql
 - 同時不發送大量「門診已移除」通知。
 
 這代表 PDF/OCR 或醫院網頁暫時解析不完整時，前台仍可保留上一版可用資料，不會因一次同步異常造成整間醫院資料突然消失。
+
+資料來源頁會另外讀取 `sync_runs`：
+
+- 最近一次同步成功，才顯示正常。
+- 最近一次同步部分失敗，顯示部分異常。
+- 最近一次同步完全失敗，顯示更新異常。
+- 即使顯示更新異常，正式查詢仍會保留上一版已發布資料，避免業務端突然看不到資料。

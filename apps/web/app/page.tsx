@@ -1,7 +1,7 @@
 import ClientDashboard from "./ClientDashboard";
 import { createSupabaseBrowserClient } from "../lib/supabase";
 import { mergeSourceCatalog } from "../lib/sourceCatalog";
-import type { Hospital, PublishedSchedule } from "../lib/types";
+import type { Hospital, PublishedSchedule, SyncRun } from "../lib/types";
 
 type HomePageProps = {
   searchParams?: Promise<{
@@ -22,6 +22,7 @@ type PageData = {
   hospitals: Hospital[];
   sourceHospitals: Hospital[];
   schedules: PublishedSchedule[];
+  syncRuns: SyncRun[];
 };
 
 const schedulePageSize = 1000;
@@ -55,16 +56,42 @@ async function loadPublishedSchedules(supabase: ReturnType<typeof createSupabase
   return schedules;
 }
 
+async function loadSyncRuns(supabase: ReturnType<typeof createSupabaseBrowserClient>) {
+  const result = await supabase
+    .from("sync_runs")
+    .select("id,hospital_id,status,scraped_count,published_count,rejected_count,started_at,finished_at,error_message")
+    .order("started_at", { ascending: false })
+    .limit(250);
+
+  if (result.error) {
+    const fallbackResult = await supabase
+      .from("sync_runs")
+      .select("id,hospital_id,status,scraped_count,published_count,rejected_count,started_at,finished_at")
+      .order("started_at", { ascending: false })
+      .limit(250);
+
+    if (fallbackResult.error) {
+      console.error(fallbackResult.error);
+      return [];
+    }
+
+    return (fallbackResult.data ?? []) as SyncRun[];
+  }
+
+  return (result.data ?? []) as SyncRun[];
+}
+
 async function loadPageData(): Promise<PageData> {
   const supabase = createSupabaseBrowserClient();
 
-  const [hospitalResult, schedules] = await Promise.all([
+  const [hospitalResult, schedules, syncRuns] = await Promise.all([
     supabase
       .from("hospitals")
       .select("id,region,hospital_name,branch_name,schedule_url,enabled")
       .eq("enabled", true)
       .order("region", { ascending: true }),
-    loadPublishedSchedules(supabase)
+    loadPublishedSchedules(supabase),
+    loadSyncRuns(supabase)
   ]);
 
   if (hospitalResult.error) {
@@ -74,7 +101,8 @@ async function loadPageData(): Promise<PageData> {
   return {
     hospitals: hospitalResult.data ?? [],
     sourceHospitals: mergeSourceCatalog(hospitalResult.data ?? []),
-    schedules
+    schedules,
+    syncRuns
   };
 }
 
@@ -87,6 +115,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       hospitals={data.hospitals}
       sourceHospitals={data.sourceHospitals}
       schedules={data.schedules}
+      syncRuns={data.syncRuns}
       initialFilters={{
         q: params.q ?? "",
         region: params.region ?? "",

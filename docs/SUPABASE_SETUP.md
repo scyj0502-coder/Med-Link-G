@@ -99,6 +99,14 @@ db/migrations/0002_data_api_grants.sql
 
 新建立的 Supabase 專案只需要跑最新版 `0001_initial.sql` 即可。
 
+如果你要讓「資料來源」頁顯示最新同步狀態與錯誤摘要，請確認也有執行：
+
+```text
+db/migrations/0007_public_sync_run_status.sql
+```
+
+這個 migration 只公開同步狀態、筆數與錯誤摘要，不會公開 Supabase secret key。
+
 ## 5. GitHub Actions Secrets 之後再設定
 
 等本機確認可以連到 Supabase 後，之後才需要到 GitHub repository 設定 Secrets。

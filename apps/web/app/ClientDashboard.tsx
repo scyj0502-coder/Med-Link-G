@@ -28,12 +28,13 @@ import {
 import { loadFavorites, loadLocalFavorites, saveFavorite } from "../lib/favoritesStorage";
 import { defaultPersonalNote, mockPersonalNotes } from "../lib/mockPersonalNotes";
 import { loadLocalPersonalNotes, loadPersonalNotes, savePersonalNote } from "../lib/personalNotesStorage";
-import type { Hospital, PublishedSchedule } from "../lib/types";
+import type { Hospital, PublishedSchedule, SyncRun } from "../lib/types";
 
 type ClientDashboardProps = {
   hospitals: Hospital[];
   sourceHospitals: Hospital[];
   schedules: PublishedSchedule[];
+  syncRuns: SyncRun[];
   initialFilters: {
     q: string;
     region?: string;
@@ -48,7 +49,7 @@ type ClientDashboardProps = {
   initialView?: DashboardView;
 };
 
-export default function ClientDashboard({ hospitals, sourceHospitals, schedules, initialFilters, initialView = "today" }: ClientDashboardProps) {
+export default function ClientDashboard({ hospitals, sourceHospitals, schedules, syncRuns, initialFilters, initialView = "today" }: ClientDashboardProps) {
   const [filters, setFilters] = useState<FilterState>({
     ...emptyFilters,
     query: initialFilters.q,
@@ -344,7 +345,7 @@ export default function ClientDashboard({ hospitals, sourceHospitals, schedules,
                 }}
               />
             ) : activeView === "sources" ? (
-              <DataSourcesView hospitals={sourceHospitals} query={filters.query} schedules={schedules} />
+              <DataSourcesView hospitals={sourceHospitals} query={filters.query} schedules={schedules} syncRuns={syncRuns} />
             ) : activeView === "account" ? (
               <AccountSettingsView favoriteCount={favoriteDoctorCount} noteCount={notes.length} />
             ) : (

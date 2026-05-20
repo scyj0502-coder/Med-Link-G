@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -118,12 +119,14 @@ class SupabaseScheduleWriter:
             "enabled": source.enabled,
         }], on_conflict="id")
 
-        run = self.client.insert("sync_runs", {
+        run = self.insert_sync_run({
             "hospital_id": source.id,
             "status": "ok" if publishable and not rejected else "needs_attention" if publishable else "parse_failed",
             "scraped_count": len(publishable) + len(rejected),
             "published_count": len(publishable),
             "rejected_count": len(rejected),
+            "finished_at": utc_now_iso(),
+            "error_message": "" if publishable else "No publishable schedules were parsed.",
         })[0]
 
         payloads = [schedule_payload(item) | {"sync_run_id": run["id"]} for item in publishable]
@@ -170,13 +173,24 @@ class SupabaseScheduleWriter:
             "schedule_url": source.schedule_url,
             "enabled": source.enabled,
         }], on_conflict="id")
-        self.client.insert("sync_runs", {
+        self.insert_sync_run({
             "hospital_id": source.id,
             "status": "parse_failed",
             "scraped_count": 0,
             "published_count": 0,
             "rejected_count": 0,
+            "finished_at": utc_now_iso(),
+            "error_message": error[:1000],
         })
+
+    def insert_sync_run(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
+        try:
+            return self.client.insert("sync_runs", payload)
+        except httpx.HTTPStatusError as exc:
+            if not is_missing_column_error(exc) or "error_message" not in payload:
+                raise
+        fallback_payload = {key: value for key, value in payload.items() if key != "error_message"}
+        return self.client.insert("sync_runs", fallback_payload)
 
     def upsert_published(self, payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
         try:
@@ -217,3 +231,7 @@ def is_missing_column_error(exc: httpx.HTTPStatusError) -> bool:
         return False
     text = exc.response.text.lower()
     return "column" in text and ("not found" in text or "could not find" in text)
+
+
+def utc_now_iso() -> str:
+    return datetime.now(UTC).isoformat()
