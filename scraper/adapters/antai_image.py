@@ -16,6 +16,8 @@ from adapters.edah_pdf import ocr_image
 
 
 IMAGE_PATTERN = re.compile(r"/images-1003/(\d{6})-(\d+)\.jpg$", re.IGNORECASE)
+CELL_DOCTOR_PATTERN = re.compile(r"([\u4e00-\u9fff]{2,4})([A-Z]\d{1,2})(?:診|誌|認|詰)?")
+NOTE_PATTERN = re.compile(r"[（(]([^（）()]{2,30})[）)]")
 
 
 @dataclass(frozen=True)
@@ -40,6 +42,14 @@ class ScheduleColumn:
     period: str
     left: int
     right: int
+
+
+@dataclass(frozen=True)
+class CellDoctor:
+    doctor_name: str
+    room: str
+    note: str
+    raw_text: str
 
 
 class AntaiImageAdapter(ScheduleAdapter):
@@ -206,6 +216,46 @@ def data_row_ranges(grid: TableGrid) -> list[tuple[int, int]]:
         for top, bottom in zip(data_edges, data_edges[1:])
         if bottom - top >= 18
     ]
+
+
+def extract_cell_doctors(raw_text: str) -> list[CellDoctor]:
+    compact = normalize_cell_text(raw_text)
+    if not compact:
+        return []
+    note = "；".join(dict.fromkeys(match.strip() for match in NOTE_PATTERN.findall(raw_text) if match.strip()))
+    doctors: list[CellDoctor] = []
+    seen: set[tuple[str, str]] = set()
+    for match in CELL_DOCTOR_PATTERN.finditer(compact):
+        doctor_name = match.group(1)
+        room = f"{match.group(2)}診"
+        key = (doctor_name, room)
+        if key in seen:
+            continue
+        seen.add(key)
+        doctors.append(CellDoctor(doctor_name=doctor_name, room=room, note=note, raw_text=raw_text))
+    return doctors
+
+
+def normalize_cell_text(raw_text: str) -> str:
+    return (
+        raw_text.upper()
+        .replace("\u3000", "")
+        .replace(" ", "")
+        .replace("\n", "")
+        .replace("０", "0")
+        .replace("１", "1")
+        .replace("２", "2")
+        .replace("３", "3")
+        .replace("４", "4")
+        .replace("５", "5")
+        .replace("６", "6")
+        .replace("７", "7")
+        .replace("８", "8")
+        .replace("９", "9")
+        .replace("Ｃ", "C")
+        .replace("Ａ", "A")
+        .replace("Ｂ", "B")
+    )
 
 
 def parse_ocr_text(source, image_ref: SourceImage, fetched_at: str) -> list[RawSchedule]:

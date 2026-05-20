@@ -5,7 +5,16 @@ import unittest
 from unittest.mock import patch
 from PIL import Image, ImageDraw
 
-from adapters.antai_image import TableGrid, data_row_ranges, detect_table_grid, discover_latest_images, merge_positions, schedule_columns
+from adapters.antai_image import (
+    TableGrid,
+    data_row_ranges,
+    detect_table_grid,
+    discover_latest_images,
+    extract_cell_doctors,
+    merge_positions,
+    normalize_cell_text,
+    schedule_columns,
+)
 
 
 class AntaiImageParserTest(unittest.TestCase):
@@ -63,6 +72,22 @@ class AntaiImageParserTest(unittest.TestCase):
         grid = TableGrid(x_lines=[], y_lines=[225, 244, 260, 276, 317, 374, 410])
 
         self.assertEqual(data_row_ranges(grid), [(317, 374), (374, 410)])
+
+    def test_normalize_cell_text_removes_ocr_spacing(self) -> None:
+        self.assertEqual(normalize_cell_text("王 程 慶\nC21 誌\n"), "王程慶C21誌")
+
+    def test_extract_cell_doctors_repairs_room_suffix_ocr_variants(self) -> None:
+        doctors = extract_cell_doctors("王 程 慶\nC21 誌\n洪 仲 傑\nC22 認")
+
+        self.assertEqual(
+            [(item.doctor_name, item.room) for item in doctors],
+            [("王程慶", "C21診"), ("洪仲傑", "C22診")],
+        )
+
+    def test_extract_cell_doctors_keeps_parenthesis_note(self) -> None:
+        doctors = extract_cell_doctors("林清菁 C36診（清福刀特別門診）")
+
+        self.assertEqual([(item.doctor_name, item.room, item.note) for item in doctors], [("林清菁", "C36診", "清福刀特別門診")])
 
 
 if __name__ == "__main__":
