@@ -20,6 +20,12 @@ from adapters.edah_pdf import ocr_image
 IMAGE_PATTERN = re.compile(r"/images-1003/(\d{6})-(\d+)\.jpg$", re.IGNORECASE)
 CELL_DOCTOR_PATTERN = re.compile(r"([\u4e00-\u9fff]{2,4})([A-Z]\d{1,2})(?:\d)?(?:診|誌|認|詰)?")
 NOTE_PATTERN = re.compile(r"[（(]([^（）()]{2,30})[）)]")
+DEPARTMENT_CORRECTIONS = {
+    "醉臟內科": "腎臟內科",
+    "肝膽腸胡科": "肝膽腸胃科",
+    "脹腔內科": "胸腔內科",
+    "媒染科": "感染科",
+}
 
 
 @dataclass(frozen=True)
@@ -294,17 +300,49 @@ def normalize_context_text(raw_text: str) -> str:
     return re.sub(r"\s+", "", raw_text.replace("\u3000", ""))
 
 
+def clean_department_text(raw_text: str) -> str:
+    compact = normalize_context_text(raw_text)
+    compact = re.sub(r"[^\u4e00-\u9fff]", "", compact)
+    if compact in DEPARTMENT_CORRECTIONS:
+        return DEPARTMENT_CORRECTIONS[compact]
+    if len(compact) < 2:
+        return ""
+    if not any(keyword in compact for keyword in ("科", "中心", "門診", "檢查")):
+        return ""
+    return DEPARTMENT_CORRECTIONS.get(compact, compact)
+
+
+def clean_location_text(raw_text: str) -> str:
+    compact = normalize_context_text(raw_text)
+    compact = re.sub(r"[^A-Z0-9\u4e00-\u9fff]", "", compact.upper())
+    compact = compact.replace("椿", "棟")
+    compact = compact.replace("椏", "樓")
+    if len(compact) < 2:
+        return ""
+    if not any(keyword in compact for keyword in ("棟", "樓", "室", "診")):
+        return ""
+    return compact
+
+
+def should_carry_context(raw_text: str) -> bool:
+    compact = normalize_context_text(raw_text)
+    compact = re.sub(r"[|｜_\-—,，.。:：、﹍ˍ]", "", compact)
+    return compact == ""
+
+
 def row_context_from_text(
     department_text: str,
     location_text: str,
     row_range: tuple[int, int],
     previous: RowContext | None = None,
 ) -> RowContext:
-    department = normalize_context_text(department_text)
-    location = normalize_context_text(location_text)
+    department = clean_department_text(department_text)
+    location = clean_location_text(location_text)
     if previous:
-        department = department or previous.department
-        location = location or previous.location
+        if not department and should_carry_context(department_text):
+            department = previous.department
+        if not location and should_carry_context(location_text):
+            location = previous.location
     return RowContext(department=department, location=location, top=row_range[0], bottom=row_range[1])
 
 
@@ -338,6 +376,27 @@ def ocr_box(image: Image.Image, box: Box, ocr: Callable[[Image.Image], str] | No
     return ocr(crop)
 
 
+def box_has_content(image: Image.Image, box: Box) -> bool:
+    inset = 4
+    left = min(box.right, box.left + inset)
+    top = min(box.bottom, box.top + inset)
+    right = max(left, box.right - inset)
+    bottom = max(top, box.bottom - inset)
+    if right <= left or bottom <= top:
+        return False
+
+    grayscale = image.convert("L")
+    pixels = grayscale.load()
+    dark_pixels = 0
+    for y in range(top, bottom):
+        for x in range(left, right):
+            if pixels[x, y] < 140:
+                dark_pixels += 1
+                if dark_pixels >= 20:
+                    return True
+    return False
+
+
 def read_row_contexts(
     image: Image.Image,
     grid: TableGrid,
@@ -367,7 +426,11 @@ def parse_image_table(
 ) -> list[RawSchedule]:
     grid = detect_table_grid(image)
     row_contexts = read_row_contexts(image, grid, ocr)
-    cell_texts = [(cell, ocr_box(image, cell.box, ocr)) for cell in schedule_cell_boxes(grid, row_contexts)]
+    cell_texts = [
+        (cell, ocr_box(image, cell.box, ocr))
+        for cell in schedule_cell_boxes(grid, row_contexts)
+        if box_has_content(image, cell.box)
+    ]
     return build_schedules_from_cells(source, image_ref, fetched_at, cell_texts)
 
 

@@ -12,7 +12,10 @@ from adapters.antai_image import (
     RowContext,
     SourceImage,
     TableGrid,
+    box_has_content,
     build_schedules_from_cells,
+    clean_department_text,
+    clean_location_text,
     data_row_ranges,
     detect_table_grid,
     discover_latest_images,
@@ -26,6 +29,7 @@ from adapters.antai_image import (
     schedule_column_edges,
     schedule_cell_boxes,
     schedule_columns,
+    should_carry_context,
 )
 
 
@@ -134,6 +138,29 @@ class AntaiImageParserTest(unittest.TestCase):
         self.assertEqual(context.location, "復建大樓2樓")
         self.assertEqual((context.top, context.bottom), (317, 374))
 
+    def test_row_context_does_not_carry_when_ocr_has_untrusted_noise(self) -> None:
+        previous = RowContext(department="健康中心", location="復建大樓2樓", top=276, bottom=317)
+
+        context = row_context_from_text("oe,", "2 樓", (317, 374), previous)
+
+        self.assertEqual(context.department, "")
+        self.assertEqual(context.location, "2樓")
+
+    def test_clean_department_text_rejects_noise_and_repairs_common_ocr(self) -> None:
+        self.assertEqual(clean_department_text("oe,"), "")
+        self.assertEqual(clean_department_text("醉 臟 內 科"), "腎臟內科")
+        self.assertEqual(clean_department_text("肝 膽 腸 胡 科"), "肝膽腸胃科")
+        self.assertEqual(clean_department_text("脹 腔 內 科"), "胸腔內科")
+
+    def test_clean_location_text_keeps_building_and_floor_only(self) -> None:
+        self.assertEqual(clean_location_text("| C 椿 3 樓"), "C棟3樓")
+        self.assertEqual(clean_location_text("C棟3椏"), "C棟3樓")
+        self.assertEqual(clean_location_text("，"), "")
+
+    def test_should_carry_context_only_for_blank_or_line_noise(self) -> None:
+        self.assertTrue(should_carry_context("| ˍ"))
+        self.assertFalse(should_carry_context("oe,"))
+
     def test_schedule_cell_boxes_attach_column_and_row_context(self) -> None:
         grid = TableGrid(
             x_lines=[54, 90, 204, 310, 400, 489, 578, 669, 759, 848, 938, 1028, 1118, 1207, 1297, 1386, 1477, 1566, 1656, 1746],
@@ -148,6 +175,15 @@ class AntaiImageParserTest(unittest.TestCase):
         self.assertEqual(cells[0].column.weekday_label, "星期一")
         self.assertEqual(cells[0].column.period, "上午")
         self.assertEqual(cells[0].row_context.department, "一般內科")
+
+    def test_box_has_content_ignores_empty_cells(self) -> None:
+        empty = Image.new("RGB", (80, 50), "white")
+        filled = Image.new("RGB", (80, 50), "white")
+        draw = ImageDraw.Draw(filled)
+        draw.rectangle((20, 15, 35, 30), fill="black")
+
+        self.assertFalse(box_has_content(empty, Box(left=0, top=0, right=80, bottom=50)))
+        self.assertTrue(box_has_content(filled, Box(left=0, top=0, right=80, bottom=50)))
 
     def test_read_row_contexts_uses_left_boxes_and_carries_context(self) -> None:
         image = Image.new("RGB", (1800, 500), "white")
@@ -241,12 +277,15 @@ class AntaiImageParserTest(unittest.TestCase):
             x_lines=[54, 90, 204, 310, 400, 489, 578, 669, 759, 848, 938, 1028, 1118, 1207, 1297, 1386, 1477, 1566, 1656, 1746],
             y_lines=[225, 244, 260, 276, 317],
         )
-        ocr_values = ["一般內科", "復建大樓 2樓", "王 程 彥\nC21 誌"] + [""] * 15
+        image = Image.new("RGB", (1800, 500), "white")
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((330, 285, 345, 300), fill="black")
+        ocr_values = ["一般內科", "復建大樓 2樓", "王 程 彥\nC21 誌"]
 
         with patch("adapters.antai_image.detect_table_grid", return_value=grid):
             schedules = parse_image_table(
                 source=source,
-                image=Image.new("RGB", (1800, 500), "white"),
+                image=image,
                 image_ref=image_ref,
                 fetched_at="2026-05-20T00:00:00+00:00",
                 ocr=lambda crop: ocr_values.pop(0),
