@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { plannedKindForSource } from "../../lib/sourceCatalog";
+import { plannedKindForSource, plannedNoteForSource } from "../../lib/sourceCatalog";
 import type { Hospital, PublishedSchedule } from "../../lib/types";
 
 type SourceStatus = "正常" | "部分異常" | "更新異常" | "尚未更新" | "開發中";
@@ -24,6 +24,7 @@ type SourceRow = {
   status: SourceStatus;
   sourceUrl: string;
   scheduleCount: number;
+  devNote: string;
 };
 
 const statusStyles: Record<SourceStatus, string> = {
@@ -49,7 +50,7 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
   const [sourceQuery, setSourceQuery] = useState("");
   const rows = useMemo(() => buildSourceRows(hospitals, schedules), [hospitals, schedules]);
   const filteredRows = rows.filter((row) => {
-    const target = [row.hospitalName, row.branchName, row.region, row.kind, row.status].join(" ").toLowerCase();
+    const target = [row.hospitalName, row.branchName, row.region, row.kind, row.status, row.devNote].join(" ").toLowerCase();
     const normalizedQuery = [query, sourceQuery].filter(Boolean).join(" ").trim().toLowerCase();
     return (
       (!normalizedQuery || target.includes(normalizedQuery)) &&
@@ -215,6 +216,7 @@ function SourceListRow({ row }: { row: SourceRow }) {
           <div className="min-w-0">
             <h3 className="truncate font-black text-[#061b3d]">{row.hospitalName}</h3>
             <div className="mt-1 inline-flex rounded-md bg-[#eaf2ff] px-2 py-1 text-xs font-black text-[#075de8]">{row.branchName || "總院"}</div>
+            {row.devNote ? <p className="mt-2 line-clamp-2 text-xs font-bold leading-5 text-[#60708d]">{row.devNote}</p> : null}
           </div>
         </div>
       </div>
@@ -360,7 +362,8 @@ function buildSourceRows(hospitals: Hospital[], schedules: PublishedSchedule[]):
       relativeUpdated: relativeTime(updatedValue),
       status,
       sourceUrl: latest?.source_file_url || latest?.source_url || hospital.schedule_url || "",
-      scheduleCount: hospitalSchedules.length
+      scheduleCount: hospitalSchedules.length,
+      devNote: plannedNoteForSource(hospital.id) ?? ""
     };
   });
 }
@@ -409,7 +412,7 @@ function latestUpdatedTime(rows: SourceRow[]) {
 }
 
 function exportSourceRows(rows: SourceRow[]) {
-  const header = ["醫院名稱", "分院", "地區", "資料類型", "更新頻率", "最後更新時間", "更新狀態", "原始門診表連結"];
+  const header = ["醫院名稱", "分院", "地區", "資料類型", "更新頻率", "最後更新時間", "更新狀態", "開發狀態", "原始門診表連結"];
   const body = rows.map((row) => [
     row.hospitalName,
     row.branchName,
@@ -418,6 +421,7 @@ function exportSourceRows(rows: SourceRow[]) {
     row.frequency,
     row.lastUpdated,
     row.status,
+    row.devNote,
     row.sourceUrl
   ]);
   const csv = [header, ...body].map((row) => row.map(toCsvCell).join(",")).join("\n");

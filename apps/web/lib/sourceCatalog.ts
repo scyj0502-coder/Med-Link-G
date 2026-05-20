@@ -2,6 +2,7 @@ import type { Hospital } from "./types";
 
 export type SourceCatalogItem = Hospital & {
   plannedKind: "網頁擷取" | "PDF 檔案" | "圖片" | "手動輸入";
+  plannedNote: string;
 };
 
 export const plannedSources: SourceCatalogItem[] = [
@@ -12,7 +13,8 @@ export const plannedSources: SourceCatalogItem[] = [
     hospital_name: "高雄長庚紀念醫院",
     branch_name: "總院",
     schedule_url: "https://register.cgmh.org.tw/OpTimeSheet/250429004_upload.pdf",
-    plannedKind: "PDF 檔案"
+    plannedKind: "PDF 檔案",
+    plannedNote: "資料來源已找到，但目前 PDF 內容與解析結果不穩，暫停發布正式資料。"
   },
   {
     id: "antai",
@@ -21,7 +23,8 @@ export const plannedSources: SourceCatalogItem[] = [
     hospital_name: "安泰醫療社團法人安泰醫院",
     branch_name: "總院",
     schedule_url: "https://www.tsmh.org.tw/sites/web_dg/show_web_page.php?edsno=1003",
-    plannedKind: "圖片"
+    plannedKind: "圖片",
+    plannedNote: "已建立圖片表格解析流程，正在校正科別與地點 OCR，尚未發布正式資料。"
   }
 ];
 
@@ -40,4 +43,8 @@ export function mergeSourceCatalog(hospitals: Hospital[]) {
 
 export function plannedKindForSource(id: string) {
   return plannedSources.find((source) => source.id === id)?.plannedKind;
+}
+
+export function plannedNoteForSource(id: string) {
+  return plannedSources.find((source) => source.id === id)?.plannedNote;
 }
