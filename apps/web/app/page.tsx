@@ -1,5 +1,6 @@
 import ClientDashboard from "./ClientDashboard";
 import { createSupabaseBrowserClient } from "../lib/supabase";
+import { mergeSourceCatalog } from "../lib/sourceCatalog";
 import type { Hospital, PublishedSchedule } from "../lib/types";
 
 type HomePageProps = {
@@ -19,6 +20,7 @@ type HomePageProps = {
 
 type PageData = {
   hospitals: Hospital[];
+  sourceHospitals: Hospital[];
   schedules: PublishedSchedule[];
 };
 
@@ -71,6 +73,7 @@ async function loadPageData(): Promise<PageData> {
 
   return {
     hospitals: hospitalResult.data ?? [],
+    sourceHospitals: mergeSourceCatalog(hospitalResult.data ?? []),
     schedules
   };
 }
@@ -82,6 +85,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   return (
     <ClientDashboard
       hospitals={data.hospitals}
+      sourceHospitals={data.sourceHospitals}
       schedules={data.schedules}
       initialFilters={{
         q: params.q ?? "",

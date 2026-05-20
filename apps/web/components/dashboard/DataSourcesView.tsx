@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { plannedKindForSource } from "../../lib/sourceCatalog";
 import type { Hospital, PublishedSchedule } from "../../lib/types";
 
-type SourceStatus = "正常" | "部分異常" | "更新異常" | "尚未更新";
+type SourceStatus = "正常" | "部分異常" | "更新異常" | "尚未更新" | "開發中";
 type SourceKind = "網頁擷取" | "PDF 檔案" | "圖片" | "手動輸入";
 
 type DataSourcesViewProps = {
@@ -29,7 +30,8 @@ const statusStyles: Record<SourceStatus, string> = {
   正常: "bg-[#dff7ec] text-[#168a5d]",
   部分異常: "bg-[#fff1e8] text-[#f97316]",
   更新異常: "bg-[#ffe8e8] text-[#dc2626]",
-  尚未更新: "bg-[#eef2f8] text-[#60708d]"
+  尚未更新: "bg-[#eef2f8] text-[#60708d]",
+  開發中: "bg-[#f3e8ff] text-[#7c3aed]"
 };
 
 const kindStyles: Record<SourceKind, string> = {
@@ -60,12 +62,13 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
   const normalCount = rows.filter((row) => row.status === "正常").length;
   const partialCount = rows.filter((row) => row.status === "部分異常").length;
   const errorCount = rows.filter((row) => row.status === "更新異常").length;
+  const plannedCount = rows.filter((row) => row.status === "開發中").length;
   const stats = [
     { label: "資料來源總數", value: rows.length, suffix: "個來源", tone: "blue" },
     { label: "正常更新", value: normalCount, suffix: "個來源", tone: "green" },
     { label: "部分異常", value: partialCount, suffix: "個來源", tone: "orange" },
     { label: "更新異常", value: errorCount, suffix: "個來源", tone: "red" },
-    { label: "平均更新時間", value: averageUpdateHours(rows), suffix: "小時", tone: "purple" }
+    { label: "開發中", value: plannedCount, suffix: "個來源", tone: "purple" }
   ];
   const groups = [
     { value: "all", label: "全部", count: rows.length },
@@ -133,7 +136,7 @@ export function DataSourcesView({ hospitals, schedules, query }: DataSourcesView
             </FilterSelect>
             <FilterSelect label="更新狀態" value={status} onChange={setStatus}>
               <option value="">全部狀態</option>
-              {(["正常", "部分異常", "更新異常", "尚未更新"] as SourceStatus[]).map((item) => <option key={item} value={item}>{item}</option>)}
+              {(["正常", "部分異常", "更新異常", "尚未更新", "開發中"] as SourceStatus[]).map((item) => <option key={item} value={item}>{item}</option>)}
             </FilterSelect>
             <label className="grid gap-2 text-sm font-black text-[#0d2348]">
               搜尋醫院
@@ -241,7 +244,8 @@ function DataSourcesSidePanel({ rows }: { rows: SourceRow[] }) {
     { label: "正常", description: "資料已成功更新，內容完整可用" },
     { label: "部分異常", description: "部分科別或時段暫時無法取得" },
     { label: "更新異常", description: "資料取得失敗，請稍後再試" },
-    { label: "尚未更新", description: "尚未取得任何門診資料" }
+    { label: "尚未更新", description: "尚未取得任何門診資料" },
+    { label: "開發中", description: "已列入來源規劃，尚未發布正式門診資料" }
   ];
   const kindCounts = countKinds(rows);
   const recentRows = [...rows].sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated)).slice(0, 5);
@@ -343,8 +347,8 @@ function buildSourceRows(hospitals: Hospital[], schedules: PublishedSchedule[]):
     const hospitalSchedules = scheduleMap.get(hospital.id) ?? [];
     const latest = latestSchedule(hospitalSchedules);
     const updatedValue = latest?.fetched_at ?? latest?.published_at ?? latest?.parsed_at ?? "";
-    const status = sourceStatus(hospitalSchedules, latest, updatedValue);
-    const kind = sourceKind(latest, hospital.schedule_url);
+    const status = sourceStatus(hospital, hospitalSchedules, latest, updatedValue);
+    const kind = sourceKind(hospital, latest, hospital.schedule_url);
     return {
       id: hospital.id,
       hospitalName: hospital.hospital_name,
@@ -365,7 +369,8 @@ function latestSchedule(schedules: PublishedSchedule[]) {
   return [...schedules].sort((a, b) => getTime(b.fetched_at ?? b.published_at ?? b.parsed_at) - getTime(a.fetched_at ?? a.published_at ?? a.parsed_at))[0];
 }
 
-function sourceStatus(schedules: PublishedSchedule[], latest: PublishedSchedule | undefined, updatedValue: string): SourceStatus {
+function sourceStatus(hospital: Hospital, schedules: PublishedSchedule[], latest: PublishedSchedule | undefined, updatedValue: string): SourceStatus {
+  if (!hospital.enabled) return "開發中";
   if (!latest || !schedules.length) return "尚未更新";
   const parseStatuses = schedules.map((item) => item.parse_status).filter(Boolean);
   if (parseStatuses.length && parseStatuses.every((item) => item !== "ok" && item !== "success")) return "更新異常";
@@ -374,7 +379,9 @@ function sourceStatus(schedules: PublishedSchedule[], latest: PublishedSchedule 
   return "正常";
 }
 
-function sourceKind(schedule: PublishedSchedule | undefined, scheduleUrl: string | null): SourceKind {
+function sourceKind(hospital: Hospital, schedule: PublishedSchedule | undefined, scheduleUrl: string | null): SourceKind {
+  const plannedKind = plannedKindForSource(hospital.id);
+  if (plannedKind) return plannedKind;
   const value = [schedule?.source_type ?? "", schedule?.source_file_url ?? "", schedule?.source_url ?? "", scheduleUrl ?? ""].join(" ").toLowerCase();
   if (value.includes("image") || value.includes(".jpg") || value.includes(".png")) return "圖片";
   if (value.includes("pdf") || value.includes(".pdf")) return "PDF 檔案";

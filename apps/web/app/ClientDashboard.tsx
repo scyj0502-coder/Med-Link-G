@@ -32,6 +32,7 @@ import type { Hospital, PublishedSchedule } from "../lib/types";
 
 type ClientDashboardProps = {
   hospitals: Hospital[];
+  sourceHospitals: Hospital[];
   schedules: PublishedSchedule[];
   initialFilters: {
     q: string;
@@ -47,7 +48,7 @@ type ClientDashboardProps = {
   initialView?: DashboardView;
 };
 
-export default function ClientDashboard({ hospitals, schedules, initialFilters, initialView = "today" }: ClientDashboardProps) {
+export default function ClientDashboard({ hospitals, sourceHospitals, schedules, initialFilters, initialView = "today" }: ClientDashboardProps) {
   const [filters, setFilters] = useState<FilterState>({
     ...emptyFilters,
     query: initialFilters.q,
@@ -343,7 +344,7 @@ export default function ClientDashboard({ hospitals, schedules, initialFilters, 
                 }}
               />
             ) : activeView === "sources" ? (
-              <DataSourcesView hospitals={hospitals} query={filters.query} schedules={schedules} />
+              <DataSourcesView hospitals={sourceHospitals} query={filters.query} schedules={schedules} />
             ) : activeView === "account" ? (
               <AccountSettingsView favoriteCount={favoriteDoctorCount} noteCount={notes.length} />
             ) : (
