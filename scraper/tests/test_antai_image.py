@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 from PIL import Image, ImageDraw
 
-from adapters.antai_image import detect_table_grid, discover_latest_images, merge_positions
+from adapters.antai_image import TableGrid, data_row_ranges, detect_table_grid, discover_latest_images, merge_positions, schedule_columns
 
 
 class AntaiImageParserTest(unittest.TestCase):
@@ -45,6 +45,24 @@ class AntaiImageParserTest(unittest.TestCase):
 
         self.assertEqual(grid.x_lines, [20, 80, 140, 200])
         self.assertEqual(grid.y_lines, [20, 60, 100, 140])
+
+    def test_schedule_columns_map_antai_weekday_periods(self) -> None:
+        grid = TableGrid(
+            x_lines=[54, 90, 204, 310, 400, 489, 578, 669, 759, 848, 938, 1028, 1118, 1207, 1297, 1386, 1477, 1566, 1656, 1746],
+            y_lines=[],
+        )
+
+        columns = schedule_columns(grid)
+
+        self.assertEqual(len(columns), 16)
+        self.assertEqual((columns[0].weekday_label, columns[0].period, columns[0].left, columns[0].right), ("星期一", "上午", 310, 400))
+        self.assertEqual((columns[2].weekday_label, columns[2].period), ("星期一", "夜診"))
+        self.assertEqual((columns[15].weekday_label, columns[15].period, columns[15].left, columns[15].right), ("星期六", "上午", 1656, 1746))
+
+    def test_data_row_ranges_skip_header_rows(self) -> None:
+        grid = TableGrid(x_lines=[], y_lines=[225, 244, 260, 276, 317, 374, 410])
+
+        self.assertEqual(data_row_ranges(grid), [(317, 374), (374, 410)])
 
 
 if __name__ == "__main__":

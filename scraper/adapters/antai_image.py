@@ -33,6 +33,15 @@ class TableGrid:
     y_lines: list[int]
 
 
+@dataclass(frozen=True)
+class ScheduleColumn:
+    weekday: int
+    weekday_label: str
+    period: str
+    left: int
+    right: int
+
+
 class AntaiImageAdapter(ScheduleAdapter):
     """Antai publishes schedule pages as images embedded in an HTML page.
 
@@ -150,6 +159,53 @@ def merge_positions(values: list[int], gap: int = 3) -> list[int]:
         else:
             groups[-1].append(value)
     return [round((group[0] + group[-1]) / 2) for group in groups]
+
+
+def schedule_columns(grid: TableGrid) -> list[ScheduleColumn]:
+    data_edges = grid.x_lines[3:]
+    if len(data_edges) < 17:
+        return []
+
+    periods = [
+        (1, "星期一", "上午"),
+        (1, "星期一", "下午"),
+        (1, "星期一", "夜診"),
+        (2, "星期二", "上午"),
+        (2, "星期二", "下午"),
+        (2, "星期二", "夜診"),
+        (3, "星期三", "上午"),
+        (3, "星期三", "下午"),
+        (3, "星期三", "夜診"),
+        (4, "星期四", "上午"),
+        (4, "星期四", "下午"),
+        (4, "星期四", "夜診"),
+        (5, "星期五", "上午"),
+        (5, "星期五", "下午"),
+        (5, "星期五", "夜診"),
+        (6, "星期六", "上午"),
+    ]
+
+    return [
+        ScheduleColumn(
+            weekday=weekday,
+            weekday_label=weekday_label,
+            period=period,
+            left=data_edges[index],
+            right=data_edges[index + 1],
+        )
+        for index, (weekday, weekday_label, period) in enumerate(periods)
+    ]
+
+
+def data_row_ranges(grid: TableGrid) -> list[tuple[int, int]]:
+    if len(grid.y_lines) <= 4:
+        return []
+    data_edges = grid.y_lines[4:]
+    return [
+        (top, bottom)
+        for top, bottom in zip(data_edges, data_edges[1:])
+        if bottom - top >= 18
+    ]
 
 
 def parse_ocr_text(source, image_ref: SourceImage, fetched_at: str) -> list[RawSchedule]:
