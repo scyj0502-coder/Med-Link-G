@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import httpx
+import os
 import unittest
 from unittest.mock import patch
 from PIL import Image, ImageDraw
@@ -29,6 +30,26 @@ from adapters.antai_image import (
 
 
 class AntaiImageParserTest(unittest.TestCase):
+    def test_adapter_keeps_image_ocr_unpublished_without_opt_in(self) -> None:
+        source = HospitalSource(
+            id="antai",
+            enabled=True,
+            adapter="antai_image",
+            region="屏東",
+            hospital_name="安泰醫院",
+            branch_name="總院",
+            departments=[],
+            schedule_url="https://www.tsmh.org.tw/sites/web_dg/show_web_page.php?edsno=1003",
+        )
+        from adapters.antai_image import AntaiImageAdapter
+
+        previous = os.environ.pop("ANTAI_IMAGE_PUBLISH", None)
+        try:
+            self.assertEqual(AntaiImageAdapter(source).fetch(), [])
+        finally:
+            if previous is not None:
+                os.environ["ANTAI_IMAGE_PUBLISH"] = previous
+
     def test_discover_latest_images_from_html(self) -> None:
         html = """
         <html>

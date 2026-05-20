@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -86,6 +87,9 @@ class AntaiImageAdapter(ScheduleAdapter):
     """
 
     def fetch(self) -> list[RawSchedule]:
+        if os.environ.get("ANTAI_IMAGE_PUBLISH") != "1":
+            return []
+
         fetched_at = datetime.now(UTC).isoformat()
         images = discover_latest_images(self.source.schedule_url)
         schedules: list[RawSchedule] = []
