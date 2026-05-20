@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from adapters.base import RawSchedule
 from adapters.base import HospitalSource
-from main import selected_sources, should_preserve_stale
+from main import selected_sources, should_preserve_stale, write_sync_summary
 
 
 class SyncSafetyTest(unittest.TestCase):
@@ -52,6 +52,41 @@ class SyncSafetyTest(unittest.TestCase):
     def test_selected_sources_fails_unknown_target(self) -> None:
         with self.assertRaises(SystemExit):
             selected_sources([hospital_source("kmugh", "kmugh", True, "高雄")], "missing")
+
+    def test_write_sync_summary_outputs_json_and_markdown(self) -> None:
+        temp_dir = Path(__file__).resolve().parent / "__tmp_sync_summary__"
+        temp_dir.mkdir(exist_ok=True)
+        json_path = temp_dir / "sync-summary.json"
+        markdown_path = temp_dir / "sync-summary.md"
+
+        try:
+            write_sync_summary([
+                {
+                    "source_id": "kmugh",
+                    "hospital_name": "高醫岡山",
+                    "branch_name": "總院",
+                    "status": "ok",
+                    "scraped": 33,
+                    "published": 33,
+                    "rejected": 0,
+                    "changes": 2,
+                    "preserve_stale": False,
+                    "error": "",
+                }
+            ], json_path, markdown_path)
+
+            self.assertIn('"source_id": "kmugh"', json_path.read_text(encoding="utf-8"))
+            markdown = markdown_path.read_text(encoding="utf-8")
+            self.assertIn("來源同步總表", markdown)
+            self.assertIn("高醫岡山 總院", markdown)
+            self.assertIn("正常", markdown)
+        finally:
+            if json_path.exists():
+                json_path.unlink()
+            if markdown_path.exists():
+                markdown_path.unlink()
+            if temp_dir.exists():
+                temp_dir.rmdir()
 
 
 def schedule(index: int) -> RawSchedule:

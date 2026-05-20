@@ -74,6 +74,10 @@ jobs:
             echo "- Run time (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')"
             echo "- Target: ${SYNC_TARGET:-all enabled sources}"
             echo
+            if [ -f sync-summary.md ]; then
+              cat sync-summary.md
+              echo
+            fi
             echo '```text'
             if [ -f sync-output.log ]; then
               tail -n 80 sync-output.log

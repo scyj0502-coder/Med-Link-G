@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -35,12 +37,13 @@ ADAPTERS = {
 SERVICE_REGIONS = {"台南", "高雄", "屏東"}
 
 
-def run(target: str | None = None) -> None:
+def run(target: str | None = None) -> list[dict[str, Any]]:
     load_dotenv()
     config = load_config(Path("config.yaml"))
     writer = SupabaseScheduleWriter.from_env()
     notifier = TelegramNotifier.from_env()
     sources = selected_sources(config.hospitals, target)
+    results: list[dict[str, Any]] = []
 
     for source in sources:
         adapter_cls = ADAPTERS[source.adapter]
@@ -49,6 +52,18 @@ def run(target: str | None = None) -> None:
             scraped = adapter.fetch()
         except Exception as exc:
             writer.write_failed_run(source, str(exc))
+            results.append({
+                "source_id": source.id,
+                "hospital_name": source.hospital_name,
+                "branch_name": source.branch_name,
+                "status": "parse_failed",
+                "scraped": 0,
+                "published": 0,
+                "rejected": 0,
+                "changes": 0,
+                "preserve_stale": False,
+                "error": str(exc),
+            })
             print(f"{source.id}: parse_failed error={exc}")
             continue
         publishable, rejected = partition_publishable(scraped)
@@ -64,11 +79,27 @@ def run(target: str | None = None) -> None:
         if rejected:
             notifier.send_quality_warning(source, rejected)
 
+        status = "ok" if publishable and not rejected else "needs_attention" if publishable else "parse_failed"
+        results.append({
+            "source_id": source.id,
+            "hospital_name": source.hospital_name,
+            "branch_name": source.branch_name,
+            "status": status,
+            "scraped": len(scraped),
+            "published": len(publishable),
+            "rejected": len(rejected),
+            "changes": len(changes),
+            "previous": len(previous),
+            "preserve_stale": preserve_stale,
+            "error": "",
+        })
         print(
             f"{source.id}: scraped={len(scraped)} "
             f"published={len(publishable)} rejected={len(rejected)} changes={len(changes)} "
             f"preserve_stale={preserve_stale}"
         )
+    write_sync_summary(results, Path("sync-summary.json"), Path("sync-summary.md"))
+    return results
 
 
 def selected_sources(sources: list[HospitalSource], target: str | None = None) -> list[HospitalSource]:
@@ -98,6 +129,54 @@ def should_preserve_stale(previous: list[dict], publishable: list) -> bool:
     if len(previous) < 20:
         return False
     return len(publishable) < len(previous) * 0.5
+
+
+def write_sync_summary(results: list[dict[str, Any]], json_path: Path, markdown_path: Path) -> None:
+    json_path.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+    lines = [
+        "### 來源同步總表",
+        "",
+        "| 來源 | 狀態 | 抓取 | 發布 | 異常 | 異動 | 保留上一版 | 備註 |",
+        "|---|---:|---:|---:|---:|---:|---|---|",
+    ]
+    if not results:
+        lines.append("| 無 | - | 0 | 0 | 0 | 0 | - | 沒有符合條件的啟用來源 |")
+    for item in results:
+        label = f"{item['hospital_name']} {item['branch_name']}".strip()
+        note = item.get("error") or ""
+        if item.get("status") == "needs_attention":
+            note = "部分資料被品質規則擋下，前台只發布可信資料"
+        elif item.get("preserve_stale"):
+            note = "本次資料少於上一版，已保留上一版未出現資料"
+        lines.append(
+            "| "
+            + " | ".join([
+                escape_markdown_table(label),
+                sync_status_label(str(item.get("status", ""))),
+                str(item.get("scraped", 0)),
+                str(item.get("published", 0)),
+                str(item.get("rejected", 0)),
+                str(item.get("changes", 0)),
+                "是" if item.get("preserve_stale") else "否",
+                escape_markdown_table(str(note)),
+            ])
+            + " |"
+        )
+    markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def sync_status_label(status: str) -> str:
+    if status == "ok":
+        return "正常"
+    if status == "needs_attention":
+        return "部分異常"
+    if status == "parse_failed":
+        return "更新異常"
+    return status or "未知"
+
+
+def escape_markdown_table(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", " ")
 
 
 def main() -> None:
