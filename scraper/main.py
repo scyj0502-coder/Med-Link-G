@@ -91,6 +91,7 @@ def run(target: str | None = None) -> list[dict[str, Any]]:
             "scraped": len(scraped),
             "published": len(publishable),
             "rejected": len(rejected),
+            "rejected_reasons": rejected_reason_counts(rejected),
             "changes": len(changes),
             "previous": len(previous),
             "preserve_stale": preserve_stale,
@@ -136,8 +137,13 @@ def should_preserve_stale(previous: list[dict], publishable: list) -> bool:
 
 def write_sync_summary(results: list[dict[str, Any]], json_path: Path, markdown_path: Path) -> None:
     json_path.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+    totals = sync_totals(results)
     lines = [
         "### 來源同步總表",
+        "",
+        f"- 來源數：{totals['sources']}",
+        f"- 正常：{totals['ok']}，部分異常：{totals['needs_attention']}，更新異常：{totals['parse_failed']}",
+        f"- 抓取：{totals['scraped']} 筆，發布：{totals['published']} 筆，異常：{totals['rejected']} 筆，異動：{totals['changes']} 筆",
         "",
         "| 來源 | 狀態 | 抓取 | 發布 | 異常 | 異動 | 保留上一版 | 備註 |",
         "|---|---:|---:|---:|---:|---:|---|---|",
@@ -149,8 +155,11 @@ def write_sync_summary(results: list[dict[str, Any]], json_path: Path, markdown_
         note = item.get("error") or ""
         if item.get("status") == "needs_attention":
             note = "部分資料被品質規則擋下，前台只發布可信資料"
-        elif item.get("preserve_stale"):
-            note = "本次資料少於上一版，已保留上一版未出現資料"
+        reason_text = rejected_reason_summary(item.get("rejected_reasons"))
+        if reason_text:
+            note = append_note(note, f"異常原因：{reason_text}")
+        if item.get("preserve_stale"):
+            note = append_note(note, "本次資料少於上一版，已保留上一版未出現資料")
         lines.append(
             "| "
             + " | ".join([
@@ -180,6 +189,48 @@ def sync_status_label(status: str) -> str:
 
 def escape_markdown_table(value: str) -> str:
     return value.replace("|", "\\|").replace("\n", " ")
+
+
+def rejected_reason_counts(rejected: list[Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in rejected:
+        reason = str(getattr(item, "reason", "") or "unknown")
+        counts[reason] = counts.get(reason, 0) + 1
+    return dict(sorted(counts.items(), key=lambda entry: (-entry[1], entry[0])))
+
+
+def rejected_reason_summary(value: Any) -> str:
+    if not isinstance(value, dict) or not value:
+        return ""
+    return "、".join(f"{reason} {count} 筆" for reason, count in value.items())
+
+
+def append_note(current: str, extra: str) -> str:
+    if not current:
+        return extra
+    return f"{current}；{extra}"
+
+
+def sync_totals(results: list[dict[str, Any]]) -> dict[str, int]:
+    totals = {
+        "sources": len(results),
+        "ok": 0,
+        "needs_attention": 0,
+        "parse_failed": 0,
+        "scraped": 0,
+        "published": 0,
+        "rejected": 0,
+        "changes": 0,
+    }
+    for item in results:
+        status = str(item.get("status", ""))
+        if status in {"ok", "needs_attention", "parse_failed"}:
+            totals[status] += 1
+        totals["scraped"] += int(item.get("scraped", 0) or 0)
+        totals["published"] += int(item.get("published", 0) or 0)
+        totals["rejected"] += int(item.get("rejected", 0) or 0)
+        totals["changes"] += int(item.get("changes", 0) or 0)
+    return totals
 
 
 def has_parse_failures(results: list[dict[str, Any]]) -> bool:

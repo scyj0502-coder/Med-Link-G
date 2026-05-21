@@ -99,6 +99,14 @@ kmugh: scraped=33 published=33 rejected=0 changes=0 preserve_stale=False
 
 GitHub Actions 的 Summary 會另外顯示「來源同步總表」，用表格列出每個來源的狀態、抓取筆數、發布筆數、異常筆數、異動筆數，以及是否保留上一版資料。這一段比完整 log 更適合快速檢查同步結果。
 
+若有資料被品質規則擋下，Summary 也會列出主要原因，例如：
+
+```text
+low_confidence 2 筆、missing_department 1 筆
+```
+
+這代表系統沒有把不可信資料發布給業務查詢，並不是要業務逐筆人工驗證。
+
 同一次執行也會上傳 `med-link-sync-report` artifact，裡面包含：
 
 - `sync-summary.json`

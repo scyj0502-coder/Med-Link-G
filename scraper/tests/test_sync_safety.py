@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from adapters.base import RawSchedule
 from adapters.base import HospitalSource
-from main import has_parse_failures, selected_sources, should_preserve_stale, write_sync_summary
+from main import has_parse_failures, rejected_reason_summary, selected_sources, should_preserve_stale, sync_totals, write_sync_summary
 
 
 class SyncSafetyTest(unittest.TestCase):
@@ -69,6 +69,7 @@ class SyncSafetyTest(unittest.TestCase):
                     "scraped": 33,
                     "published": 33,
                     "rejected": 0,
+                    "rejected_reasons": {},
                     "changes": 2,
                     "preserve_stale": False,
                     "error": "",
@@ -78,6 +79,7 @@ class SyncSafetyTest(unittest.TestCase):
             self.assertIn('"source_id": "kmugh"', json_path.read_text(encoding="utf-8"))
             markdown = markdown_path.read_text(encoding="utf-8")
             self.assertIn("來源同步總表", markdown)
+            self.assertIn("抓取：33 筆", markdown)
             self.assertIn("高醫岡山 總院", markdown)
             self.assertIn("正常", markdown)
         finally:
@@ -97,6 +99,19 @@ class SyncSafetyTest(unittest.TestCase):
             {"source_id": "ok", "status": "ok"},
             {"source_id": "partial", "status": "needs_attention"},
         ]))
+
+    def test_sync_totals_and_rejected_reason_summary(self) -> None:
+        totals = sync_totals([
+            {"status": "ok", "scraped": 10, "published": 10, "rejected": 0, "changes": 1},
+            {"status": "needs_attention", "scraped": 8, "published": 6, "rejected": 2, "changes": 0},
+        ])
+
+        self.assertEqual(totals["sources"], 2)
+        self.assertEqual(totals["ok"], 1)
+        self.assertEqual(totals["needs_attention"], 1)
+        self.assertEqual(totals["scraped"], 18)
+        self.assertEqual(totals["rejected"], 2)
+        self.assertEqual(rejected_reason_summary({"low_confidence": 2, "missing_department": 1}), "low_confidence 2 筆、missing_department 1 筆")
 
 
 def schedule(index: int) -> RawSchedule:
